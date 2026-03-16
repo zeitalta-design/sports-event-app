@@ -1,0 +1,69 @@
+import { notFound } from "next/navigation";
+import { getMonthLabel, getMonthDescription, DISTANCE_SLUGS, PREFECTURE_SLUGS } from "@/lib/seo-mappings";
+import { getEventsByMonth } from "@/lib/seo-queries";
+import SeoEventList from "@/components/SeoEventList";
+
+export async function generateMetadata({ params }) {
+  const { month } = await params;
+  const label = getMonthLabel(month);
+  if (!label) return {};
+
+  return {
+    title: `${label}開催のマラソン大会`,
+    description: getMonthDescription(month),
+    openGraph: {
+      title: `${label}開催のマラソン大会 | 大会ナビ`,
+      description: getMonthDescription(month),
+      type: "website",
+    },
+  };
+}
+
+export default async function MonthPage({ params }) {
+  const { month } = await params;
+  const m = parseInt(month);
+  if (isNaN(m) || m < 1 || m > 12) notFound();
+
+  const label = getMonthLabel(month);
+
+  let events = [];
+  try {
+    events = getEventsByMonth(m);
+  } catch {}
+
+  // 関連リンク: 前後の月 + 距離別
+  const relatedLinks = [];
+  const prevMonth = m === 1 ? 12 : m - 1;
+  const nextMonth = m === 12 ? 1 : m + 1;
+  relatedLinks.push(
+    { label: `${prevMonth}月開催`, href: `/marathon/month/${prevMonth}` },
+    { label: `${nextMonth}月開催`, href: `/marathon/month/${nextMonth}` }
+  );
+  for (const [slug, info] of Object.entries(DISTANCE_SLUGS)) {
+    relatedLinks.push({ label: info.label, href: `/marathon/distance/${slug}` });
+  }
+  const popularPrefectures = ["tokyo", "osaka", "kanagawa"];
+  for (const slug of popularPrefectures) {
+    relatedLinks.push({
+      label: `${PREFECTURE_SLUGS[slug]}の大会`,
+      href: `/marathon/prefecture/${slug}`,
+    });
+  }
+
+  return (
+    <SeoEventList
+      title={`${label}開催のマラソン大会`}
+      description={`${label}に開催されるマラソン大会の一覧です`}
+      breadcrumbs={[
+        { label: "トップ", href: "/" },
+        { label: "マラソン", href: "/marathon" },
+        { label: `${label}開催のマラソン大会` },
+      ]}
+      events={events}
+      total={events.length}
+      ctaHref={`/marathon?month=${m}`}
+      ctaLabel="条件を絞って探す →"
+      relatedLinks={relatedLinks}
+    />
+  );
+}

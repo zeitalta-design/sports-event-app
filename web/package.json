@@ -1,0 +1,51 @@
+{
+  "name": "sports-event-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "init-db": "node ../scripts/init-db.js",
+    "seed": "node ../scripts/seed.js",
+    "scrape:runnet:list": "node ../scripts/scrape-runnet-list.js",
+    "scrape:runnet:list:full": "node ../scripts/scrape-runnet-list.js --pages 106",
+    "scrape:runnet:list:new": "node ../scripts/scrape-runnet-list.js --pages 106 --only-new",
+    "scrape:runnet:detail": "node ../scripts/scrape-runnet-detail.js",
+    "scrape:runnet:detail:batch": "node ../scripts/scrape-runnet-detail.js --all",
+    "scrape:moshicom:detail": "node ../scripts/scrape-moshicom-detail.js --only-missing-races",
+    "notifications:generate": "node ../scripts/generate-notifications.js",
+    "jobs:daily": "node ../scripts/run-daily-jobs.js",
+    "jobs:daily:full": "node ../scripts/run-daily-jobs.js --with-email-send",
+    "jobs:daily:dry": "node ../scripts/run-daily-jobs.js --dry-run",
+    "emails:generate": "node ../scripts/generate-email-jobs.js",
+    "emails:send": "node ../scripts/send-emails.js",
+    "emails:send:dry": "node ../scripts/send-emails.js --dry-run",
+    "seed:searches": "node ../scripts/seed-saved-searches.js",
+    "seed:users": "node ../scripts/seed-users.js",
+    "cleanup:old-data": "node ../scripts/cleanup-old-data.js",
+    "reclassify:sport-types": "node ../scripts/reclassify-sport-types.js",
+    "reclassify:sport-types:apply": "node ../scripts/reclassify-sport-types.js --apply",
+    "audit:trail": "node ../scripts/audit-trail-events.js",
+    "audit:trail:all": "node ../scripts/audit-trail-events.js --all",
+    "rebuild:details": "node ../scripts/rebuild-event-details.js",
+    "rebuild:details:all": "node ../scripts/rebuild-event-details.js --all --force",
+    "rebuild:details:new": "node ../scripts/rebuild-event-details.js --all"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.6.2",
+    "cheerio": "^1.2.0",
+    "next": "16.1.6",
+    "nodemailer": "^8.0.2",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "tailwindcss": "^4"
+  }
+}

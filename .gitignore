@@ -1,0 +1,5 @@
+node_modules
+.next
+.env
+web/node_modules
+web/.next
