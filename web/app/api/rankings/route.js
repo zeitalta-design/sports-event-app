@@ -14,9 +14,14 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type") || "popular";
     const limit = Math.min(parseInt(searchParams.get("limit")) || 10, 20);
+    const sportType = searchParams.get("sport_type") || ""; // Phase125: スポーツ種別フィルタ
 
     const db = getDb();
     let events = [];
+
+    // Phase125: スポーツフィルタ共通条件
+    const sportFilter = sportType ? "AND e.sport_type = ?" : "";
+    const sportParam = sportType ? [sportType] : [];
 
     switch (type) {
       case "popular":
@@ -30,14 +35,15 @@ export async function GET(request) {
             FROM events e
             LEFT JOIN marathon_details md ON e.id = md.event_id
             WHERE e.is_active = 1 AND e.event_date >= date('now')
+              ${sportFilter}
             ORDER BY e.popularity_score DESC
             LIMIT ?
           `)
-          .all(limit);
+          .all(...sportParam, limit);
         break;
 
       case "beginner":
-        // 初心者向け: 説明文に初心者キーワード + 短距離
+        // 初心者向け: 説明文に初心者キーワード
         events = db
           .prepare(`
             SELECT e.id, e.title, e.event_date, e.entry_end_date,
@@ -47,6 +53,7 @@ export async function GET(request) {
             FROM events e
             LEFT JOIN marathon_details md ON e.id = md.event_id
             WHERE e.is_active = 1 AND e.event_date >= date('now')
+              ${sportFilter}
               AND (
                 e.description LIKE '%初心者%'
                 OR e.description LIKE '%ビギナー%'
@@ -57,11 +64,11 @@ export async function GET(request) {
             ORDER BY e.popularity_score DESC
             LIMIT ?
           `)
-          .all(limit);
+          .all(...sportParam, limit);
         break;
 
       case "flat":
-        // フラットコース: 説明文にフラットキーワード
+        // フラットコース: 説明文にフラットキーワード（マラソン向け）
         events = db
           .prepare(`
             SELECT e.id, e.title, e.event_date, e.entry_end_date,
@@ -71,6 +78,7 @@ export async function GET(request) {
             FROM events e
             LEFT JOIN marathon_details md ON e.id = md.event_id
             WHERE e.is_active = 1 AND e.event_date >= date('now')
+              ${sportFilter}
               AND (
                 e.description LIKE '%フラット%'
                 OR e.description LIKE '%平坦%'
@@ -80,11 +88,11 @@ export async function GET(request) {
             ORDER BY e.popularity_score DESC
             LIMIT ?
           `)
-          .all(limit);
+          .all(...sportParam, limit);
         break;
 
       case "record":
-        // 記録狙い: フルマラソン + 人気上位
+        // 記録狙い: フルマラソン + 人気上位（マラソン向け）
         events = db
           .prepare(`
             SELECT e.id, e.title, e.event_date, e.entry_end_date,
@@ -112,8 +120,128 @@ export async function GET(request) {
           .all(limit);
         break;
 
+      case "scenic":
+        // 絶景コース: トレイル向け
+        events = db
+          .prepare(`
+            SELECT e.id, e.title, e.event_date, e.entry_end_date,
+                   e.prefecture, e.city, e.entry_status, e.sport_type,
+                   e.distance_list, e.popularity_score, e.description,
+                   md.venue_name
+            FROM events e
+            LEFT JOIN marathon_details md ON e.id = md.event_id
+            WHERE e.is_active = 1 AND e.event_date >= date('now')
+              ${sportFilter}
+              AND (
+                e.description LIKE '%絶景%'
+                OR e.description LIKE '%景色%'
+                OR e.description LIKE '%眺望%'
+                OR e.description LIKE '%パノラマ%'
+                OR e.title LIKE '%トレイル%'
+              )
+            ORDER BY e.popularity_score DESC
+            LIMIT ?
+          `)
+          .all(...sportParam, limit);
+        break;
+
+      // Phase203: 口コミ評価ランキング
+      case "review_top":
+        events = db
+          .prepare(`
+            SELECT e.id, e.title, e.event_date, e.entry_end_date,
+                   e.prefecture, e.city, e.entry_status, e.sport_type,
+                   e.distance_list, e.popularity_score, e.description,
+                   md.venue_name,
+                   AVG(COALESCE(r.rating_overall, r.rating)) as avg_rating,
+                   COUNT(r.id) as review_count
+            FROM events e
+            LEFT JOIN marathon_details md ON e.id = md.event_id
+            INNER JOIN event_reviews r ON r.event_id = e.id AND (r.status = 'published' OR r.status IS NULL)
+            WHERE e.is_active = 1 AND e.event_date >= date('now')
+              ${sportFilter}
+            GROUP BY e.id
+            HAVING review_count >= 2
+            ORDER BY avg_rating DESC, review_count DESC
+            LIMIT ?
+          `)
+          .all(...sportParam, limit);
+        break;
+
+      // Phase203: 写真が多い大会
+      case "photo_rich":
+        events = db
+          .prepare(`
+            SELECT e.id, e.title, e.event_date, e.entry_end_date,
+                   e.prefecture, e.city, e.entry_status, e.sport_type,
+                   e.distance_list, e.popularity_score, e.description,
+                   md.venue_name,
+                   COUNT(p.id) as photo_count
+            FROM events e
+            LEFT JOIN marathon_details md ON e.id = md.event_id
+            INNER JOIN event_photos p ON p.event_id = e.id AND (p.status = 'published' OR p.status IS NULL)
+            WHERE e.is_active = 1 AND e.event_date >= date('now')
+              ${sportFilter}
+            GROUP BY e.id
+            HAVING photo_count >= 1
+            ORDER BY photo_count DESC, e.popularity_score DESC
+            LIMIT ?
+          `)
+          .all(...sportParam, limit);
+        break;
+
+      // Phase203: 初心者人気大会（口コミの初心者評価が高い）
+      case "beginner_popular":
+        events = db
+          .prepare(`
+            SELECT e.id, e.title, e.event_date, e.entry_end_date,
+                   e.prefecture, e.city, e.entry_status, e.sport_type,
+                   e.distance_list, e.popularity_score, e.description,
+                   md.venue_name,
+                   AVG(r.rating_beginner) as avg_beginner_rating,
+                   COUNT(r.id) as review_count
+            FROM events e
+            LEFT JOIN marathon_details md ON e.id = md.event_id
+            INNER JOIN event_reviews r ON r.event_id = e.id AND (r.status = 'published' OR r.status IS NULL) AND r.rating_beginner IS NOT NULL
+            WHERE e.is_active = 1 AND e.event_date >= date('now')
+              ${sportFilter}
+            GROUP BY e.id
+            HAVING review_count >= 1
+            ORDER BY avg_beginner_rating DESC, review_count DESC
+            LIMIT ?
+          `)
+          .all(...sportParam, limit);
+        break;
+
       default:
         events = [];
+    }
+
+    // Phase231: データが少ない場合のフォールバック
+    // 特定カテゴリの結果が少ない場合、人気順の大会で補完
+    if (events.length < 3 && type !== "popular") {
+      const existing = new Set(events.map((e) => e.id));
+      const fallback = db
+        .prepare(`
+          SELECT e.id, e.title, e.event_date, e.entry_end_date,
+                 e.prefecture, e.city, e.entry_status, e.sport_type,
+                 e.distance_list, e.popularity_score, e.description,
+                 md.venue_name
+          FROM events e
+          LEFT JOIN marathon_details md ON e.id = md.event_id
+          WHERE e.is_active = 1 AND e.event_date >= date('now')
+            ${sportFilter}
+          ORDER BY e.popularity_score DESC
+          LIMIT ?
+        `)
+        .all(...sportParam, limit);
+
+      for (const item of fallback) {
+        if (!existing.has(item.id) && events.length < limit) {
+          events.push(item);
+          existing.add(item.id);
+        }
+      }
     }
 
     // ステータス再計算

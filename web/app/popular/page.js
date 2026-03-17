@@ -3,6 +3,9 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import EventCard from "@/components/EventCard";
 import PopularityBadge from "@/components/PopularityBadge";
+import EmptyState from "@/components/EmptyState";
+import ErrorState from "@/components/ErrorState";
+import SeoInternalLinks from "@/components/SeoInternalLinks";
 
 /**
  * Phase46: /popular — 人気大会ランキングページ
@@ -14,6 +17,7 @@ import PopularityBadge from "@/components/PopularityBadge";
 export default function PopularEventsPage() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [period, setPeriod] = useState("30");
 
@@ -27,12 +31,14 @@ export default function PopularEventsPage() {
 
   async function fetchPopularEvents() {
     setLoading(true);
+    setError(false);
     try {
       const res = await fetch(`/api/popular-events?limit=20&days=${period}`);
       const data = await res.json();
       setEvents(data.events || []);
     } catch (err) {
       console.error("Failed to fetch popular events:", err);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -70,17 +76,17 @@ export default function PopularEventsPage() {
       {/* ヘッダー */}
       <div className="flex items-center gap-3 mb-2">
         <div className="w-1 h-7 bg-blue-600 rounded-full" />
-        <h1 className="text-2xl font-bold" style={{ color: "#323433" }}>
+        <h1 className="text-2xl font-bold" style={{ color: "#1a1a1a" }}>
           🔥 人気の大会ランキング
         </h1>
       </div>
-      <p className="text-sm mb-6" style={{ color: "#333333" }}>
+      <p className="text-sm mb-6" style={{ color: "#1a1a1a" }}>
         ユーザーの閲覧・お気に入り・エントリークリック数から算出した人気指数でランキング
       </p>
 
       {/* 期間切替 */}
       <div className="flex items-center gap-2 mb-6">
-        <span className="text-xs font-medium" style={{ color: "#333333" }}>集計期間:</span>
+        <span className="text-xs font-medium" style={{ color: "#1a1a1a" }}>集計期間:</span>
         {[
           { key: "7", label: "7日間" },
           { key: "30", label: "30日間" },
@@ -94,7 +100,7 @@ export default function PopularEventsPage() {
                 ? "bg-blue-600 text-white border-blue-600"
                 : "bg-white border-gray-200 hover:bg-gray-50"
             }`}
-            style={period !== opt.key ? { color: "#333333" } : undefined}
+            style={period !== opt.key ? { color: "#1a1a1a" } : undefined}
           >
             {opt.label}
           </button>
@@ -118,12 +124,13 @@ export default function PopularEventsPage() {
             </div>
           ))}
         </div>
+      ) : error ? (
+        <div className="card">
+          <ErrorState onRetry={fetchPopularEvents} />
+        </div>
       ) : events.length === 0 ? (
-        <div className="card p-12 text-center">
-          <p className="text-2xl mb-2">📊</p>
-          <p className="text-sm" style={{ color: "#333333" }}>
-            まだ十分なデータがありません。大会を閲覧・お気に入りするとランキングに反映されます。
-          </p>
+        <div className="card">
+          <EmptyState preset="rankings" />
         </div>
       ) : (
         <div className="space-y-4">
@@ -178,6 +185,9 @@ export default function PopularEventsPage() {
           ⛰️ トレイル人気ランキング →
         </Link>
       </div>
+
+      {/* Phase233: SEO内部リンク */}
+      <SeoInternalLinks groups={["marathon", "season", "features"]} exclude="/popular" />
     </div>
   );
 }

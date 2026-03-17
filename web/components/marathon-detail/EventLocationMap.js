@@ -41,7 +41,7 @@ export default function EventLocationMap({
       <div className="card overflow-hidden">
         {/* セクションヘッダー */}
         <div className="p-6 pb-4">
-          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <span className="text-xl">📍</span>
             会場・アクセス
           </h2>
@@ -54,7 +54,7 @@ export default function EventLocationMap({
             <div className="space-y-3">
               {venueName && (
                 <div>
-                  <dt className="text-xs text-gray-500 mb-0.5">会場名</dt>
+                  <dt className="text-xs text-gray-700 font-bold mb-0.5">会場名</dt>
                   <dd className="text-base font-semibold text-gray-900">
                     {venueName}
                   </dd>
@@ -62,13 +62,13 @@ export default function EventLocationMap({
               )}
               {venueAddress && (
                 <div>
-                  <dt className="text-xs text-gray-500 mb-0.5">住所</dt>
+                  <dt className="text-xs text-gray-700 font-bold mb-0.5">住所</dt>
                   <dd className="text-sm text-gray-700">{venueAddress}</dd>
                 </div>
               )}
               {accessInfo && (
                 <div>
-                  <dt className="text-xs text-gray-500 mb-0.5">アクセス</dt>
+                  <dt className="text-xs text-gray-700 font-bold mb-0.5">アクセス</dt>
                   <dd className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                     {accessInfo}
                   </dd>
@@ -91,7 +91,7 @@ export default function EventLocationMap({
             <div className="space-y-3">
               {prefecture && (
                 <div>
-                  <dt className="text-xs text-gray-500 mb-0.5">都道府県</dt>
+                  <dt className="text-xs text-gray-700 font-bold mb-0.5">都道府県</dt>
                   <dd className="text-sm font-medium text-gray-800">
                     {prefecture}
                   </dd>
@@ -99,7 +99,7 @@ export default function EventLocationMap({
               )}
               {city && (
                 <div>
-                  <dt className="text-xs text-gray-500 mb-0.5">市区町村</dt>
+                  <dt className="text-xs text-gray-700 font-bold mb-0.5">市区町村</dt>
                   <dd className="text-sm text-gray-700">{city}</dd>
                 </div>
               )}
@@ -119,6 +119,15 @@ export default function EventLocationMap({
               referrerPolicy="no-referrer-when-downgrade"
               title={`${eventTitle || "大会"}の開催場所`}
             />
+          </div>
+        )}
+        {/* 地図非表示の場合の案内 */}
+        {!embedUrl && (prefecture || city) && (
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <p className="text-xs text-gray-400 text-center">
+              正確な開催場所が特定できないため、地図は表示していません。
+              詳細は公式サイトをご確認ください。
+            </p>
           </div>
         )}
 
@@ -144,21 +153,22 @@ export default function EventLocationMap({
 }
 
 function buildMapQuery({ venueName, venueAddress, prefecture, city, latitude, longitude }) {
-  // lat/lng がある場合はそれを使う
+  // lat/lng がある場合はそれを使う（最も正確）
   if (latitude && longitude) {
     return `${latitude},${longitude}`;
   }
-  // 住所がある場合
+  // 住所がある場合（正確）
   if (venueAddress) {
     return venueName ? `${venueName} ${venueAddress}` : venueAddress;
   }
-  // 会場名 + 都道府県
+  // 会場名 + 都道府県 + 市区町村（それなりに正確）
   if (venueName && prefecture) {
-    return `${prefecture} ${city || ""} ${venueName}`;
+    return `${prefecture}${city || ""} ${venueName}`;
   }
-  // 都道府県 + 市区町村
-  if (prefecture && city) {
-    return `${prefecture}${city}`;
+  // 会場名のみ（施設名で検索）
+  if (venueName) {
+    return venueName;
   }
+  // 都道府県 + 市区町村のみでは正確な場所が特定できないため地図は非表示
   return null;
 }

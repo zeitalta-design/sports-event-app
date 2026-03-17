@@ -141,6 +141,35 @@ export function buildDecisionSignals(data) {
     });
   }
 
+  // --- Phase143: 口コミ由来シグナル ---
+  if (data.reviewSummary && data.reviewSummary.total >= 3) {
+    const rs = data.reviewSummary;
+    if (rs.avg_beginner && rs.avg_beginner >= 4.0) {
+      signals.push({
+        key: "beginner_friendly",
+        type: "positive",
+        label: "初心者に好評",
+        detail: "参加者から初心者向けの高評価を得ています",
+      });
+    }
+    if (rs.avg_overall && rs.avg_overall >= 4.5) {
+      signals.push({
+        key: "highly_rated",
+        type: "positive",
+        label: "高評価",
+        detail: `総合評価 ${rs.avg_overall}（${rs.total}件）`,
+      });
+    }
+    if (rs.avg_access && rs.avg_access < 3.0) {
+      signals.push({
+        key: "access_note",
+        type: "info",
+        label: "アクセス注意",
+        detail: "移動時間に余裕を持つことをおすすめします",
+      });
+    }
+  }
+
   // 優先度ソート: urgent > caution > info > positive
   const TYPE_ORDER = { urgent: 0, caution: 1, info: 2, positive: 3 };
   signals.sort(

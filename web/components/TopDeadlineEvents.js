@@ -46,8 +46,8 @@ export default function TopDeadlineEvents({ events = [] }) {
     <section className="max-w-6xl mx-auto px-4 py-10">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-bold" style={{ color: "#323433" }}>締切間近の大会</h2>
-          <p className="text-xs font-medium mt-0.5" style={{ color: "#323433" }}>エントリー締切が近い大会をチェック</p>
+          <h2 className="text-lg font-bold" style={{ color: "#1a1a1a" }}>締切間近の大会</h2>
+          <p className="text-xs font-medium mt-0.5" style={{ color: "#1a1a1a" }}>エントリー締切が近い大会をチェック</p>
         </div>
         <Link href="/marathon?sort=entry_end_date" className="text-xs text-blue-600 hover:text-blue-800 font-medium">
           もっと見る →
@@ -63,12 +63,12 @@ export default function TopDeadlineEvents({ events = [] }) {
               className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md hover:border-blue-200 transition-all group"
             >
               <div className="flex items-start justify-between gap-2 mb-2">
-                <h3 className="text-sm font-bold group-hover:text-blue-700 transition-colors line-clamp-2 flex-1" style={{ color: "#323433" }}>
+                <h3 className="text-sm font-bold group-hover:text-blue-700 transition-colors line-clamp-2 flex-1" style={{ color: "#1a1a1a" }}>
                   <SportIcon sportType={ev.sport_type} /> {ev.title}
                 </h3>
                 <DeadlineBadge days={days} />
               </div>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-medium" style={{ color: "#323433" }}>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-medium" style={{ color: "#1a1a1a" }}>
                 <span>開催 {formatDate(ev.event_date)}</span>
                 <span>締切 {formatDate(ev.entry_end_date)}</span>
                 {ev.prefecture && <span>{ev.prefecture}</span>}

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { DISTANCE_SLUGS, DISTANCE_TO_API_KEY, PREFECTURE_SLUGS } from "@/lib/seo-mappings";
 import { getEventsByDistance } from "@/lib/seo-queries";
+import { REGION_SLUGS } from "@/lib/seo-config";
 import SeoEventList from "@/components/SeoEventList";
 
 export async function generateMetadata({ params }) {
@@ -12,7 +13,7 @@ export async function generateMetadata({ params }) {
     title: `${info.label}大会`,
     description: info.description,
     openGraph: {
-      title: `${info.label}大会 | 大会ナビ`,
+      title: `${info.label}大会 | スポ活`,
       description: info.description,
       type: "website",
     },
@@ -43,6 +44,16 @@ export default async function DistancePage({ params }) {
       href: `/marathon/prefecture/${slug}`,
     });
   }
+  // 地方×距離クロスページ
+  for (const [rSlug, rInfo] of Object.entries(REGION_SLUGS)) {
+    relatedLinks.push({
+      label: `${rInfo.label}の${info.label}`,
+      href: `/marathon/region/${rSlug}/${distance}`,
+    });
+  }
+  // テーマ別への導線
+  relatedLinks.push({ label: "初心者向け", href: "/marathon/theme/beginner" });
+  relatedLinks.push({ label: "募集中の大会", href: "/marathon/theme/open" });
 
   const apiKey = DISTANCE_TO_API_KEY[distance];
 

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
+import EmptyState from "@/components/EmptyState";
 
 // ─── 通知タイプ設定（クライアント用インライン） ──────────
 
@@ -258,18 +259,20 @@ export default function NotificationsPage() {
           ))}
         </div>
       ) : notifications.length === 0 ? (
-        <div className="card p-12 text-center">
-          <p className="text-gray-400 text-sm">
-            {unreadOnly ? "未読の通知はありません" : "通知はありません"}
-          </p>
-          {unreadOnly && (
-            <button
-              onClick={() => setUnreadOnly(false)}
-              className="inline-block mt-3 text-sm text-blue-600 hover:text-blue-800"
-            >
-              すべての通知を表示 →
-            </button>
-          )}
+        <div className="card">
+          <EmptyState
+            preset="notifications"
+            title={unreadOnly ? "未読の通知はありません" : undefined}
+          >
+            {unreadOnly && (
+              <button
+                onClick={() => setUnreadOnly(false)}
+                className="inline-block mt-3 text-sm text-blue-600 hover:text-blue-800"
+              >
+                すべての通知を表示 →
+              </button>
+            )}
+          </EmptyState>
         </div>
       ) : (
         <>

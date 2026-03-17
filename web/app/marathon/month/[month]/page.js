@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getMonthLabel, getMonthDescription, DISTANCE_SLUGS, PREFECTURE_SLUGS } from "@/lib/seo-mappings";
 import { getEventsByMonth } from "@/lib/seo-queries";
+import { SEASON_SLUGS } from "@/lib/seo-config";
 import SeoEventList from "@/components/SeoEventList";
 
 export async function generateMetadata({ params }) {
@@ -12,7 +13,7 @@ export async function generateMetadata({ params }) {
     title: `${label}開催のマラソン大会`,
     description: getMonthDescription(month),
     openGraph: {
-      title: `${label}開催のマラソン大会 | 大会ナビ`,
+      title: `${label}開催のマラソン大会 | スポ活`,
       description: getMonthDescription(month),
       type: "website",
     },
@@ -49,6 +50,15 @@ export default async function MonthPage({ params }) {
       href: `/marathon/prefecture/${slug}`,
     });
   }
+  // 季節ページへの導線
+  for (const [sSlug, sInfo] of Object.entries(SEASON_SLUGS)) {
+    if (sInfo.months.includes(m)) {
+      relatedLinks.push({ label: `${sInfo.label}の大会一覧`, href: `/marathon/season/${sSlug}` });
+    }
+  }
+  // テーマ別への導線
+  relatedLinks.push({ label: "初心者向け", href: "/marathon/theme/beginner" });
+  relatedLinks.push({ label: "募集中の大会", href: "/marathon/theme/open" });
 
   return (
     <SeoEventList

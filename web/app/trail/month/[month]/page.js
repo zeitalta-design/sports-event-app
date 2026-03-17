@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getMonthLabel, getMonthDescription, PREFECTURE_SLUGS } from "@/lib/seo-mappings";
+import { SEASON_SLUGS } from "@/lib/seo-config";
 import { getEventsByMonth } from "@/lib/seo-queries";
 import SeoEventList from "@/components/SeoEventList";
 
@@ -17,7 +18,7 @@ export async function generateMetadata({ params }) {
     title: `${label}開催のトレイルラン大会`,
     description: getMonthDescription(month, "trail"),
     openGraph: {
-      title: `${label}開催のトレイルラン大会 | 大会ナビ`,
+      title: `${label}開催のトレイルラン大会 | スポ活`,
       description: getMonthDescription(month, "trail"),
       type: "website",
     },
@@ -52,6 +53,14 @@ export default async function TrailMonthPage({ params }) {
       href: `/trail/prefecture/${slug}`,
     });
   }
+  // Phase118: 季節・テーマ・距離への導線
+  for (const [sSlug, sInfo] of Object.entries(SEASON_SLUGS)) {
+    if (sInfo.months.includes(m)) {
+      relatedLinks.push({ label: `${sInfo.label}のトレイル`, href: `/trail/season/${sSlug}` });
+    }
+  }
+  relatedLinks.push({ label: "初心者向け", href: "/trail/theme/beginner" });
+  relatedLinks.push({ label: "募集中", href: "/trail/theme/open" });
   // Phase54: ランキング導線
   relatedLinks.push({ label: "🔥 トレイル人気ランキング", href: "/trail/ranking" });
   // マラソン同月へのクロスリンク

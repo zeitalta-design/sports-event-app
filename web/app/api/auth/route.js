@@ -5,6 +5,7 @@ import {
   loginUser,
   logoutUser,
 } from "@/lib/auth";
+import { extractRequestInfo } from "@/lib/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -31,18 +32,13 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const { action } = body;
+    const { ipAddress, userAgent } = extractRequestInfo(request);
 
     if (action === "signup") {
       const { email, password, name } = body;
       if (!email || !password) {
         return NextResponse.json(
           { error: "メールアドレスとパスワードは必須です" },
-          { status: 400 }
-        );
-      }
-      if (password.length < 6) {
-        return NextResponse.json(
-          { error: "パスワードは6文字以上必要です" },
           { status: 400 }
         );
       }
@@ -61,7 +57,7 @@ export async function POST(request) {
           { status: 400 }
         );
       }
-      const result = await loginUser({ email, password });
+      const result = await loginUser({ email, password, ipAddress, userAgent });
       if (result.error) {
         return NextResponse.json({ error: result.error }, { status: 401 });
       }

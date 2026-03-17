@@ -60,4 +60,21 @@ export const EVENTS = {
   COMPARE_REMOVE: "compare_remove",
   COMPARE_VIEW: "compare_view",
   COMPARE_CLEAR: "compare_clear",
+
+  // Phase117: SEO拡張計測
+  SEO_PAGE_VIEW: "seo_page_view",           // SEOページ流入（page_type, slug）
+  SEO_LIST_DETAIL: "seo_list_detail",         // 一覧→詳細遷移
+  SEO_LIST_SAVE: "seo_list_save",             // 一覧→保存
+  SEO_LIST_COMPARE: "seo_list_compare",       // 一覧→比較
+  SEO_LIST_NOTIFY: "seo_list_notify",         // 一覧→通知
+  SEO_INTERNAL_LINK: "seo_internal_link",     // 内部リンククリック
+  SEO_CIRCULATION: "seo_circulation",         // 回遊セクションクリック
+  SEO_CATEGORY_CLICK: "seo_category_click",   // カテゴリ導線クリック
+
+  // Phase126: マルチスポーツ計測
+  SPORT_SWITCH: "sport_switch",               // スポーツ切替（from_sport, to_sport, context）
+  SPORT_LIST_VIEW: "sport_list_view",         // スポーツ一覧ページビュー（sport_type）
+  SPORT_FILTER_CHANGE: "sport_filter_change", // スポーツフィルタ変更（sport_type, page）
+  RANKING_SPORT_FILTER: "ranking_sport_filter", // ランキングのスポーツフィルタ
+  CALENDAR_SPORT_FILTER: "calendar_sport_filter", // カレンダーのスポーツフィルタ
 };

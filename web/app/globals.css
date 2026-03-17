@@ -2,7 +2,7 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #1a1a2e;
+  --foreground: #1a1a1a;
   --primary-50: #eff6ff;
   --primary-100: #dbeafe;
   --primary-500: #3b82f6;
@@ -15,15 +15,19 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-noto-sans-jp);
+  --font-mono: monospace;
 }
 
 body {
   background: #f5f5f5;
   color: var(--foreground);
-  font-family: var(--font-geist-sans), "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  font-family: var(--font-noto-sans-jp), "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic Medium", "Yu Gothic", "Meiryo", sans-serif;
   -webkit-font-smoothing: antialiased;
+  font-size: 15px;
+  line-height: 1.8;
+  font-feature-settings: "palt";
+  letter-spacing: 0.02em;
 }
 
 .card {
@@ -31,40 +35,40 @@ body {
 }
 
 .section-title {
-  @apply text-lg font-bold text-gray-900 tracking-tight;
+  @apply text-xl font-bold text-gray-900 tracking-tight;
 }
 
 .btn-primary {
-  @apply px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-lg
+  @apply px-5 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-lg
          hover:bg-blue-700 active:bg-blue-800 transition-colors
          disabled:opacity-40 disabled:cursor-not-allowed;
 }
 
 .btn-secondary {
-  @apply px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg
+  @apply px-4 py-2 bg-gray-100 text-gray-800 text-sm font-medium rounded-lg
          hover:bg-gray-200 active:bg-gray-300 transition-colors;
 }
 
 .badge {
-  @apply inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded;
+  @apply inline-flex items-center text-xs font-bold px-2.5 py-1 rounded;
 }
 .badge-green { @apply bg-green-50 text-green-700; }
 .badge-blue { @apply bg-blue-50 text-blue-700; }
 .badge-amber { @apply bg-amber-50 text-amber-700; }
 .badge-red { @apply bg-red-50 text-red-700; }
-.badge-gray { @apply bg-gray-100 text-gray-600; }
+.badge-gray { @apply bg-gray-100 text-gray-700; }
 
 .prose-custom h2 {
-  @apply text-lg font-bold text-gray-900 mb-3 mt-0;
+  @apply text-xl font-bold text-gray-900 mb-4 mt-0;
 }
 .prose-custom p {
-  @apply text-sm text-gray-600 leading-relaxed mb-2;
+  @apply text-base text-gray-700 leading-[1.9] mb-3;
 }
 .prose-custom ul {
-  @apply list-disc list-inside text-sm text-gray-600 space-y-1 mb-2 ml-2;
+  @apply list-disc list-inside text-base text-gray-700 space-y-1.5 mb-3 ml-2;
 }
 .prose-custom li {
-  @apply leading-relaxed;
+  @apply leading-[1.9];
 }
 
 /* 横スクロールバー非表示 */

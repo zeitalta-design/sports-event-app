@@ -1,23 +1,27 @@
 /**
  * サイト共通設定（ブランド定義）
  * サービス名やURLをここに集約し、各所から参照する
+ *
+ * Phase221: ブランド統一 — 「大会ナビ」→「スポ活」
  */
 
 export const siteConfig = {
   /** サービス名（日本語） */
-  siteName: "大会ナビ",
+  siteName: "スポ活",
   /** サービス名（英語） */
-  siteNameEn: "TaikaiNavi",
+  siteNameEn: "SpoKatsu",
   /** サービス説明 */
   siteDescription: "全国のスポーツ大会を探せる検索・通知サービス",
   /** キャッチコピー */
   tagline: "全国のスポーツ大会を探す",
   /** サイトURL */
   siteUrl: process.env.APP_BASE_URL || "http://localhost:3001",
+  /** ロゴ画像パス */
+  logoImage: "/logo-banner.png",
   /** メール送信者名 */
-  mailFrom: process.env.MAIL_FROM || "大会ナビ <noreply@taikainavi.com>",
+  mailFrom: process.env.MAIL_FROM || "スポ活 <noreply@spokatsu.com>",
   /** メール件名プレフィックス */
-  emailPrefix: "【大会ナビ】",
+  emailPrefix: "【スポ活】",
   /** メールフッター署名 */
-  emailSignature: "大会ナビ — スポーツ大会検索・通知サービス",
+  emailSignature: "スポ活 — スポーツ大会検索・通知サービス",
 };

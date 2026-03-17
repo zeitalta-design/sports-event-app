@@ -13,6 +13,12 @@ import { getDisplayEntryStatus } from "@/lib/entry-status";
 import { getEntryHistorySummary } from "@/lib/entry-history";
 import { getEntryUrgencyMeta } from "@/lib/entry-urgency";
 import { getFreshnessInfo } from "@/lib/freshness";
+import { calculateTrustScore } from "@/lib/event-trust-score";
+import { getEventHistoryTimeline, estimateParticipantCount } from "@/lib/event-history-service";
+import { getEventReviewSummary, generateReviewInsights } from "@/lib/review-service";
+import { getEventResultsSummary } from "@/lib/results-service";
+import { getEventHeroPhoto, getEventGalleryPhotos, getEventPhotoCount } from "@/lib/photo-service";
+import { getEventEngagement } from "@/lib/event-engagement-rate";
 
 // ─── JSON安全パース ──────────────────────────
 
@@ -54,12 +60,36 @@ export function getMarathonDetailPageData(id) {
     .prepare("SELECT * FROM marathon_details WHERE marathon_id = ?")
     .get(id);
 
-  // レビュー取得（Phase55）
+  // レビュー取得（Phase55→Phase138拡張）
   let reviews = [];
   try {
     reviews = db
-      .prepare("SELECT * FROM event_reviews WHERE event_id = ? ORDER BY created_at DESC LIMIT 20")
+      .prepare("SELECT * FROM event_reviews WHERE event_id = ? AND (status = 'published' OR status IS NULL) ORDER BY created_at DESC LIMIT 20")
       .all(id);
+  } catch {}
+
+  // Phase142: 口コミサマリー・要約
+  let reviewSummary = null;
+  let reviewInsights = [];
+  try {
+    reviewSummary = getEventReviewSummary(id);
+    reviewInsights = generateReviewInsights(id);
+  } catch {}
+
+  // Phase152: 大会結果サマリー
+  let resultsSummary = null;
+  try {
+    resultsSummary = getEventResultsSummary(id);
+  } catch {}
+
+  // Phase159: 大会写真
+  let heroPhoto = null;
+  let galleryData = { photos: [], grouped: {} };
+  let photoCount = 0;
+  try {
+    heroPhoto = getEventHeroPhoto(id);
+    galleryData = getEventGalleryPhotos(id, 12);
+    photoCount = getEventPhotoCount(id);
   } catch {}
 
   // 締切履歴・緊急度
@@ -71,12 +101,12 @@ export function getMarathonDetailPageData(id) {
   } catch {}
 
   // 統合オブジェクトを構築
-  return buildPageData(event, races, detail, historySummary, urgencyMeta, reviews);
+  return buildPageData(event, races, detail, historySummary, urgencyMeta, reviews, reviewSummary, reviewInsights, resultsSummary, heroPhoto, galleryData, photoCount);
 }
 
 // ─── データ統合 ──────────────────────────────
 
-function buildPageData(event, races, detail, historySummary, urgencyMeta, reviews) {
+function buildPageData(event, races, detail, historySummary, urgencyMeta, reviews, reviewSummary, reviewInsights, resultsSummary, heroPhoto, galleryData, photoCount) {
   const d = detail || {};
 
   return {
@@ -112,6 +142,8 @@ function buildPageData(event, races, detail, historySummary, urgencyMeta, review
     hero_image_url: event.hero_image_url,
     scraped_at: event.scraped_at,
     source_site: event.source_site,
+    source_priority: d.source_priority || "runnet",
+    moshicom_url: d.moshicom_url || null,
     sport_type: event.sport_type,
     latitude: event.latitude || null,
     longitude: event.longitude || null,
@@ -183,6 +215,14 @@ function buildPageData(event, races, detail, historySummary, urgencyMeta, review
 
     // === Phase55: 詳細ページ情報拡充 ===
     reviews: reviews || [],
+    reviewSummary: reviewSummary || null,
+    reviewInsights: reviewInsights || [],
+    resultsSummary: resultsSummary || null,
+    // Phase159: 写真データ
+    heroPhoto: heroPhoto || null,
+    galleryPhotos: galleryData?.photos || [],
+    galleryGrouped: galleryData?.grouped || {},
+    photoCount: photoCount || 0,
     registration_requirements_text: d.registration_requirements_text || null,
     health_management_text: d.health_management_text || null,
     terms_text: d.terms_text || null,
@@ -227,6 +267,16 @@ function buildPageData(event, races, detail, historySummary, urgencyMeta, review
       lastVerifiedAt: event.last_verified_at,
       scrapedAt: event.scraped_at,
     }),
+
+    // === 信頼スコア（Phase188） ===
+    trustScore: (() => { try { return calculateTrustScore(event.id); } catch { return null; } })(),
+
+    // === 大会履歴・規模（Phase189-190） ===
+    eventHistory: (() => { try { return getEventHistoryTimeline(event.id); } catch { return null; } })(),
+    participantCount: (() => { try { return estimateParticipantCount(event.id); } catch { return null; } })(),
+
+    // === エンゲージメント指標（Phase194） ===
+    engagement: (() => { try { return getEventEngagement(event.id); } catch { return null; } })(),
 
     // === 相互検証（Phase39） ===
     verification_conflict: event.verification_conflict || 0,

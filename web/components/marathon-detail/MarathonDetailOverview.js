@@ -9,7 +9,7 @@ export default function MarathonDetailOverview({ data }) {
 
   return (
     <div className="card p-6">
-      <h2 className="text-lg font-bold text-gray-900 mb-4">大会概要</h2>
+      <h2 className="text-xl font-bold text-gray-900 mb-4">大会概要</h2>
       {data.summary && (
         <div className="space-y-4">
           {data.summary.split("\n\n").map((paragraph, i) => (
@@ -27,7 +27,7 @@ export default function MarathonDetailOverview({ data }) {
           {data.description.split("\n\n").map((paragraph, i) => (
             <p
               key={i}
-              className="text-base text-gray-600 leading-[1.9] whitespace-pre-wrap"
+              className="text-base text-gray-800 leading-[1.9] whitespace-pre-wrap"
             >
               {paragraph}
             </p>
@@ -43,7 +43,7 @@ export default function MarathonDetailOverview({ data }) {
             {data.description.split("\n\n").map((paragraph, i) => (
               <p
                 key={i}
-                className="text-sm text-gray-500 leading-[1.8] whitespace-pre-wrap"
+                className="text-sm text-gray-600 leading-[1.8] whitespace-pre-wrap"
               >
                 {paragraph}
               </p>

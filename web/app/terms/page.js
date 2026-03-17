@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "利用規約",
-  description: "大会ナビ（スポーツ大会検索・通知サービス）の利用規約です。",
+  description: "スポ活（スポーツ大会検索・通知サービス）の利用規約です。",
 };
 
 export default function TermsPage() {
@@ -15,7 +15,7 @@ export default function TermsPage() {
         <section>
           <h2>第1条（サービス概要）</h2>
           <p>
-            大会ナビ（以下「本サービス」）は、全国のスポーツ大会・マラソン大会に関する情報を
+            スポ活（以下「本サービス」）は、全国のスポーツ大会・マラソン大会に関する情報を
             検索・比較・通知するための支援サービスです。
           </p>
           <p>

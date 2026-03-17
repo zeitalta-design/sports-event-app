@@ -24,8 +24,8 @@ export default function TopNewEvents({ events = [] }) {
     <section className="max-w-6xl mx-auto px-4 py-10">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-bold" style={{ color: "#323433" }}>注目の大会</h2>
-          <p className="text-xs font-medium mt-0.5" style={{ color: "#323433" }}>最近更新された大会情報</p>
+          <h2 className="text-lg font-bold" style={{ color: "#1a1a1a" }}>注目の大会</h2>
+          <p className="text-xs font-medium mt-0.5" style={{ color: "#1a1a1a" }}>最近更新された大会情報</p>
         </div>
         <Link href="/marathon" className="text-xs text-blue-600 hover:text-blue-800 font-medium">
           すべて見る →
@@ -38,10 +38,10 @@ export default function TopNewEvents({ events = [] }) {
             href={getEventDetailPath(ev)}
             className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md hover:border-blue-200 transition-all group"
           >
-            <h3 className="text-sm font-bold group-hover:text-blue-700 transition-colors line-clamp-2 mb-2" style={{ color: "#323433" }}>
+            <h3 className="text-sm font-bold group-hover:text-blue-700 transition-colors line-clamp-2 mb-2" style={{ color: "#1a1a1a" }}>
               <SportIcon sportType={ev.sport_type} /> {ev.title}
             </h3>
-            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-medium" style={{ color: "#323433" }}>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-medium" style={{ color: "#1a1a1a" }}>
               <span>{formatDate(ev.event_date)}</span>
               {ev.prefecture && <span>{ev.prefecture}</span>}
               {ev.entry_status && ev.entry_status !== "unknown" && (

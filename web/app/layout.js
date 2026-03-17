@@ -1,13 +1,18 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Analytics from "@/components/Analytics";
 import CompareBar from "@/components/CompareBar";
+import DataTrackInit from "@/components/DataTrackInit";
 import { siteConfig } from "@/lib/site-config";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const notoSansJP = Noto_Sans_JP({
+  variable: "--font-noto-sans-jp",
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  display: "swap",
+});
 
 export const metadata = {
   metadataBase: new URL(siteConfig.siteUrl),
@@ -15,7 +20,7 @@ export const metadata = {
     default: `${siteConfig.siteName} | 全国のスポーツ大会を探す`,
     template: `%s | ${siteConfig.siteName}`,
   },
-  description: "大会ナビは、全国のスポーツ大会を検索・比較・通知できるサービスです。まずはマラソン大会検索に対応。",
+  description: "スポ活は、全国のスポーツ大会を検索・比較・通知できるサービスです。まずはマラソン大会検索に対応。",
   openGraph: {
     siteName: siteConfig.siteName,
     locale: "ja_JP",
@@ -33,11 +38,45 @@ export const metadata = {
   },
 };
 
+// Phase222: 構造化データ（JSON-LD）
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      name: siteConfig.siteName,
+      alternateName: siteConfig.siteNameEn,
+      url: siteConfig.siteUrl,
+      description: siteConfig.siteDescription,
+      inLanguage: "ja",
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: `${siteConfig.siteUrl}/marathon?q={search_term_string}`,
+        },
+        "query-input": "required name=search_term_string",
+      },
+    },
+    {
+      "@type": "Organization",
+      name: siteConfig.siteName,
+      url: siteConfig.siteUrl,
+      description: siteConfig.siteDescription,
+    },
+  ],
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="ja">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}>
+      <body className={`${notoSansJP.variable} antialiased min-h-screen flex flex-col`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <Analytics />
+        <DataTrackInit />
         <Header />
         <main className="flex-1 pb-14">{children}</main>
         <Footer />

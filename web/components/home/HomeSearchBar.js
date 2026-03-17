@@ -9,7 +9,10 @@ const MONTHS = Array.from({ length: 12 }, (_, i) => ({
   label: `${i + 1}月`,
 }));
 
-// クイック条件チップ（常時表示）
+/**
+ * おすすめチップ: 一休の「ゴルフにおすすめ ×」のように、
+ * 検索枠の上にタグとして表示し、何を検索できるか一目でわかる
+ */
 const QUICK_CHIPS = [
   { key: "marathon",    label: "マラソン" },
   { key: "trail",       label: "トレイル" },
@@ -18,7 +21,6 @@ const QUICK_CHIPS = [
   { key: "walking",     label: "ウォーキング" },
 ];
 
-// 絞り込みパネル内の追加条件
 const FILTER_SECTIONS = [
   {
     title: "競技ジャンル",
@@ -87,22 +89,17 @@ export default function HomeSearchBar({ totalEvents = 0 }) {
     e.preventDefault();
     const params = new URLSearchParams();
 
-    // キーワード: 基本キーワード + 選択チップ + フィルタ条件を結合
     const parts = [];
     if (keyword) parts.push(keyword);
 
-    // クイックチップ → keywordに追加
     selectedChips.forEach((chip) => {
       const found = QUICK_CHIPS.find((c) => c.key === chip);
       if (found) parts.push(found.label);
     });
 
-    // フィルタ内のジャンル・レベル → keywordに追加
     filterChecks.forEach((key) => {
-      // distance系は別パラメータ
       const distItem = FILTER_SECTIONS.find((s) => s.key === "distance")?.items.find((i) => i.key === key);
       if (distItem) return;
-      // status系も別処理
       if (key === "open") return;
       parts.push(key);
     });
@@ -111,7 +108,6 @@ export default function HomeSearchBar({ totalEvents = 0 }) {
     if (prefecture) params.set("prefecture", prefecture);
     if (month) params.set("month", month);
 
-    // distance
     const distKeys = FILTER_SECTIONS.find((s) => s.key === "distance")?.items
       .filter((i) => filterChecks.has(i.key))
       .map((i) => i.key) || [];
@@ -123,53 +119,65 @@ export default function HomeSearchBar({ totalEvents = 0 }) {
   const activeCount = selectedChips.size + filterChecks.size;
 
   return (
-    <section className="relative -mt-10 sm:-mt-12 z-10 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-5 sm:p-7">
-          {/* 見出し */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <section className="relative -mt-14 sm:-mt-16 z-10 px-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 sm:p-8">
+
+          {/* ヘッダー行: 検索アイコン + タイトル + 件数 */}
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2.5">
+              <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
-              <h2 className="text-base font-bold" style={{ color: "#333333" }}>大会を探す</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">大会を探す</h2>
             </div>
             {totalEvents > 0 && (
-              <span className="text-xs" style={{ color: "#333333" }}>
-                <span className="font-semibold text-blue-600">{totalEvents.toLocaleString()}</span> 件掲載中
+              <span className="text-sm text-gray-600">
+                <span className="font-bold text-blue-600 text-base">{totalEvents.toLocaleString()}</span>
+                {" "}件掲載中
               </span>
             )}
           </div>
 
           <form onSubmit={handleSearch}>
-            {/* 中段: キーワード・エリア・開催月 */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            {/* メイン入力エリア: ラベル + アイコン付き */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+              {/* キーワード */}
               <div>
-                <label className="block text-[11px] font-medium mb-1.5 tracking-wide" style={{ color: "#333333" }}>
+                <label className="flex items-center gap-1.5 text-sm font-bold mb-2 text-gray-800">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                  </svg>
                   キーワード
                 </label>
                 <input
                   type="text"
-                  placeholder="大会名・会場名で検索"
+                  placeholder="東京マラソン、横浜…"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200
+                  className="w-full px-4 py-3 text-base rounded-xl border border-gray-200
                              focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400
-                             placeholder:text-gray-300 transition-shadow"
-                  style={{ color: "#333333" }}
+                             placeholder:text-gray-400 transition-shadow"
+                  style={{ color: "#1a1a1a" }}
                 />
               </div>
+
+              {/* エリア */}
               <div>
-                <label className="block text-[11px] font-medium mb-1.5 tracking-wide" style={{ color: "#333333" }}>
+                <label className="flex items-center gap-1.5 text-sm font-bold mb-2 text-gray-800">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                  </svg>
                   エリア
                 </label>
                 <select
                   value={prefecture}
                   onChange={(e) => setPrefecture(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200
+                  className="w-full px-4 py-3 text-base rounded-xl border border-gray-200
                              focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400
                              bg-white transition-shadow"
-                  style={{ color: "#333333" }}
+                  style={{ color: prefecture ? "#1a1a1a" : "#9ca3af" }}
                 >
                   <option value="">都道府県を選択</option>
                   {PREFECTURES.map((p) => (
@@ -177,17 +185,22 @@ export default function HomeSearchBar({ totalEvents = 0 }) {
                   ))}
                 </select>
               </div>
+
+              {/* 開催月 */}
               <div>
-                <label className="block text-[11px] font-medium mb-1.5 tracking-wide" style={{ color: "#333333" }}>
+                <label className="flex items-center gap-1.5 text-sm font-bold mb-2 text-gray-800">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                  </svg>
                   開催月
                 </label>
                 <select
                   value={month}
                   onChange={(e) => setMonth(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-gray-200
+                  className="w-full px-4 py-3 text-base rounded-xl border border-gray-200
                              focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400
                              bg-white transition-shadow"
-                  style={{ color: "#333333" }}
+                  style={{ color: month ? "#1a1a1a" : "#9ca3af" }}
                 >
                   <option value="">月を選択</option>
                   {MONTHS.map((m) => (
@@ -197,8 +210,8 @@ export default function HomeSearchBar({ totalEvents = 0 }) {
               </div>
             </div>
 
-            {/* 下段: クイックチップ + 絞り込みボタン */}
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
+            {/* クイックチップ + 絞り込み */}
+            <div className="flex items-center gap-2.5 mb-5 flex-wrap">
               {QUICK_CHIPS.map((chip) => {
                 const active = selectedChips.has(chip.key);
                 return (
@@ -206,17 +219,16 @@ export default function HomeSearchBar({ totalEvents = 0 }) {
                     key={chip.key}
                     type="button"
                     onClick={() => toggleChip(chip.key)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-full border transition-all ${
                       active
                         ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                         : "bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50"
                     }`}
-                    style={active ? undefined : { color: "#333333" }}
+                    style={active ? undefined : { color: "#1a1a1a" }}
                     aria-pressed={active}
-                    aria-label={`${chip.label}で絞り込み`}
                   >
                     {active && (
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     )}
@@ -225,57 +237,55 @@ export default function HomeSearchBar({ totalEvents = 0 }) {
                 );
               })}
 
-              {/* 絞り込みボタン */}
               <button
                 type="button"
                 onClick={() => setFilterOpen(!filterOpen)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
+                className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-full border transition-all ${
                   filterOpen || filterChecks.size > 0
                     ? "bg-blue-50 text-blue-700 border-blue-300"
                     : "bg-gray-50 border-gray-200 hover:border-gray-300"
                 }`}
-                style={filterOpen || filterChecks.size > 0 ? undefined : { color: "#333333" }}
+                style={filterOpen || filterChecks.size > 0 ? undefined : { color: "#1a1a1a" }}
                 aria-expanded={filterOpen}
-                aria-label="詳細条件で絞り込み"
               >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
                 </svg>
                 絞り込み
                 {filterChecks.size > 0 && (
-                  <span className="ml-0.5 w-4 h-4 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold rounded-full">
+                  <span className="ml-0.5 w-5 h-5 flex items-center justify-center bg-blue-600 text-white text-xs font-bold rounded-full">
                     {filterChecks.size}
                   </span>
                 )}
               </button>
             </div>
 
-            {/* 絞り込みパネル（展開時） */}
+            {/* 絞り込みパネル */}
             {filterOpen && (
-              <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="mb-5 p-5 bg-gray-50 rounded-xl border border-gray-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
                   {FILTER_SECTIONS.map((section) => (
                     <div key={section.key}>
-                      <p className="text-[11px] font-bold mb-2" style={{ color: "#333333" }}>
+                      <p className="text-xs font-bold mb-2.5 text-gray-700">
                         {section.title}
                       </p>
-                      <div className="space-y-1.5">
+                      <div className="space-y-2">
                         {section.items.map((item) => {
                           const checked = filterChecks.has(item.key);
                           return (
                             <label
                               key={item.key}
-                              className="flex items-center gap-2 cursor-pointer group"
+                              className="flex items-center gap-2.5 cursor-pointer group"
                             >
                               <input
                                 type="checkbox"
                                 checked={checked}
                                 onChange={() => toggleFilter(item.key)}
-                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/40"
+                                className="w-4.5 h-4.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500/40"
                               />
                               <span
-                                className="text-xs group-hover:text-blue-600 transition-colors"
-                                style={{ color: "#333333" }}
+                                className="text-sm group-hover:text-blue-600 transition-colors"
+                                style={{ color: "#1a1a1a" }}
                               >
                                 {item.label}
                               </span>
@@ -287,11 +297,11 @@ export default function HomeSearchBar({ totalEvents = 0 }) {
                   ))}
                 </div>
                 {filterChecks.size > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 flex justify-end">
+                  <div className="mt-4 pt-3 border-t border-gray-200 flex justify-end">
                     <button
                       type="button"
                       onClick={() => setFilterChecks(new Set())}
-                      className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                      className="text-sm text-gray-400 hover:text-red-500 transition-colors"
                     >
                       条件をクリア
                     </button>
@@ -300,15 +310,16 @@ export default function HomeSearchBar({ totalEvents = 0 }) {
               </div>
             )}
 
+            {/* 検索ボタン — 大きく目立つ */}
             <button
               type="submit"
-              className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl
-                         hover:bg-blue-700 active:bg-blue-800 transition-colors text-sm
-                         shadow-sm hover:shadow-md"
+              className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl
+                         hover:bg-blue-700 active:bg-blue-800 transition-colors text-base
+                         shadow-md hover:shadow-lg"
             >
               大会を検索する
               {activeCount > 0 && (
-                <span className="ml-1.5 text-blue-200">({activeCount}件の条件)</span>
+                <span className="ml-2 text-blue-200">({activeCount}件の条件)</span>
               )}
             </button>
           </form>

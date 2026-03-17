@@ -1,16 +1,28 @@
 import { ImageResponse } from "next/og";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 export const runtime = "nodejs";
-export const alt = "大会ナビ — 全国のスポーツ大会を探す";
+export const alt = "スポ活 — 全国のスポーツ大会を探す";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default function Image() {
+  // ロゴ画像をBase64で読み込み
+  let logoSrc = null;
+  try {
+    const logoPath = join(process.cwd(), "public", "logo-banner.png");
+    const logoData = readFileSync(logoPath);
+    logoSrc = `data:image/png;base64,${logoData.toString("base64")}`;
+  } catch {
+    // ロゴが見つからない場合はテキストフォールバック
+  }
+
   return new ImageResponse(
     (
       <div
         style={{
-          background: "linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)",
+          background: "linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%)",
           width: "100%",
           height: "100%",
           display: "flex",
@@ -20,58 +32,50 @@ export default function Image() {
           fontFamily: "sans-serif",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: 24,
-          }}
-        >
+        {/* ロゴ */}
+        {logoSrc ? (
+          <img
+            src={logoSrc}
+            width={400}
+            height={120}
+            style={{ objectFit: "contain", marginBottom: 32 }}
+          />
+        ) : (
           <div
             style={{
-              width: 80,
-              height: 80,
-              borderRadius: 16,
-              backgroundColor: "white",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 44,
-              fontWeight: 700,
-              color: "#2563eb",
-              marginRight: 20,
-            }}
-          >
-            大
-          </div>
-          <div
-            style={{
-              fontSize: 64,
-              fontWeight: 700,
+              fontSize: 72,
+              fontWeight: 800,
               color: "white",
+              marginBottom: 32,
+              letterSpacing: "0.05em",
             }}
           >
-            大会ナビ
+            スポカツ
           </div>
-        </div>
+        )}
+
+        {/* キャッチコピー */}
         <div
           style={{
-            fontSize: 28,
-            color: "rgba(255,255,255,0.85)",
+            fontSize: 32,
+            color: "rgba(255,255,255,0.9)",
+            fontWeight: 600,
             marginTop: 8,
           }}
         >
           全国のスポーツ大会を探す・比較する・通知を受け取る
         </div>
+
+        {/* URL */}
         <div
           style={{
-            fontSize: 20,
-            color: "rgba(255,255,255,0.6)",
-            marginTop: 24,
+            fontSize: 22,
+            color: "rgba(255,255,255,0.5)",
+            marginTop: 32,
+            letterSpacing: "0.1em",
           }}
         >
-          taikainavi.com
+          spokatsu.com
         </div>
       </div>
     ),

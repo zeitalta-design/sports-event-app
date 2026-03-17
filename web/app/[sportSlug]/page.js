@@ -25,8 +25,15 @@ const DEFAULT_DISTANCES = [
 const SORT_OPTIONS = [
   { key: "event_date", label: "開催日順" },
   { key: "entry_end_date", label: "締切日順" },
+  { key: "entry_status_priority", label: "募集状況優先" },
   { key: "newest", label: "新着順" },
   { key: "popularity", label: "人気順" },
+];
+
+const ENTRY_STATUS_OPTIONS = [
+  { key: "", label: "すべて" },
+  { key: "open", label: "受付中" },
+  { key: "upcoming", label: "受付予定" },
 ];
 
 export default function SportListPage() {
@@ -45,7 +52,7 @@ export default function SportListPage() {
     prefecture: "",
     month: "",
     distance: "",
-    status: "",
+    entry_status: "",
     sort: "event_date",
   });
 
@@ -64,7 +71,7 @@ export default function SportListPage() {
       if (filters.prefecture) params.set("prefecture", filters.prefecture);
       if (filters.month) params.set("month", filters.month);
       if (filters.distance) params.set("distance", filters.distance);
-      if (filters.status) params.set("status", filters.status);
+      if (filters.entry_status) params.set("entry_status", filters.entry_status);
       if (filters.sort) params.set("sort", filters.sort);
 
       const res = await fetch(`/api/events?${params}`);
@@ -120,7 +127,7 @@ export default function SportListPage() {
 
       {/* フィルター */}
       <div className="card p-4 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">キーワード</label>
             <input
@@ -166,6 +173,18 @@ export default function SportListPage() {
             >
               {distances.map((d) => (
                 <option key={d.key} value={d.key}>{d.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">募集状況</label>
+            <select
+              value={filters.entry_status}
+              onChange={(e) => setFilters({ ...filters, entry_status: e.target.value })}
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {ENTRY_STATUS_OPTIONS.map((s) => (
+                <option key={s.key} value={s.key}>{s.label}</option>
               ))}
             </select>
           </div>
@@ -278,7 +297,7 @@ export default function SportListPage() {
         </>
       )}
 
-      {/* Phase54: trail ランキング・回遊導線 */}
+      {/* Phase54/Phase120: trail ランキング・回遊導線 */}
       {sport?.slug === "trail" && (
         <div className="mt-10 pt-8 border-t border-gray-100 space-y-8">
           {/* ランキング・特集カード */}
@@ -293,29 +312,74 @@ export default function SportListPage() {
                   <p className="text-xs text-green-600">閲覧数・お気に入りで人気順に表示</p>
                 </div>
               </a>
-              <a href="/trail/month/4"
+              <a href="/trail/theme/open"
                  className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-xl hover:bg-green-100 hover:border-green-300 transition-all group">
-                <span className="text-2xl">🌸</span>
+                <span className="text-2xl">✅</span>
                 <div>
-                  <p className="text-sm font-bold text-green-800 group-hover:text-green-900">春のトレイル大会</p>
-                  <p className="text-xs text-green-600">4〜5月開催のトレイルラン大会</p>
+                  <p className="text-sm font-bold text-green-800 group-hover:text-green-900">募集中のトレイル大会</p>
+                  <p className="text-xs text-green-600">今すぐエントリーできる大会を表示</p>
                 </div>
+              </a>
+            </div>
+          </div>
+
+          {/* Phase120: 距離から探す */}
+          <div>
+            <h2 className="text-sm font-bold text-gray-700 mb-3">距離から探す</h2>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: "ショート", sub: "〜20km", href: "/trail/distance/short", emoji: "🌿" },
+                { label: "ミドル", sub: "20〜50km", href: "/trail/distance/middle", emoji: "⛰️" },
+                { label: "ロング", sub: "50km〜", href: "/trail/distance/long", emoji: "🏔️" },
+              ].map((d) => (
+                <a key={d.href} href={d.href}
+                   className="flex flex-col items-center gap-1 p-4 bg-gray-50 border border-gray-200 rounded-xl hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition-all text-center">
+                  <span className="text-xl">{d.emoji}</span>
+                  <span className="text-sm font-bold text-gray-800">{d.label}</span>
+                  <span className="text-xs text-gray-500">{d.sub}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Phase120: 地方から探す */}
+          <div>
+            <h2 className="text-sm font-bold text-gray-700 mb-3">地方から探す</h2>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: "北海道", href: "/trail/region/hokkaido" },
+                { label: "東北", href: "/trail/region/tohoku" },
+                { label: "関東", href: "/trail/region/kanto" },
+                { label: "中部", href: "/trail/region/chubu" },
+                { label: "近畿", href: "/trail/region/kinki" },
+                { label: "中国", href: "/trail/region/chugoku" },
+                { label: "四国", href: "/trail/region/shikoku" },
+                { label: "九州・沖縄", href: "/trail/region/kyushu" },
+              ].map((link) => (
+                <a key={link.href} href={link.href}
+                   className="inline-block px-3 py-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-200
+                              rounded-full hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition-all">
+                  {link.label}
+                </a>
+              ))}
+              <a href="/trail/region" className="inline-block px-3 py-1.5 text-xs text-green-600 hover:underline">
+                地方別一覧 →
               </a>
             </div>
           </div>
 
           {/* 季節別開催月 */}
           <div>
-            <h2 className="text-sm font-bold text-gray-700 mb-3">開催月から探す</h2>
+            <h2 className="text-sm font-bold text-gray-700 mb-3">季節・開催月から探す</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: "春", emoji: "🌸", months: [3, 4, 5], highlight: true },
-                { label: "夏", emoji: "☀️", months: [6, 7, 8], highlight: false },
-                { label: "秋", emoji: "🍁", months: [9, 10, 11], highlight: true },
-                { label: "冬", emoji: "❄️", months: [12, 1, 2], highlight: false },
+                { label: "春", emoji: "🌸", months: [3, 4, 5], slug: "spring", highlight: true },
+                { label: "夏", emoji: "☀️", months: [6, 7, 8], slug: "summer", highlight: false },
+                { label: "秋", emoji: "🍁", months: [9, 10, 11], slug: "autumn", highlight: true },
+                { label: "冬", emoji: "❄️", months: [12, 1, 2], slug: "winter", highlight: false },
               ].map((season) => (
                 <div key={season.label} className={`p-3 rounded-xl border ${season.highlight ? "bg-green-50/50 border-green-100" : "bg-gray-50 border-gray-100"}`}>
-                  <p className="text-xs font-bold text-gray-600 mb-2">{season.emoji} {season.label}</p>
+                  <a href={`/trail/season/${season.slug}`} className="text-xs font-bold text-gray-600 mb-2 block hover:text-green-700">{season.emoji} {season.label}の大会 →</a>
                   <div className="flex flex-wrap gap-1.5">
                     {season.months.map((m) => (
                       <a key={m} href={`/trail/month/${m}`}
@@ -330,9 +394,31 @@ export default function SportListPage() {
             </div>
           </div>
 
-          {/* 地域から探す */}
+          {/* Phase120: テーマから探す */}
           <div>
-            <h2 className="text-sm font-bold text-gray-700 mb-3">地域から探す</h2>
+            <h2 className="text-sm font-bold text-gray-700 mb-3">テーマから探す</h2>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: "🔰 初心者向け", href: "/trail/theme/beginner" },
+                { label: "🏔️ 絶景コース", href: "/trail/theme/scenic" },
+                { label: "⏰ 締切間近", href: "/trail/theme/deadline" },
+                { label: "🔥 人気の大会", href: "/trail/theme/popular" },
+              ].map((link) => (
+                <a key={link.href} href={link.href}
+                   className="inline-block px-3 py-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-200
+                              rounded-full hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition-all">
+                  {link.label}
+                </a>
+              ))}
+              <a href="/trail/theme" className="inline-block px-3 py-1.5 text-xs text-green-600 hover:underline">
+                テーマ別一覧 →
+              </a>
+            </div>
+          </div>
+
+          {/* 地域から探す（都道府県） */}
+          <div>
+            <h2 className="text-sm font-bold text-gray-700 mb-3">都道府県から探す</h2>
             <div className="flex flex-wrap gap-2">
               {[
                 { label: "東京都", href: "/trail/prefecture/tokyo" },

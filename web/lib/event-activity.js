@@ -143,13 +143,27 @@ export function getEventActivityMetrics(eventId, days = 30) {
 /**
  * 全大会のアクティビティ集計を一括取得（直近N日）
  * 人気順ランキング用
+ *
+ * Phase220: 30分間のインメモリキャッシュを追加（重いクエリのため）
+ *
  * @param {Object} options
  * @param {number} [options.days=30]
  * @param {number} [options.limit=50]
  * @returns {Map<number, { detail_views: number, favorites: number, entry_clicks: number }>}
  */
+const _metricsCache = { data: null, expiry: 0, key: "" };
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30分
+
 export function getAllEventActivityMetrics({ days = 30, limit = 50 } = {}) {
   try {
+    const cacheKey = `${days}-${limit}`;
+    const now = Date.now();
+
+    // キャッシュが有効ならそのまま返す
+    if (_metricsCache.data && _metricsCache.key === cacheKey && now < _metricsCache.expiry) {
+      return _metricsCache.data;
+    }
+
     const db = getDb();
     const rows = db
       .prepare(
@@ -170,6 +184,11 @@ export function getAllEventActivityMetrics({ days = 30, limit = 50 } = {}) {
       if (row.action_type === "favorite_add") m.favorites = row.cnt;
       if (row.action_type === "entry_click") m.entry_clicks = row.cnt;
     }
+
+    // キャッシュに保存
+    _metricsCache.data = map;
+    _metricsCache.expiry = now + CACHE_TTL_MS;
+    _metricsCache.key = cacheKey;
 
     return map;
   } catch (err) {

@@ -35,8 +35,8 @@ export default function TopFeatureList() {
     <section className="bg-gray-50 py-14">
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-10">
-          <h2 className="text-lg font-bold" style={{ color: "#323433" }}>大会ナビでできること</h2>
-          <p className="text-xs font-medium mt-1" style={{ color: "#323433" }}>探す → 保存する → 通知を受け取る</p>
+          <h2 className="text-lg font-bold" style={{ color: "#1a1a1a" }}>スポ活でできること</h2>
+          <p className="text-xs font-medium mt-1" style={{ color: "#1a1a1a" }}>探す → 保存する → 通知を受け取る</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           {features.map((f) => (
@@ -47,8 +47,8 @@ export default function TopFeatureList() {
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-50 text-blue-600 mb-4">
                 {f.icon}
               </div>
-              <h3 className="font-bold text-sm mb-2" style={{ color: "#323433" }}>{f.title}</h3>
-              <p className="text-xs font-medium leading-relaxed" style={{ color: "#323433" }}>{f.desc}</p>
+              <h3 className="font-bold text-sm mb-2" style={{ color: "#1a1a1a" }}>{f.title}</h3>
+              <p className="text-xs font-medium leading-relaxed" style={{ color: "#1a1a1a" }}>{f.desc}</p>
             </div>
           ))}
         </div>

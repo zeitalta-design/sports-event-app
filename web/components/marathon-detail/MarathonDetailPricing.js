@@ -14,7 +14,7 @@ export default function MarathonDetailPricing({ pricing, races }) {
 
   return (
     <div className="card p-6">
-      <h2 className="text-lg font-bold text-gray-900 mb-4">種目・参加費</h2>
+      <h2 className="text-xl font-bold text-gray-900 mb-4">種目・参加費</h2>
       <div className="overflow-x-auto -mx-2">
         {hasPricing ? (
           <PricingTable items={pricing} />
@@ -31,13 +31,13 @@ function PricingTable({ items }) {
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b-2 border-gray-200">
-          <th className="text-left py-3 px-3 text-sm text-gray-500 font-semibold">
+          <th className="text-left py-3 px-3 text-sm text-gray-700 font-bold">
             種目
           </th>
-          <th className="text-left py-3 px-3 text-sm text-gray-500 font-semibold">
+          <th className="text-left py-3 px-3 text-sm text-gray-700 font-bold">
             参加費
           </th>
-          <th className="text-left py-3 px-3 text-sm text-gray-500 font-semibold">
+          <th className="text-left py-3 px-3 text-sm text-gray-700 font-bold">
             備考
           </th>
         </tr>
@@ -54,7 +54,7 @@ function PricingTable({ items }) {
             <td className="py-3 px-3 text-gray-800 font-medium">
               {item.fee || "-"}
             </td>
-            <td className="py-3 px-3 text-gray-500 text-sm">
+            <td className="py-3 px-3 text-gray-600 text-sm">
               {item.note || ""}
             </td>
           </tr>
@@ -72,26 +72,26 @@ function RacesTable({ races }) {
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b-2 border-gray-200">
-          <th className="text-left py-3 px-3 text-sm text-gray-500 font-semibold">
+          <th className="text-left py-3 px-3 text-sm text-gray-700 font-bold">
             種目
           </th>
-          <th className="text-left py-3 px-3 text-sm text-gray-500 font-semibold">
+          <th className="text-left py-3 px-3 text-sm text-gray-700 font-bold">
             距離
           </th>
-          <th className="text-left py-3 px-3 text-sm text-gray-500 font-semibold">
+          <th className="text-left py-3 px-3 text-sm text-gray-700 font-bold">
             参加費
           </th>
-          <th className="text-left py-3 px-3 text-sm text-gray-500 font-semibold">
+          <th className="text-left py-3 px-3 text-sm text-gray-700 font-bold">
             定員
           </th>
-          <th className="text-left py-3 px-3 text-sm text-gray-500 font-semibold">
+          <th className="text-left py-3 px-3 text-sm text-gray-700 font-bold">
             制限時間
           </th>
-          <th className="text-left py-3 px-3 text-sm text-gray-500 font-semibold">
+          <th className="text-left py-3 px-3 text-sm text-gray-700 font-bold">
             スタート
           </th>
           {hasEligibility && (
-            <th className="text-left py-3 px-3 text-sm text-gray-500 font-semibold">
+            <th className="text-left py-3 px-3 text-sm text-gray-700 font-bold">
               参加資格
             </th>
           )}

@@ -1,9 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import NotificationBell from "./NotificationBell";
 import { SPORT_CONFIGS } from "@/lib/sport-config";
+import { siteConfig } from "@/lib/site-config";
 
 export default function Header() {
   const router = useRouter();
@@ -42,15 +44,15 @@ export default function Header() {
   const isLoggedIn = user !== undefined && user !== null;
   const isAdmin = user?.role === "admin";
 
-  // SPORT_CONFIGSからナビリンク生成
-  const sportNavLinks = SPORT_CONFIGS
+  // Phase220: useMemoでナビリンク計算をキャッシュ（SPORT_CONFIGSは静的）
+  const sportNavLinks = useMemo(() => SPORT_CONFIGS
     .filter((s) => s.enabled)
     .sort((a, b) => a.order - b.order)
     .map((s) => ({
       href: `/${s.slug}`,
       label: s.shortLabel || s.label,
       key: s.key,
-    }));
+    })), []);
 
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
@@ -58,10 +60,15 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* 左: ロゴ */}
         <Link href="/" className="flex items-center gap-2 shrink-0 group">
-          <span className="text-2xl font-extrabold text-blue-700 tracking-tight group-hover:text-blue-800 transition-colors">
-            大会ナビ
-          </span>
-          <span className="text-[10px] hidden md:inline border-l border-gray-200 pl-2 ml-0.5 leading-tight" style={{ color: "#333333" }}>
+          <Image
+            src={siteConfig.logoImage}
+            alt={siteConfig.siteName}
+            width={120}
+            height={36}
+            className="h-8 w-auto group-hover:opacity-90 transition-opacity"
+            priority
+          />
+          <span className="text-xs hidden md:inline border-l border-gray-200 pl-2 ml-0.5 leading-tight text-gray-600 font-medium">
             全国のスポーツ大会を探す
           </span>
         </Link>
@@ -111,26 +118,26 @@ export default function Header() {
             </>
           )}
           {isAdmin && (
-            <Link href="/admin/jobs" className="text-orange-600 hover:text-orange-700 transition-colors font-medium text-xs border border-orange-300 rounded px-2 py-0.5">
-              管理
+            <Link href="/admin/ops" className="text-orange-600 hover:text-orange-700 transition-colors font-bold text-xs border border-orange-300 rounded px-2.5 py-1">
+              運営管理
             </Link>
           )}
           <div className="flex items-center gap-2 ml-1 pl-3 border-l border-gray-200">
             {user === undefined ? null : isLoggedIn ? (
               <>
-                <span className="text-xs hidden md:inline" style={{ color: "#333333" }}>
+                <span className="text-sm hidden md:inline text-gray-700 font-medium">
                   {user.name || user.email}
                 </span>
-                <button onClick={handleLogout} className="text-xs hover:text-red-500 transition-colors" style={{ color: "#333333" }}>
+                <button onClick={handleLogout} className="text-sm text-gray-600 hover:text-red-500 transition-colors font-medium">
                   ログアウト
                 </button>
               </>
             ) : (
               <>
-                <Link href="/login" className="hover:text-blue-600 transition-colors font-medium text-sm" style={{ color: "#333333" }}>
+                <Link href="/login" className="text-gray-700 hover:text-blue-600 transition-colors font-bold text-sm">
                   ログイン
                 </Link>
-                <Link href="/signup" className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-xs shadow-sm">
+                <Link href="/signup" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold text-sm shadow-sm">
                   会員登録
                 </Link>
               </>
@@ -141,7 +148,7 @@ export default function Header() {
         {/* モバイルボタン群 */}
         <div className="flex sm:hidden items-center gap-2">
           {sportNavLinks.slice(0, 1).map((link) => (
-            <Link key={link.key} href={link.href} className="hover:text-blue-600 text-xs font-medium" style={{ color: "#333333" }}>
+            <Link key={link.key} href={link.href} className="text-gray-700 hover:text-blue-600 text-sm font-bold">
               {link.label}
             </Link>
           ))}
@@ -183,7 +190,7 @@ export default function Header() {
               <MobileNavLink href="/notifications" label="通知一覧" onClick={() => setMenuOpen(false)} />
               <MobileNavLink href="/notification-settings" label="通知設定" onClick={() => setMenuOpen(false)} />
               {isAdmin && (
-                <MobileNavLink href="/admin/jobs" label="管理画面" onClick={() => setMenuOpen(false)} className="text-orange-600" />
+                <MobileNavLink href="/admin/ops" label="運営管理" onClick={() => setMenuOpen(false)} className="text-orange-600" />
               )}
               <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
                 <span className="text-xs text-gray-400">{user.name || user.email}</span>
@@ -212,12 +219,11 @@ function NavLink({ href, label, active }) {
   return (
     <Link
       href={href}
-      className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+      className={`px-3.5 py-2 text-sm font-bold rounded-lg transition-colors ${
         active
           ? "text-blue-700 bg-blue-50"
-          : "hover:text-blue-600 hover:bg-gray-50"
+          : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
       }`}
-      style={active ? undefined : { color: "#333333" }}
     >
       {label}
     </Link>
@@ -228,8 +234,7 @@ function HeaderIconLink({ href, label, children }) {
   return (
     <Link
       href={href}
-      className="p-2 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-      style={{ color: "#333333" }}
+      className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
       title={label}
       aria-label={label}
     >
@@ -243,8 +248,7 @@ function MobileNavLink({ href, label, onClick, className = "" }) {
     <Link
       href={href}
       onClick={onClick}
-      className={`block py-2 text-sm hover:text-blue-600 ${className}`}
-      style={{ color: "#333333" }}
+      className={`block py-2.5 text-base font-medium text-gray-700 hover:text-blue-600 ${className}`}
     >
       {label}
     </Link>

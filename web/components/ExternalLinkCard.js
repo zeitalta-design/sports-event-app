@@ -6,9 +6,11 @@ import { trackEvent, EVENTS } from "@/lib/analytics";
  * 外部リンクカード（GA4計測 + 人気指数ログ付き）
  * 詳細ページのRUNNET/moshicom/公式サイトリンクで使用
  */
-export default function ExternalLinkCard({ sourceUrl, officialUrl, eventId, eventTitle }) {
-  const isMoshicom = officialUrl?.includes("moshicom");
-  const sourceLabel = isMoshicom
+export default function ExternalLinkCard({ sourceUrl, officialUrl, moshicomUrl, sourcePriority, eventId, eventTitle }) {
+  const isMoshicom = officialUrl?.includes("moshicom") || !!moshicomUrl;
+  const sourceLabel = moshicomUrl
+    ? (sourcePriority === "moshicom" ? "情報はMOSHICOMを優先しています" : "データ出典: RUNNET / moshicom")
+    : isMoshicom
     ? "データ出典: RUNNET / moshicom"
     : "データ出典: RUNNET";
 
@@ -78,6 +80,20 @@ export default function ExternalLinkCard({ sourceUrl, officialUrl, eventId, even
           {isMoshicom
             ? "moshicomで見る（外部サイト） ↗"
             : "公式サイトを見る（外部サイト） ↗"}
+        </a>
+      )}
+      {moshicomUrl && !officialUrl?.includes("moshicom") && (
+        <a
+          href={moshicomUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => {
+            trackEvent(EVENTS.EXTERNAL_MOSHICOM, { event_id: eventId, event_title: eventTitle, url: moshicomUrl });
+            logEntryClick(moshicomUrl);
+          }}
+          className="block w-full text-center btn-secondary"
+        >
+          moshicomで見る（外部サイト） ↗
         </a>
       )}
       <p className="text-xs text-gray-400 text-center">{sourceLabel}</p>

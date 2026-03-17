@@ -12,6 +12,7 @@ const ALL_LINKS = [
   { key: "saved", href: "/saved", label: "あとで見る" },
   { key: "compare", href: "/compare", label: "比較表" },
   { key: "alerts", href: "/alerts", label: "見直しリスト" },
+  { key: "calendar", href: "/calendar", label: "カレンダー" },
 ];
 
 export default function CrossNavLinks({ currentPage }) {
@@ -31,6 +32,7 @@ export default function CrossNavLinks({ currentPage }) {
       <Link
         href="/marathon"
         className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+        data-track="cross_nav_search"
       >
         大会を探す
       </Link>

@@ -31,7 +31,8 @@
     "audit:trail:all": "node ../scripts/audit-trail-events.js --all",
     "rebuild:details": "node ../scripts/rebuild-event-details.js",
     "rebuild:details:all": "node ../scripts/rebuild-event-details.js --all --force",
-    "rebuild:details:new": "node ../scripts/rebuild-event-details.js --all"
+    "rebuild:details:new": "node ../scripts/rebuild-event-details.js --all",
+    "admin:create": "node ../scripts/create-admin.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

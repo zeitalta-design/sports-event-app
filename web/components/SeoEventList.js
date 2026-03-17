@@ -5,6 +5,7 @@ import { getEventDetailPath } from "@/lib/sport-config";
 import UrgencyBadge from "./UrgencyBadge";
 import FreshnessBadge from "./FreshnessBadge";
 import { ConflictBadge } from "./VerificationConflictBadge";
+import SeoTracker from "./seo/SeoTracker";
 
 function formatDate(dateStr) {
   if (!dateStr) return "日程未定";
@@ -30,6 +31,15 @@ function formatDistances(distanceList) {
   ];
 }
 
+/** 締切までの残り日数を計算 */
+function getDaysUntilDeadline(entryEndDate) {
+  if (!entryEndDate) return null;
+  const end = new Date(entryEndDate);
+  const now = new Date();
+  const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+  return diff >= 0 ? diff : null;
+}
+
 function EntryBadge({ status }) {
   return (
     <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded ${getStatusBadgeClassSimple(status)}`}>
@@ -38,43 +48,72 @@ function EntryBadge({ status }) {
   );
 }
 
+/** Phase116: 締切カウントダウン */
+function DeadlineCountdown({ event }) {
+  if (event.entry_status !== "open") return null;
+  const days = getDaysUntilDeadline(event.entry_end_date);
+  if (days === null) return null;
+
+  let colorClass = "text-gray-500";
+  let icon = "📅";
+  if (days <= 3) { colorClass = "text-red-600 font-bold"; icon = "🔴"; }
+  else if (days <= 7) { colorClass = "text-amber-600 font-medium"; icon = "🔥"; }
+  else if (days <= 14) { colorClass = "text-blue-600"; icon = "⏰"; }
+
+  return (
+    <span className={`text-xs ${colorClass}`}>
+      {icon} 締切まで{days}日
+    </span>
+  );
+}
+
+/** Phase122: スポーツ別の距離バッジカラー */
+const SPORT_BADGE_CLASS = {
+  trail: "bg-green-50 text-green-600",
+  marathon: "bg-blue-50 text-blue-600",
+};
+
 function SeoEventCard({ event }) {
   const distances = formatDistances(event.distance_list);
+  const badgeClass = SPORT_BADGE_CLASS[event.sport_type] || SPORT_BADGE_CLASS.marathon;
   return (
     <div className="card hover:shadow-md transition-shadow">
       <Link href={getEventDetailPath(event)} className="block p-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">
-              {event.title}
-            </h3>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-              <span>{formatDate(event.event_date)}</span>
+        {/* Phase116: 募集状況を上部に目立つ位置で表示 */}
+        <div className="flex items-center gap-2 mb-2">
+          <EntryBadge status={event.entry_status} />
+          <DeadlineCountdown event={event} />
+          <UrgencyBadge event={event} />
+        </div>
+
+        <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">
+          {event.title}
+        </h3>
+
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+          <span>{formatDate(event.event_date)}</span>
+          <span className="text-gray-300">|</span>
+          <span>{event.prefecture || "エリア未定"}</span>
+          {event.venue_name && (
+            <>
               <span className="text-gray-300">|</span>
-              <span>{event.prefecture || "エリア未定"}</span>
-              {event.venue_name && (
-                <>
-                  <span className="text-gray-300">|</span>
-                  <span>{event.venue_name}</span>
-                </>
-              )}
-            </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              {distances.map((d) => (
-                <span key={d} className="inline-block px-1.5 py-0.5 text-xs bg-blue-50 text-blue-600 rounded">
-                  {d}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            <EntryBadge status={event.entry_status} />
-            <UrgencyBadge event={event} />
-          </div>
+              <span className="truncate max-w-[150px]">{event.venue_name}</span>
+            </>
+          )}
+        </div>
+
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {distances.map((d) => (
+            <span key={d} className={`inline-block px-1.5 py-0.5 text-xs rounded ${badgeClass}`}>
+              {d}
+            </span>
+          ))}
         </div>
       </Link>
       <div className="px-4 pb-2 -mt-1 flex items-center gap-2">
-        <span className="text-[10px] text-gray-400">出典: RUNNET</span>
+        <span className="text-[10px] text-gray-400">
+          出典: {event.source === "moshicom" ? "MOSHICOM" : "RUNNET"}
+        </span>
         <FreshnessBadge event={event} />
         <ConflictBadge level={event.verification_conflict_level} />
       </div>
@@ -85,6 +124,8 @@ function SeoEventCard({ event }) {
 /**
  * SEOページ共通の大会一覧レイアウト
  * Server Component — SSR で描画される
+ * Phase114: circulationSection スロット追加
+ * Phase116: カード強化（募集状況上部表示・締切カウントダウン）
  */
 export default function SeoEventList({
   title,
@@ -97,9 +138,17 @@ export default function SeoEventList({
   relatedLinks,
   emptyHref,
   emptyLabel,
+  children,
+  trackingPageType,
+  trackingSlug,
+  trackingSportType,
 }) {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Phase117/126: SEOページ計測（スポーツ種別付き） */}
+      {trackingPageType && (
+        <SeoTracker pageType={trackingPageType} slug={trackingSlug || ""} eventCount={total || 0} sportType={trackingSportType || "marathon"} />
+      )}
       <Breadcrumbs items={breadcrumbs} />
 
       <h1 className="text-2xl font-bold text-gray-900 mb-1">{title}</h1>
@@ -134,6 +183,9 @@ export default function SeoEventList({
           </Link>
         </div>
       )}
+
+      {/* Phase114: 回遊セクション（children slot） */}
+      {children}
 
       {/* 関連リンク */}
       {relatedLinks && relatedLinks.length > 0 && (

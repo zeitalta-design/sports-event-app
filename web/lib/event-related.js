@@ -16,6 +16,7 @@ import { getDb } from "@/lib/db";
 import {
   PREFECTURE_NAME_TO_SLUG,
   DISTANCE_SLUGS,
+  TRAIL_DISTANCE_SLUGS,
   REGION_GROUPS,
 } from "@/lib/seo-mappings";
 
@@ -465,21 +466,36 @@ export function buildSearchLinksFromEvent(data, options = {}) {
   }
 
   // 2. 距離で探す
-  const distCats = getPrimaryDistanceCategory(data.races || []);
-  if (distCats.length > 0) {
-    // 最も代表的な距離を1つ選ぶ
-    const primaryDist = distCats.includes("full")
-      ? "full"
-      : distCats.includes("half")
-        ? "half"
-        : distCats[0];
-
-    const distInfo = DISTANCE_SLUGS[primaryDist];
-    if (distInfo) {
+  if (sportSlug === "trail") {
+    // Phase123: trail用は距離レンジでslug判定
+    const maxDist = Math.max(...(data.races || []).map((r) => r.distance_km || 0));
+    let trailDistSlug = null;
+    if (maxDist > 0 && maxDist <= 20) trailDistSlug = "short";
+    else if (maxDist > 20 && maxDist <= 50) trailDistSlug = "middle";
+    else if (maxDist > 50) trailDistSlug = "long";
+    if (trailDistSlug) {
+      const dInfo = TRAIL_DISTANCE_SLUGS[trailDistSlug];
       links.push({
-        label: `${distInfo.label}をもっと見る`,
-        href: `/${sportSlug}/distance/${primaryDist}`,
+        label: `${dInfo.shortLabel}トレイルをもっと見る`,
+        href: `/trail/distance/${trailDistSlug}`,
       });
+    }
+  } else {
+    const distCats = getPrimaryDistanceCategory(data.races || []);
+    if (distCats.length > 0) {
+      const primaryDist = distCats.includes("full")
+        ? "full"
+        : distCats.includes("half")
+          ? "half"
+          : distCats[0];
+
+      const distInfo = DISTANCE_SLUGS[primaryDist];
+      if (distInfo) {
+        links.push({
+          label: `${distInfo.label}をもっと見る`,
+          href: `/${sportSlug}/distance/${primaryDist}`,
+        });
+      }
     }
   }
 

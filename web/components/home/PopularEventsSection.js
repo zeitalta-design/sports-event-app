@@ -82,11 +82,11 @@ function PopularEventCard({ event, rank }) {
           })()}
           <h3
             className="font-bold text-sm leading-snug line-clamp-2 group-hover:text-blue-700 transition-colors min-h-[2.5rem]"
-            style={{ color: "#323433" }}
+            style={{ color: "#1a1a1a" }}
           >
             {event.title}
           </h3>
-          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-medium" style={{ color: "#323433" }}>
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-medium" style={{ color: "#1a1a1a" }}>
             <span className="inline-flex items-center gap-0.5">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -134,7 +134,7 @@ export default function PopularEventsSection({ events = [] }) {
       {/* 見出し */}
       <div className="flex items-center gap-3 mb-6">
         <div className="w-1 h-7 bg-blue-600 rounded-full" />
-        <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "#323433" }}>今人気の大会</h2>
+        <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "#1a1a1a" }}>今人気の大会</h2>
       </div>
 
       {/* カード横並び */}

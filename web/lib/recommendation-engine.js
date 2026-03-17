@@ -14,12 +14,14 @@ import { calculatePopularityScore } from "@/lib/event-popularity";
 // ── スコアリング重み ──
 
 const WEIGHTS = {
-  distance: 25,        // 距離マッチ
-  prefecture: 20,      // 地域マッチ
-  popularity: 15,      // 人気度
-  freshness: 15,       // 開催日の近さ
-  cooccurrence: 15,    // 閲覧共起
+  distance: 20,        // 距離マッチ
+  prefecture: 15,      // 地域マッチ
+  popularity: 12,      // 人気度
+  freshness: 12,       // 開催日の近さ
+  cooccurrence: 11,    // 閲覧共起
   level: 10,           // レベル適性
+  history: 10,         // Phase206: 参加履歴ベース
+  season: 10,          // Phase206: 季節マッチ
 };
 
 // 距離キー → distance_km 範囲マッピング
@@ -144,6 +146,8 @@ export function scoreEventForProfile(event, profile, ctx = {}) {
     freshness: 0,
     cooccurrence: 0,
     level: 0,
+    history: 0,
+    season: 0,
     total: 0,
   };
 
@@ -173,8 +177,14 @@ export function scoreEventForProfile(event, profile, ctx = {}) {
   // レベル適性
   breakdown.level = calcLevelScore(event, profile.level);
 
+  // Phase206: 参加履歴ベース（同じ地域・距離に参加歴あればボーナス）
+  breakdown.history = calcHistoryScore(event, ctx.participationHistory);
+
+  // Phase206: 季節マッチ（過去に参加した季節と同じ季節ならボーナス）
+  breakdown.season = calcSeasonScore(event, profile.preferredSeasons);
+
   breakdown.total = Object.keys(WEIGHTS).reduce(
-    (sum, key) => sum + breakdown[key],
+    (sum, key) => sum + (breakdown[key] || 0),
     0
   );
 
@@ -372,4 +382,67 @@ const REGION_MAP = {
 
 function getRegion(prefecture) {
   return REGION_MAP[prefecture] || null;
+}
+
+// Phase206: 参加履歴スコア
+function calcHistoryScore(event, participationHistory) {
+  if (!participationHistory || participationHistory.length === 0) return 0;
+  let score = 0;
+
+  // 同じ地域に参加歴あれば +50%
+  const region = getRegion(event.prefecture);
+  if (region && participationHistory.some((h) => getRegion(h.prefecture) === region)) {
+    score += WEIGHTS.history * 0.5;
+  }
+
+  // 同じ距離帯に参加歴あれば +50%
+  if (event.distance_list) {
+    const eventKms = event.distance_list.split(",").map(Number).filter(Boolean);
+    const hasMatchingDistance = eventKms.some((km) => {
+      return participationHistory.some((h) => {
+        if (!h.distance_km) return false;
+        return Math.abs(km - h.distance_km) < 5;
+      });
+    });
+    if (hasMatchingDistance) score += WEIGHTS.history * 0.5;
+  }
+
+  return Math.min(score, WEIGHTS.history);
+}
+
+// Phase206: 季節マッチスコア
+function calcSeasonScore(event, preferredSeasons) {
+  if (!preferredSeasons || preferredSeasons.length === 0) return 0;
+  if (!event.event_date) return 0;
+
+  try {
+    const month = new Date(event.event_date).getMonth() + 1;
+    const season = monthToSeason(month);
+    if (preferredSeasons.includes(season)) {
+      return WEIGHTS.season;
+    }
+    // 隣接季節なら半分
+    const adjacent = getAdjacentSeasons(season);
+    if (preferredSeasons.some((s) => adjacent.includes(s))) {
+      return WEIGHTS.season * 0.5;
+    }
+  } catch {}
+  return 0;
+}
+
+function monthToSeason(month) {
+  if (month >= 3 && month <= 5) return "spring";
+  if (month >= 6 && month <= 8) return "summer";
+  if (month >= 9 && month <= 11) return "autumn";
+  return "winter";
+}
+
+function getAdjacentSeasons(season) {
+  const map = {
+    spring: ["winter", "summer"],
+    summer: ["spring", "autumn"],
+    autumn: ["summer", "winter"],
+    winter: ["autumn", "spring"],
+  };
+  return map[season] || [];
 }

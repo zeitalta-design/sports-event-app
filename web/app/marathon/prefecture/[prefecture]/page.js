@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { PREFECTURE_SLUGS, DISTANCE_SLUGS, REGION_GROUPS } from "@/lib/seo-mappings";
 import { getEventsByPrefecture } from "@/lib/seo-queries";
 import SeoEventList from "@/components/SeoEventList";
+import SeoCirculationSection from "@/components/seo/SeoCirculationSection";
+import SportSwitcher from "@/components/seo/SportSwitcher";
 
 export async function generateMetadata({ params }) {
   const { prefecture } = await params;
@@ -12,7 +14,7 @@ export async function generateMetadata({ params }) {
     title: `${name}のマラソン大会`,
     description: `${name}で開催されるマラソン大会を探せます。開催日、締切、距離を比較して大会を見つけられます。`,
     openGraph: {
-      title: `${name}のマラソン大会 | 大会ナビ`,
+      title: `${name}のマラソン大会 | スポ活`,
       description: `${name}で開催されるマラソン大会一覧。日程・距離・締切で比較できます。`,
       type: "website",
     },
@@ -42,6 +44,16 @@ export default async function PrefecturePage({ params }) {
   for (const [slug, info] of Object.entries(DISTANCE_SLUGS)) {
     relatedLinks.push({ label: info.label, href: `/marathon/distance/${slug}` });
   }
+  // テーマ・季節への導線
+  relatedLinks.push({ label: "初心者向け", href: "/marathon/theme/beginner" });
+  relatedLinks.push({ label: "募集中の大会", href: "/marathon/theme/open" });
+  relatedLinks.push({ label: "締切間近", href: "/marathon/theme/deadline" });
+
+  const circulationLinks = [
+    { label: "地方別で探す", href: "/marathon/region" },
+    { label: "テーマ別で探す", href: "/marathon/theme" },
+    { label: "季節別で探す", href: "/marathon/season" },
+  ];
 
   return (
     <SeoEventList
@@ -57,6 +69,9 @@ export default async function PrefecturePage({ params }) {
       ctaHref={`/marathon?prefecture=${encodeURIComponent(name)}`}
       ctaLabel="条件を絞って探す →"
       relatedLinks={relatedLinks}
-    />
+    >
+      <SeoCirculationSection categoryLinks={circulationLinks} />
+      <SportSwitcher currentSportSlug="marathon" category="prefecture" slug={prefecture} />
+    </SeoEventList>
   );
 }

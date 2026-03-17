@@ -17,6 +17,7 @@ import { getStatusLabel, getStatusBadgeClass } from "@/lib/entry-status";
 import { getRunnerProfile } from "@/lib/runner-profile";
 import { buildDecisionSignals } from "@/lib/event-decision-signals";
 import LoginPrompt from "@/components/LoginPrompt";
+import EmptyState from "@/components/EmptyState";
 
 // ─── ヘルパー ────────────────────────────────────
 
@@ -234,6 +235,65 @@ export default function ComparePage() {
                 <span key={m.id} className={`text-xs font-medium ${typeColors[top.type] || "text-gray-600"}`}>
                   {top.label}
                 </span>
+              );
+            })}
+          />
+
+          {/* Phase192: 口コミ平均 */}
+          <CompareRow
+            label="口コミ評価"
+            values={marathons.map((m) => {
+              const s = m.reviewSummary;
+              if (!s || !s.avg_overall || s.total === 0) return "—";
+              return (
+                <div key={m.id} className="flex items-center gap-1.5">
+                  <span className="text-amber-500 text-sm">★</span>
+                  <span className="font-bold text-gray-900 tabular-nums">{s.avg_overall.toFixed(1)}</span>
+                  <span className="text-xs text-gray-400">({s.total}件)</span>
+                </div>
+              );
+            })}
+            highlight
+          />
+
+          {/* Phase192: 信頼スコア */}
+          <CompareRow
+            label="信頼スコア"
+            values={marathons.map((m) => {
+              const ts = m.trustScore;
+              if (!ts || ts.score === 0) return "—";
+              const colorMap = { emerald: "text-emerald-600", blue: "text-blue-600", amber: "text-amber-600", gray: "text-gray-500" };
+              return (
+                <div key={m.id} className="flex items-center gap-1.5">
+                  <span className={`text-sm font-bold tabular-nums ${colorMap[ts.color] || "text-gray-600"}`}>
+                    {ts.score}
+                  </span>
+                  <span className={`text-xs ${colorMap[ts.color] || "text-gray-500"}`}>{ts.label}</span>
+                </div>
+              );
+            })}
+            highlight
+          />
+
+          {/* Phase192: 写真数 */}
+          <CompareRow
+            label="写真"
+            values={marathons.map((m) =>
+              m.photoCount > 0 ? `${m.photoCount}枚` : "—"
+            )}
+          />
+
+          {/* Phase192: 開催年数 */}
+          <CompareRow
+            label="開催年数"
+            values={marathons.map((m) => {
+              const h = m.eventHistory;
+              if (!h || !h.editions || h.editions.length <= 1) return "—";
+              return (
+                <div key={m.id}>
+                  <span className="font-bold text-gray-900 tabular-nums">{h.editions.length}</span>
+                  <span className="text-xs text-gray-500 ml-0.5">年</span>
+                </div>
               );
             })}
           />
@@ -531,6 +591,30 @@ function CompareSummary({ marathons, profile: summaryProfile }) {
     } catch {}
   }
 
+  // Phase192: 口コミ評価が最も高い大会
+  const withReviews = marathons
+    .filter((m) => m.reviewSummary?.avg_overall && m.reviewSummary.total > 0)
+    .sort((a, b) => b.reviewSummary.avg_overall - a.reviewSummary.avg_overall);
+  if (withReviews.length > 0 && marathons.length >= 2) {
+    const best = withReviews[0];
+    insights.push({
+      icon: "⭐",
+      text: `口コミ評価が最も高いのは「${best.title}」（★${best.reviewSummary.avg_overall.toFixed(1)} / ${best.reviewSummary.total}件）`,
+    });
+  }
+
+  // Phase192: 信頼スコアが最も高い大会
+  const withTrust = marathons
+    .filter((m) => m.trustScore?.score > 0)
+    .sort((a, b) => b.trustScore.score - a.trustScore.score);
+  if (withTrust.length > 0 && marathons.length >= 2) {
+    const best = withTrust[0];
+    insights.push({
+      icon: "🛡️",
+      text: `情報の充実度が最も高いのは「${best.title}」（${best.trustScore.label} ${best.trustScore.score}点）`,
+    });
+  }
+
   // 受付中の大会数
   const openCount = marathons.filter(
     (m) => ["open", "closing_soon", "capacity_warning"].includes(m.official_entry_status) || m.entry_status === "open"
@@ -571,36 +655,8 @@ function CompareEmptyState() {
         気になる大会を並べて比較できます
       </p>
 
-      <div className="card p-12 text-center">
-        <div className="text-4xl mb-4">📊</div>
-        <h2 className="text-lg font-bold text-gray-700 mb-2">
-          比較したい大会を追加してください
-        </h2>
-        <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-          大会詳細ページや検索結果から「比較に追加」ボタンを押すと、
-          <br className="hidden sm:inline" />
-          ここで最大{getMaxCompare()}件の大会を横並びで比較できます。
-        </p>
-        <div className="flex flex-wrap justify-center gap-3">
-          <Link
-            href="/marathon"
-            className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            大会を探す
-          </Link>
-          <Link
-            href="/features/beginner-friendly-marathons"
-            className="px-4 py-2 text-sm font-medium bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            初心者向け大会
-          </Link>
-          <Link
-            href="/features/pb-friendly-marathons"
-            className="px-4 py-2 text-sm font-medium bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            自己ベスト狙い
-          </Link>
-        </div>
+      <div className="card">
+        <EmptyState preset="compare" />
       </div>
     </div>
   );

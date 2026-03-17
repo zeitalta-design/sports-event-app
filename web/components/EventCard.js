@@ -1,8 +1,10 @@
+import { memo, useMemo } from "react";
 import Link from "next/link";
 import CompareButton from "@/components/CompareButton";
 import SaveButton from "@/components/SaveButton";
 import PopularityBadge from "@/components/PopularityBadge";
 import OfficialStatusBadge from "@/components/OfficialStatusBadge";
+import OrganizerVerifiedBadge from "@/components/OrganizerVerifiedBadge";
 import { getStatusLabel } from "@/lib/entry-status";
 import { getEventImageUrl, getPlaceholderProps } from "@/lib/event-image";
 import { getEventDetailPath } from "@/lib/sport-config";
@@ -110,16 +112,19 @@ function EventImagePlaceholder({ event }) {
   );
 }
 
-// ── メインカード（Phase63 再設計） ──
-export default function EventCard({ event, isFavorite, onFavoriteToggle }) {
-  const imageUrl = getEventImageUrl(event);
-  const date = formatEventDate(event.event_date);
-  const location = formatEventLocation(event);
-  const venue = formatVenueName(event);
-  const tags = extractAllTags(event);
-  const desc = formatDescription(event);
-  const reviewCount = event.review_count || 0;
-  const detailPath = getEventDetailPath(event);
+// ── メインカード（Phase63 再設計 + Phase220 React.memo最適化） ──
+export default memo(function EventCard({ event, isFavorite, onFavoriteToggle }) {
+  // Phase220: useMemoで重い計算をキャッシュ
+  const { imageUrl, date, location, venue, tags, desc, reviewCount, detailPath } = useMemo(() => ({
+    imageUrl: getEventImageUrl(event),
+    date: formatEventDate(event.event_date),
+    location: formatEventLocation(event),
+    venue: formatVenueName(event),
+    tags: extractAllTags(event),
+    desc: formatDescription(event),
+    reviewCount: event.review_count || 0,
+    detailPath: getEventDetailPath(event),
+  }), [event]);
 
   return (
     <div className="card group hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
@@ -150,22 +155,22 @@ export default function EventCard({ event, isFavorite, onFavoriteToggle }) {
         {/* ── 情報エリア ── */}
         <div className="flex-1 min-w-0 p-4 sm:p-5 flex flex-col">
           {/* 上段: 日付・場所・ジャンル + 締切バッジ */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mb-2.5" style={{ color: "#333333" }}>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm mb-2.5" style={{ color: "#1a1a1a" }}>
             <span className="inline-flex items-center gap-1">
-              <svg className="w-4 h-4" style={{ color: "#333333" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-4 h-4" style={{ color: "#1a1a1a" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               {date}
             </span>
             <span className="inline-flex items-center gap-1">
-              <svg className="w-4 h-4" style={{ color: "#333333" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-4 h-4" style={{ color: "#1a1a1a" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               {location}
             </span>
             {venue && location !== venue && (
-              <span style={{ color: "#333333" }}>{venue}</span>
+              <span style={{ color: "#1a1a1a" }}>{venue}</span>
             )}
             <SportBadge sportType={event.sport_type} />
             {event.popularity_score >= 40 && (
@@ -176,12 +181,17 @@ export default function EventCard({ event, isFavorite, onFavoriteToggle }) {
                 size="sm"
               />
             )}
+            <OrganizerVerifiedBadge
+              status={event.organizer_verified}
+              updatedAt={event.updated_at}
+              context="list"
+            />
           </div>
 
           {/* メイン: 大会名 + 受付状態 */}
           <div className="flex items-start gap-3 mb-2">
             <Link href={detailPath} className="flex-1 min-w-0">
-              <h3 className="font-bold text-lg leading-snug line-clamp-2 group-hover:text-blue-700 transition-colors" style={{ color: "#323433" }}>
+              <h3 className="font-bold text-lg leading-snug line-clamp-2 group-hover:text-blue-700 transition-colors" style={{ color: "#1a1a1a" }}>
                 {event.title}
               </h3>
             </Link>
@@ -205,7 +215,7 @@ export default function EventCard({ event, isFavorite, onFavoriteToggle }) {
           )}
 
           {/* 概要文 */}
-          <p className="text-sm leading-relaxed line-clamp-2 mb-3" style={{ color: "#333333" }}>
+          <p className="text-sm leading-relaxed line-clamp-2 mb-3" style={{ color: "#1a1a1a" }}>
             {desc}
           </p>
 
@@ -216,7 +226,7 @@ export default function EventCard({ event, isFavorite, onFavoriteToggle }) {
               <Link
                 href={`${detailPath}#reviews`}
                 className="inline-flex items-center gap-1.5 text-sm hover:text-blue-600 transition-colors"
-                style={{ color: "#333333" }}
+                style={{ color: "#1a1a1a" }}
                 aria-label={reviewCount > 0 ? `${reviewCount}件のレビュー` : "詳細を見る"}
               >
                 <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -240,7 +250,7 @@ export default function EventCard({ event, isFavorite, onFavoriteToggle }) {
               />
 
               {/* 出典 */}
-              <span className="text-xs hidden sm:inline" style={{ color: "#333333" }}>出典: RUNNET</span>
+              <span className="text-xs hidden sm:inline" style={{ color: "#1a1a1a" }}>出典: RUNNET</span>
             </div>
 
             {/* お気に入り（大きめ丸ボタン） */}
@@ -266,4 +276,4 @@ export default function EventCard({ event, isFavorite, onFavoriteToggle }) {
       </div>
     </div>
   );
-}
+});

@@ -25,25 +25,25 @@ export default function MarathonDetailAccess({
 
   return (
     <div className="card p-6">
-      <h2 className="text-lg font-bold text-gray-900 mb-4">
+      <h2 className="text-xl font-bold text-gray-900 mb-4">
         会場・アクセス
       </h2>
       <div className="space-y-4 text-sm">
         {venueName && (
           <div>
-            <dt className="text-gray-500 text-sm mb-1">会場</dt>
+            <dt className="text-gray-700 text-sm mb-1 font-bold">会場</dt>
             <dd className="text-base text-gray-900 font-medium">{venueName}</dd>
           </div>
         )}
         {venueAddress && (
           <div>
-            <dt className="text-gray-500 text-sm mb-1">住所</dt>
+            <dt className="text-gray-700 text-sm mb-1 font-bold">住所</dt>
             <dd className="text-base text-gray-900">{venueAddress}</dd>
           </div>
         )}
         {accessInfo && (
           <div>
-            <dt className="text-gray-500 text-sm mb-1">アクセス</dt>
+            <dt className="text-gray-700 text-sm mb-1 font-bold">アクセス</dt>
             <dd className="text-base text-gray-700 whitespace-pre-wrap leading-relaxed">
               {accessInfo}
             </dd>

@@ -77,17 +77,17 @@ export default function TrailRankingPage() {
       {/* ヘッダー */}
       <div className="flex items-center gap-3 mb-2">
         <div className="w-1 h-7 bg-green-600 rounded-full" />
-        <h1 className="text-2xl font-bold" style={{ color: "#323433" }}>
+        <h1 className="text-2xl font-bold" style={{ color: "#1a1a1a" }}>
           ⛰️ 人気のトレイルラン大会ランキング
         </h1>
       </div>
-      <p className="text-sm mb-6" style={{ color: "#333333" }}>
+      <p className="text-sm mb-6" style={{ color: "#1a1a1a" }}>
         直近{period}日間で注目されている全国のトレイルラン大会を掲載しています
       </p>
 
       {/* 期間切替 */}
       <div className="flex items-center gap-2 mb-6">
-        <span className="text-xs font-medium" style={{ color: "#333333" }}>集計期間:</span>
+        <span className="text-xs font-medium" style={{ color: "#1a1a1a" }}>集計期間:</span>
         {[
           { key: "7", label: "7日間" },
           { key: "30", label: "30日間" },
@@ -101,7 +101,7 @@ export default function TrailRankingPage() {
                 ? "bg-green-600 text-white border-green-600"
                 : "bg-white border-gray-200 hover:bg-gray-50"
             }`}
-            style={period !== opt.key ? { color: "#333333" } : undefined}
+            style={period !== opt.key ? { color: "#1a1a1a" } : undefined}
           >
             {opt.label}
           </button>
@@ -128,7 +128,7 @@ export default function TrailRankingPage() {
       ) : events.length === 0 ? (
         <div className="card p-12 text-center">
           <p className="text-2xl mb-2">⛰️</p>
-          <p className="text-sm font-medium mb-1" style={{ color: "#333333" }}>
+          <p className="text-sm font-medium mb-1" style={{ color: "#1a1a1a" }}>
             まだランキングデータがありません
           </p>
           <p className="text-xs text-gray-400 mb-4">

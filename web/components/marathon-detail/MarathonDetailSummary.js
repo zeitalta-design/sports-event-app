@@ -98,18 +98,20 @@ export default function MarathonDetailSummary({ data }) {
 
   return (
     <div className="card p-6">
-      <h2 className="text-lg font-bold text-gray-900 mb-4">大会基本情報</h2>
+      <h2 className="text-xl font-bold text-gray-900 mb-4">この大会の要点</h2>
       <dl className="divide-y divide-gray-100">
         {rows.map((row) => (
           <div
             key={row.label}
-            className="flex justify-between items-baseline py-3 gap-4"
+            className="flex items-baseline py-3.5 gap-4"
           >
-            <dt className="text-sm font-semibold text-gray-500 shrink-0 min-w-[5rem]">
-              {row.label}
+            <dt className="shrink-0 min-w-[5.5rem]">
+              <span className="inline-block px-2 py-0.5 text-xs font-bold text-gray-700 bg-gray-100 rounded">
+                {row.label}
+              </span>
             </dt>
             <dd
-              className={`text-sm text-right ${row.className ? row.className : row.bold ? "font-bold text-gray-900" : "text-gray-800"}`}
+              className={`text-base ${row.className ? row.className : row.bold ? "font-bold text-gray-900" : "text-gray-800 font-medium"}`}
             >
               {row.value}
             </dd>

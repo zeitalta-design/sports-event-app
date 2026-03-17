@@ -27,8 +27,8 @@ export default function TopPopularSearches() {
 
   return (
     <section className="max-w-6xl mx-auto px-4 py-10">
-      <h2 className="text-lg font-bold mb-2" style={{ color: "#323433" }}>人気の条件から探す</h2>
-      <p className="text-xs font-medium mb-5" style={{ color: "#323433" }}>よく検索される条件でマラソン大会を探せます</p>
+      <h2 className="text-lg font-bold mb-2" style={{ color: "#1a1a1a" }}>人気の条件から探す</h2>
+      <p className="text-xs font-medium mb-5" style={{ color: "#1a1a1a" }}>よく検索される条件でマラソン大会を探せます</p>
       <div className="flex flex-wrap gap-2">
         {searches.map((s) => (
           <Link

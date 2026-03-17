@@ -10,10 +10,10 @@ export default function TopFeatureNavigation({ features = [] }) {
   return (
     <section className="max-w-6xl mx-auto px-4 py-10">
       <div className="text-center mb-6">
-        <h2 className="text-lg font-bold" style={{ color: "#323433" }}>
+        <h2 className="text-lg font-bold" style={{ color: "#1a1a1a" }}>
           条件で大会を探す
         </h2>
-        <p className="text-xs font-medium mt-1" style={{ color: "#323433" }}>
+        <p className="text-xs font-medium mt-1" style={{ color: "#1a1a1a" }}>
           あなたに合った大会の探し方をお選びください
         </p>
       </div>
@@ -25,11 +25,11 @@ export default function TopFeatureNavigation({ features = [] }) {
             className="block p-4 bg-white rounded-xl border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all group text-center"
           >
             <span className="text-2xl block mb-2">{feat.icon}</span>
-            <span className="font-bold text-sm group-hover:text-blue-600 transition-colors block mb-1" style={{ color: "#323433" }}>
+            <span className="font-bold text-sm group-hover:text-blue-600 transition-colors block mb-1" style={{ color: "#1a1a1a" }}>
               {feat.shortTitle}
             </span>
             {feat.eventCount > 0 && (
-              <span className="text-xs font-medium" style={{ color: "#323433" }}>
+              <span className="text-xs font-medium" style={{ color: "#1a1a1a" }}>
                 {feat.eventCount}件
               </span>
             )}

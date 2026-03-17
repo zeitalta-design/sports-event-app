@@ -13,7 +13,7 @@ export default function MarathonDetailOrganizer({ organizer }) {
 
   return (
     <div className="card p-6">
-      <h2 className="text-lg font-bold text-gray-900 mb-4">主催者情報</h2>
+      <h2 className="text-xl font-bold text-gray-900 mb-4">主催者情報</h2>
       <div className="space-y-3 text-sm">
         <div>
           <Link
@@ -32,21 +32,21 @@ export default function MarathonDetailOrganizer({ organizer }) {
 
         {organizer.contact_name && (
           <div className="flex gap-3">
-            <span className="text-gray-500 shrink-0">担当</span>
+            <span className="text-gray-600 font-bold shrink-0">担当</span>
             <span className="text-gray-900">{organizer.contact_name}</span>
           </div>
         )}
 
         {organizer.email && (
           <div className="flex gap-3">
-            <span className="text-gray-500 shrink-0">メール</span>
+            <span className="text-gray-600 font-bold shrink-0">メール</span>
             <span className="text-gray-900">{organizer.email}</span>
           </div>
         )}
 
         {organizer.phone && (
           <div className="flex gap-3">
-            <span className="text-gray-500 shrink-0">電話</span>
+            <span className="text-gray-600 font-bold shrink-0">電話</span>
             <span className="text-gray-900">{organizer.phone}</span>
           </div>
         )}
@@ -57,7 +57,7 @@ export default function MarathonDetailOrganizer({ organizer }) {
             <span className="font-semibold text-gray-900 text-base">
               {organizer.review_score.toFixed(1)}
             </span>
-            <span className="text-gray-500 text-sm">
+            <span className="text-gray-600 text-sm">
               ({organizer.review_count}件の評価)
             </span>
           </div>

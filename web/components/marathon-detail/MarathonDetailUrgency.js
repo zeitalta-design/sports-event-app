@@ -16,7 +16,7 @@ export default function MarathonDetailUrgency({ urgency, entryHistory, entryStat
 
   return (
     <div className="card p-6">
-      <h2 className="text-lg font-bold text-gray-900 mb-4">
+      <h2 className="text-xl font-bold text-gray-900 mb-4">
         申込状況の傾向
       </h2>
 
@@ -42,7 +42,7 @@ export default function MarathonDetailUrgency({ urgency, entryHistory, entryStat
         <div className="space-y-2 mb-4">
           {entryHistory.daysOpenToClose !== null && (
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-500">募集期間:</span>
+              <span className="text-gray-600 font-bold">募集期間:</span>
               <span className="font-medium text-gray-800">
                 約{entryHistory.daysOpenToClose}日で締切
               </span>
@@ -50,7 +50,7 @@ export default function MarathonDetailUrgency({ urgency, entryHistory, entryStat
           )}
           {entryHistory.daysBeforeEventClosed !== null && (
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-500">締切タイミング:</span>
+              <span className="text-gray-600 font-bold">締切タイミング:</span>
               <span className="font-medium text-gray-800">
                 開催{entryHistory.daysBeforeEventClosed}日前に締切
               </span>
@@ -58,7 +58,7 @@ export default function MarathonDetailUrgency({ urgency, entryHistory, entryStat
           )}
           {entryHistory.closeReason && entryHistory.closeReason !== "unknown" && (
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-500">締切理由:</span>
+              <span className="text-gray-600 font-bold">締切理由:</span>
               <span className="font-medium text-gray-800">
                 {closeReasonLabel(entryHistory.closeReason)}
               </span>
@@ -83,7 +83,7 @@ export default function MarathonDetailUrgency({ urgency, entryHistory, entryStat
 
       {/* 信頼度注記 */}
       {urgency?.confidence === "low" && (
-        <p className="text-xs text-gray-400 mt-3">
+        <p className="text-xs text-gray-500 mt-3">
           ※ 過去の履歴が少ないため、参考情報としてご覧ください
         </p>
       )}

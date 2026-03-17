@@ -35,6 +35,13 @@ export async function GET(request) {
       const kw = `%${keyword}%`;
       params.push(kw, kw, kw);
     }
+    // Phase113: 募集状況フィルタ
+    const entryStatusFilter = searchParams.get("entry_status");
+    if (entryStatusFilter) {
+      where.push("e.entry_status = ?");
+      params.push(entryStatusFilter);
+    }
+
     if (distance) {
       const ranges = {
         "5": [0, 5],
@@ -69,6 +76,8 @@ export async function GET(request) {
       entry_end_date: "e.entry_end_date ASC NULLS LAST",
       newest: "e.created_at DESC",
       popularity: "e.event_date ASC", // 一旦全件取得用（後でJSソート）
+      // Phase113: 募集状況優先ソート（受付中→受付予定→その他）
+      entry_status_priority: "CASE e.entry_status WHEN 'open' THEN 0 WHEN 'upcoming' THEN 1 ELSE 2 END ASC, e.event_date ASC",
     };
     const orderBy = orderClauses[sort] || orderClauses.event_date;
 

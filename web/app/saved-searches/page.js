@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { REGIONS, MONTHS } from "@/lib/constants";
 import AuthGuard from "@/components/AuthGuard";
+import EmptyState from "@/components/EmptyState";
 
 const DISTANCES = [
   { key: "", label: "指定なし" },
@@ -205,9 +206,8 @@ export default function SavedSearchesPage() {
           ))}
         </div>
       ) : searches.length === 0 ? (
-        <div className="card p-12 text-center">
-          <p className="text-gray-400 text-sm">保存された検索条件はありません</p>
-          <p className="text-gray-400 text-xs mt-1">上のフォームから条件を保存するか、一覧ページで「この条件を保存」を使ってください</p>
+        <div className="card">
+          <EmptyState preset="savedSearches" />
         </div>
       ) : (
         <div className="space-y-2">

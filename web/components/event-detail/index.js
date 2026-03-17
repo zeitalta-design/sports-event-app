@@ -21,3 +21,21 @@ export { default as EventDecisionSignalsCard } from "./EventDecisionSignalsCard"
 // Phase66: タブ化
 export { default as EventDetailTabs } from "./EventDetailTabs";
 export { TabPanel } from "./EventDetailTabs";
+// Phase142: 口コミ要約
+export { default as ReviewInsightsCard } from "./ReviewInsightsCard";
+// Phase152: 大会結果導線
+export { default as EventResultsLink } from "./EventResultsLink";
+// Phase160: 写真ギャラリー
+export { default as EventPhotoGallery } from "./EventPhotoGallery";
+// Phase162: 口コミ＋写真接続
+export { default as ReviewContextPhotos } from "./ReviewContextPhotos";
+// Phase174: 参加後CTA
+export { default as PostEventCTA } from "./PostEventCTA";
+// Phase193: コミュニティセクション
+export { default as CommunityVoicesSection } from "./CommunityVoicesSection";
+// Phase194: エンゲージメントバー
+export { default as EventEngagementBar } from "./EventEngagementBar";
+// Phase197: コミュニティ導線
+export { default as CommunityNavLinks } from "./CommunityNavLinks";
+// Phase200: 写真投稿
+export { default as PhotoUploadCTA } from "./PhotoUploadCTA";

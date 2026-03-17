@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import AuthGuard from "@/components/AuthGuard";
+import EmptyState from "@/components/EmptyState";
+import ErrorState from "@/components/ErrorState";
 import { getEventDetailPath } from "@/lib/sport-config";
 
 function formatDate(dateStr) {
@@ -47,6 +49,7 @@ function DeadlineBadge({ deadline }) {
 export default function FavoritesPage() {
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     fetchFavorites();
@@ -54,12 +57,15 @@ export default function FavoritesPage() {
 
   async function fetchFavorites() {
     setLoading(true);
+    setError(false);
     try {
       const res = await fetch("/api/favorites");
+      if (!res.ok) throw new Error("API error");
       const data = await res.json();
       setFavorites(data.favorites || []);
     } catch (err) {
       console.error(err);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -106,12 +112,13 @@ export default function FavoritesPage() {
             </div>
           ))}
         </div>
+      ) : error ? (
+        <div className="card">
+          <ErrorState onRetry={fetchFavorites} />
+        </div>
       ) : favorites.length === 0 ? (
-        <div className="card p-12 text-center">
-          <p className="text-gray-400 text-sm">お気に入りの大会はまだありません</p>
-          <Link href="/marathon" className="inline-block mt-3 text-sm text-blue-500 hover:text-blue-700">
-            大会を探す →
-          </Link>
+        <div className="card">
+          <EmptyState preset="favorites" />
         </div>
       ) : (
         <div className="space-y-2">

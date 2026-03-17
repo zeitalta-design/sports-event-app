@@ -21,6 +21,7 @@ export default function NextRacePage() {
   const [profile, setProfile] = useState(null);
   const [hasProfile, setHasProfile] = useState(false);
   const [recommendations, setRecommendations] = useState([]);
+  const [historyRecs, setHistoryRecs] = useState([]);
   const [topData, setTopData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -61,13 +62,18 @@ export default function NextRacePage() {
           params.set("goals", currentProfile.goals.join(","));
         }
         params.set("limit", "8");
+        params.set("include_history", "1");
         promises.push(
           fetch(`/api/recommendations?${params}`)
             .then((r) => r.json())
-            .catch(() => ({ recommendations: [] }))
+            .catch(() => ({ recommendations: [], historyRecommendations: [] }))
         );
       } else {
-        promises.push(Promise.resolve({ recommendations: [] }));
+        promises.push(
+          fetch("/api/recommendations?include_history=1&limit=8")
+            .then((r) => r.json())
+            .catch(() => ({ recommendations: [], historyRecommendations: [] }))
+        );
       }
 
       // トップデータ取得
@@ -79,6 +85,7 @@ export default function NextRacePage() {
 
       const [recData, topResult] = await Promise.all(promises);
       setRecommendations(recData.recommendations || []);
+      setHistoryRecs(recData.historyRecommendations || []);
       setTopData(topResult);
     } catch (err) {
       console.error("NextRace load error:", err);
@@ -128,6 +135,22 @@ export default function NextRacePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {recommendations.map((event) => (
                   <RecommendationCard key={event.id} event={event} profile={profile} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Phase172: 参加履歴ベースのおすすめ */}
+          {historyRecs.length > 0 && (
+            <section className="mb-10">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-2">
+                <span className="text-xl">🏃</span>
+                参加経験から見つけた大会
+              </h2>
+              <p className="text-xs text-gray-500 mb-4">あなたの参加履歴をもとにおすすめ</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {historyRecs.map((event) => (
+                  <HistoryRecommendationCard key={event.id} event={event} />
                 ))}
               </div>
             </section>
@@ -319,6 +342,45 @@ function EventMiniCard({ event, profile }) {
         <OfficialStatusBadge event={event} variant="badge" />
         {profile && <SuitabilityBadge event={event} variant="badge" profile={profile} />}
       </div>
+    </Link>
+  );
+}
+
+function HistoryRecommendationCard({ event }) {
+  const href = event.path || getEventDetailPath(event) || `/marathon/${event.id}`;
+
+  return (
+    <Link
+      href={href}
+      className="block card p-4 hover:shadow-md hover:border-blue-200 transition-all group"
+      data-track="history_recommendation"
+    >
+      <h3 className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 mb-2 leading-snug">
+        {event.title}
+      </h3>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 mb-2">
+        {event.event_date && (
+          <span className="font-medium text-gray-700">{formatDate(event.event_date)}</span>
+        )}
+        {event.prefecture && <span>{event.prefecture}</span>}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5 mb-2">
+        {event.distance_labels?.map((label) => (
+          <span key={label} className="inline-block px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">
+            {label}
+          </span>
+        ))}
+        <OfficialStatusBadge event={event} variant="badge" />
+      </div>
+      {event.recommendation_reasons?.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          {event.recommendation_reasons.map((reason, i) => (
+            <span key={i} className="text-[10px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded">
+              {reason}
+            </span>
+          ))}
+        </div>
+      )}
     </Link>
   );
 }

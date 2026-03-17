@@ -26,17 +26,17 @@ export default function MarathonDetailPopularity({ eventId }) {
 
   return (
     <div className="card p-5">
-      <h3 className="text-sm font-bold mb-3" style={{ color: "#323433" }}>
+      <h3 className="text-sm font-bold text-gray-900 mb-3">
         人気指数
       </h3>
 
       {/* スコアバー */}
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-2xl font-extrabold" style={{ color: "#323433" }}>
+          <span className="text-2xl font-extrabold text-gray-900">
             {score}
           </span>
-          <span className="text-xs text-gray-400">/ 100</span>
+          <span className="text-xs text-gray-500">/ 100</span>
         </div>
         <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
@@ -64,7 +64,7 @@ export default function MarathonDetailPopularity({ eventId }) {
       )}
 
       {/* 内訳 */}
-      <div className="space-y-1.5 text-xs" style={{ color: "#333333" }}>
+      <div className="space-y-1.5 text-xs text-gray-800">
         <div className="flex justify-between">
           <span>閲覧数（30日）</span>
           <span className="font-medium">{data.detail_views_30d || 0}</span>
@@ -79,7 +79,7 @@ export default function MarathonDetailPopularity({ eventId }) {
         </div>
       </div>
 
-      <p className="mt-3 text-[10px] text-gray-400 leading-relaxed">
+      <p className="mt-3 text-[10px] text-gray-500 leading-relaxed">
         ※ 人気指数はユーザーの閲覧・お気に入り・エントリークリック数から算出しています
       </p>
     </div>

@@ -2,13 +2,13 @@ import Link from "next/link";
 
 export const metadata = {
   title: "データについて",
-  description: "大会ナビで掲載しているデータの出典・更新方針について。",
+  description: "スポ活で掲載しているデータの出典・更新方針について。",
 };
 
 export default function AboutDataPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">大会ナビのデータについて</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">スポ活のデータについて</h1>
       <p className="text-xs text-gray-400 mb-8">掲載データの出典・更新方針</p>
 
       <div className="prose-custom space-y-8">
@@ -32,9 +32,9 @@ export default function AboutDataPage() {
         </section>
 
         <section>
-          <h2>大会ナビの役割</h2>
+          <h2>スポ活の役割</h2>
           <p>
-            大会ナビは外部公開情報をもとに大会を整理し、<strong>検索・比較・通知</strong>を支援するサービスです。
+            スポ活は外部公開情報をもとに大会を整理し、<strong>検索・比較・通知</strong>を支援するサービスです。
             大会の主催者ではなく、エントリー（申込）の受付も行っていません。
           </p>
           <p>

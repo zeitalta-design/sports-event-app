@@ -7,7 +7,6 @@ import { getMarathonDetailPageData } from "@/lib/marathon-detail-service";
 import { extractTrailTags } from "@/lib/trail-tags";
 import {
   buildEventQuickFacts,
-  buildEventHighlights,
   buildEventComparisonSummary,
 } from "@/lib/event-detail-highlights";
 import {
@@ -23,9 +22,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import ExternalLinkCard from "@/components/ExternalLinkCard";
 import {
   MarathonDetailHero,
-  MarathonDetailSummary,
   MarathonDetailOverview,
-  MarathonDetailFeatures,
   MarathonDetailServices,
   MarathonDetailPricing,
   MarathonDetailSchedule,
@@ -37,13 +34,14 @@ import {
   MarathonViewTracker,
 } from "@/components/marathon-detail";
 import { ConflictDetailBanner } from "@/components/VerificationConflictBadge";
+import OrganizerUpdateLink from "@/components/event-detail/OrganizerUpdateLink";
+import OrganizerVerifiedBadge from "@/components/OrganizerVerifiedBadge";
 import {
   EventCommentsSection,
   EventTermsSection,
   EventCourseSection,
   EventDayGuideSection,
   EventQuickFactsCard,
-  EventHighlightBadges,
   EventComparisonCard,
   RelatedEventsSection,
   AlternativeEventsSection,
@@ -51,7 +49,16 @@ import {
   EventCompareActions,
   EventSaveActions,
   EventDecisionSignalsCard,
+  ReviewInsightsCard,
+  EventResultsLink,
+  EventPhotoGallery,
+  ReviewContextPhotos,
+  PostEventCTA,
+  CommunityVoicesSection,
+  EventEngagementBar,
+  CommunityNavLinks,
 } from "@/components/event-detail";
+import SnsShareButtons from "@/components/SnsShareButtons";
 
 /**
  * Phase49→Phase55: 汎用スポーツ詳細ページ（大幅情報強化）
@@ -211,7 +218,11 @@ export default async function SportDetailPage({ params }) {
 
   // Phase57: 要点・ハイライト・比較UI
   const quickFacts = buildEventQuickFacts(data);
-  const highlights = buildEventHighlights(data);
+
+  // Phase228: データ出典ラベル
+  const sourceLabel = data.source_site === "runnet" ? "RUNNET" : data.source_site;
+  const hasMoshicom = data.official_url?.includes("moshicom");
+  const dataSource = hasMoshicom ? `${sourceLabel} / moshicom` : sourceLabel;
   const comparison = buildEventComparisonSummary(data);
 
   // Phase58: 回遊強化
@@ -251,7 +262,7 @@ export default async function SportDetailPage({ params }) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       {/* JSON-LD */}
       <script
         type="application/ld+json"
@@ -278,6 +289,18 @@ export default async function SportDetailPage({ params }) {
               {tag.label}
             </span>
           ))}
+        </div>
+      )}
+
+      {/* Phase134: 運営確認バッジ */}
+      {data.organizer_verified && data.organizer_verified !== "unconfirmed" && (
+        <div className="mb-2">
+          <OrganizerVerifiedBadge
+            status={data.organizer_verified}
+            updatedAt={data.updated_at}
+            context="detail"
+            size="md"
+          />
         </div>
       )}
 
@@ -314,14 +337,8 @@ export default async function SportDetailPage({ params }) {
             summary={decisionSummary}
           />
 
-          {/* Phase57: この大会の要点 */}
-          <EventQuickFactsCard quickFacts={quickFacts} />
-
-          {/* Phase57: この大会の特徴 */}
-          <EventHighlightBadges highlights={highlights} />
-
-          {/* B. 基本情報サマリー */}
-          <MarathonDetailSummary data={data} />
+          {/* Phase57→228: この大会の要点（データ出典・情報確認統合） */}
+          <EventQuickFactsCard quickFacts={quickFacts} dataSource={dataSource} freshness={data.freshness} />
 
           {/* B2. 締切傾向・緊急度 */}
           <MarathonDetailUrgency
@@ -350,9 +367,6 @@ export default async function SportDetailPage({ params }) {
             events={p58AlternativeEvents}
             sportSlug={sport.slug}
           />
-
-          {/* D. 特徴 */}
-          <MarathonDetailFeatures features={data.features} />
 
           {/* D2. サービス・設備 */}
           <MarathonDetailServices
@@ -407,14 +421,68 @@ export default async function SportDetailPage({ params }) {
           />
 
           {/* L. 口コミ・レビュー */}
-          <EventCommentsSection reviews={data.reviews} eventId={data.id} />
+          <ReviewInsightsCard insights={data.reviewInsights} />
+          <EventCommentsSection reviews={data.reviews} eventId={data.id} eventTitle={data.title} sportType={data.sport_type} reviewsPath={`/${sport.slug}/${data.id}/reviews`} />
+          <ReviewContextPhotos reviewInsights={data.reviewInsights} galleryGrouped={data.galleryGrouped} />
+
+          {/* 大会結果 */}
+          <EventResultsLink
+            eventId={data.id}
+            eventTitle={data.title}
+            resultsPath={`/${sport.slug}/${data.id}/results`}
+            resultsSummary={data.resultsSummary}
+          />
+
+          {/* Phase160: 写真ギャラリー */}
+          <EventPhotoGallery
+            photos={data.galleryPhotos}
+            grouped={data.galleryGrouped}
+            photoCount={data.photoCount}
+            photosPath={`/${sport.slug}/${data.id}/photos`}
+          />
+
+          {/* Phase194: エンゲージメント指標 */}
+          <EventEngagementBar engagement={data.engagement} />
+
+          {/* Phase193: コミュニティセクション */}
+          <CommunityVoicesSection
+            reviews={data.reviews}
+            reviewSummary={data.reviewSummary}
+            reviewInsights={data.reviewInsights}
+            eventId={data.id}
+            eventTitle={data.title}
+            sportType={data.sport_type}
+            reviewsPath={`/${sport.slug}/${data.id}/reviews`}
+          />
+
+          {/* Phase197: コミュニティ導線 */}
+          <CommunityNavLinks
+            eventId={data.id}
+            eventTitle={data.title}
+            sportSlug={sport.slug}
+            reviewCount={data.reviews?.length || 0}
+            photoCount={data.photoCount || 0}
+            hasResults={!!data.resultsSummary}
+          />
+
+          {/* Phase174: 参加後CTA */}
+          <PostEventCTA
+            eventId={data.id}
+            eventTitle={data.title}
+            sportType={data.sport_type}
+            eventDate={data.event_date}
+            photosPath={`/${sport.slug}/${data.id}/photos`}
+          />
 
           {/* 掲載情報に関する注意 */}
           <p className="text-xs text-gray-400 mt-4 leading-relaxed">
             ※
             掲載情報は外部サイトより取得したものです。最新の情報・申込条件は掲載元ページでご確認ください。
-            大会ナビは大会情報の検索・比較・通知を支援するサービスです。
+            スポ活は大会情報の検索・比較・通知を支援するサービスです。
           </p>
+
+          {/* Phase129: 運営向け情報修正リクエスト導線 */}
+          <OrganizerUpdateLink eventId={data.id} eventTitle={data.title} />
         </div>
 
         {/* サイドバー */}
@@ -423,9 +491,19 @@ export default async function SportDetailPage({ params }) {
           <ExternalLinkCard
             sourceUrl={data.source_url}
             officialUrl={data.official_url}
+            moshicomUrl={data.moshicom_url}
+            sourcePriority={data.source_priority}
             eventId={data.id}
             eventTitle={data.title}
           />
+
+          {/* Phase237: SNSシェア */}
+          <div className="card p-5">
+            <SnsShareButtons
+              url={`${siteConfig.siteUrl}/${sport.slug}/${data.id}`}
+              title={data.title}
+            />
+          </div>
 
           {/* Phase46: 人気指数 */}
           <MarathonDetailPopularity eventId={data.id} />
@@ -468,19 +546,6 @@ export default async function SportDetailPage({ params }) {
             </div>
           )}
 
-          {/* データ鮮度 */}
-          {data.freshness && (
-            <div className="text-center space-y-1">
-              <p className={`text-xs ${data.freshness.className || "text-gray-400"}`}>
-                {data.freshness.displayText}
-              </p>
-              {data.freshness.cautionText && (
-                <p className="text-xs text-amber-600 leading-relaxed">
-                  ※ {data.freshness.cautionText}
-                </p>
-              )}
-            </div>
-          )}
         </div>
       </div>
 

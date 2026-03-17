@@ -11,7 +11,7 @@ export default function MarathonDetailFaq({ faq }) {
 
   return (
     <div className="card p-6">
-      <h2 className="text-lg font-bold text-gray-900 mb-4">
+      <h2 className="text-xl font-bold text-gray-900 mb-4">
         Q&A・注意事項
       </h2>
       <div className="space-y-1">
@@ -26,7 +26,7 @@ export default function MarathonDetailFaq({ faq }) {
               </span>
               <span className="leading-relaxed">{item.question}</span>
             </summary>
-            <div className="ml-7 mb-4 text-sm text-gray-600 leading-[1.8] whitespace-pre-wrap">
+            <div className="ml-7 mb-4 text-sm text-gray-700 leading-[1.8] whitespace-pre-wrap">
               {item.answer}
             </div>
           </details>

@@ -14,6 +14,9 @@ const SECTIONS = [
   { id: "section-races", label: "種目", icon: "🏅" },
   { id: "section-info", label: "大会情報", icon: "ℹ️" },
   { id: "section-entry", label: "参加方法", icon: "✅" },
+  { id: "reviews", label: "口コミ", icon: "💬" },
+  { id: "section-results", label: "結果", icon: "🏆" },
+  { id: "section-photos", label: "写真", icon: "📸" },
   { id: "section-access", label: "会場", icon: "📍" },
 ];
 
@@ -56,10 +59,10 @@ export default function DetailSectionNav() {
           <button
             key={section.id}
             onClick={() => handleClick(section.id)}
-            className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            className={`flex items-center gap-1.5 px-4 py-3.5 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${
               activeSection === section.id
                 ? "border-blue-600 text-blue-700"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                : "border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300"
             }`}
           >
             <span className="hidden sm:inline text-base">{section.icon}</span>

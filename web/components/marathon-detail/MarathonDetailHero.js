@@ -126,6 +126,15 @@ export default function MarathonDetailHero({ data }) {
         data.official_entry_status
       ));
 
+  // Phase159: heroPhoto fallback — event_photosテーブルのヒーロー画像
+  const heroPhotoUrl = data.heroPhoto?.image_url || null;
+  const heroImageSrc = data.hero_image_url || heroPhotoUrl;
+  const heroAlt = data.heroPhoto?.alt_text || data.title;
+  // サムネイルストリップ用（最大4枚、ヒーロー除く）
+  const thumbnailPhotos = (data.galleryPhotos || [])
+    .filter((p) => p.image_url !== heroImageSrc)
+    .slice(0, 4);
+
   return (
     <div className="mb-8">
       {/* メインヒーロー: 画像 + 情報 — 2カラム（モバイル縦/PC横） */}
@@ -143,10 +152,10 @@ export default function MarathonDetailHero({ data }) {
         <div className="mdh-layout">
           {/* 左: 画像エリア */}
           <div className="mdh-img bg-gray-100">
-            {data.hero_image_url && !imgError ? (
+            {heroImageSrc && !imgError ? (
               <img
-                src={data.hero_image_url}
-                alt={data.title}
+                src={heroImageSrc}
+                alt={heroAlt}
                 style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", backgroundColor: "#f9fafb" }}
                 onError={() => setImgError(true)}
               />
@@ -156,8 +165,10 @@ export default function MarathonDetailHero({ data }) {
                 style={{ height: "100%" }}
               >
                 <div className="text-center">
-                  <span className="text-5xl block mb-2">🏃</span>
-                  <span className="text-sm text-gray-400">大会イメージ</span>
+                  <span className="text-5xl block mb-2">
+                    {data.sport_type === "trail" ? "🏔️" : data.sport_type === "cycling" ? "🚴" : "🏃"}
+                  </span>
+                  <span className="text-sm text-gray-400">大会写真を準備中</span>
                 </div>
               </div>
             )}
@@ -201,23 +212,23 @@ export default function MarathonDetailHero({ data }) {
           </div>
 
           {/* 大会名 */}
-          <h1 className="text-xl lg:text-2xl font-bold text-gray-900 leading-tight mb-1">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 leading-snug mb-1">
             {data.title}
           </h1>
 
           {/* キャッチコピー */}
           {data.tagline && (
-            <p className="text-sm text-blue-600 font-medium mb-3 leading-relaxed">
+            <p className="text-base text-blue-600 font-medium mb-3 leading-relaxed">
               {data.tagline}
             </p>
           )}
 
           {/* 基本情報テーブル */}
           <div className="flex-1 mt-2">
-            <table className="w-full text-sm">
+            <table className="w-full text-base">
               <tbody className="divide-y divide-gray-100">
                 <InfoRow label="開催日" bold>
-                  <span className="text-gray-900 font-semibold">
+                  <span className="text-gray-900 font-bold">
                     {formatDate(data.event_date)}
                   </span>
                 </InfoRow>
@@ -243,7 +254,7 @@ export default function MarathonDetailHero({ data }) {
                     )}
                 </InfoRow>
                 <InfoRow label="開催場所">
-                  <span className="text-gray-700">
+                  <span className="text-gray-900">
                     {data.prefecture}
                     {data.city ? ` ${data.city}` : ""}
                     {data.venue_name ? ` — ${data.venue_name}` : ""}
@@ -285,7 +296,7 @@ export default function MarathonDetailHero({ data }) {
               {heroFeatures.map((f) => (
                 <span
                   key={f}
-                  className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200 rounded-md"
+                  className="inline-flex items-center px-2.5 py-1 text-xs font-bold bg-gray-50 text-gray-700 border border-gray-200 rounded-md"
                 >
                   {f}
                 </span>
@@ -362,6 +373,27 @@ export default function MarathonDetailHero({ data }) {
       </div>
       </div>
 
+      {/* Phase159: サムネイルストリップ */}
+      {thumbnailPhotos.length > 0 && (
+        <div className="mt-2 flex gap-1.5 overflow-x-auto scrollbar-none px-1">
+          {thumbnailPhotos.map((photo) => (
+            <div key={photo.id} className="flex-shrink-0 w-16 h-12 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+              <img
+                src={photo.thumbnail_url || photo.image_url}
+                alt={photo.alt_text || photo.caption || "大会写真"}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+          ))}
+          {data.photoCount > thumbnailPhotos.length + 1 && (
+            <div className="flex-shrink-0 w-16 h-12 rounded-md bg-gray-100 border border-gray-200 flex items-center justify-center">
+              <span className="text-[10px] text-gray-400 font-medium">+{data.photoCount - thumbnailPhotos.length - 1}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 募集状況詳細（公式ステータス） */}
       {data.official_entry_status && data.official_checked_at && (
         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-400 px-1">
@@ -392,10 +424,12 @@ export default function MarathonDetailHero({ data }) {
 function InfoRow({ label, children, bold }) {
   return (
     <tr>
-      <td className="py-2.5 pr-4 text-gray-500 font-medium whitespace-nowrap w-24 align-top">
-        {label}
+      <td className="py-3 pr-4 align-top whitespace-nowrap w-28">
+        <span className="inline-block px-2.5 py-1 text-xs font-bold text-white bg-gray-700 rounded">
+          {label}
+        </span>
       </td>
-      <td className={`py-2.5 ${bold ? "font-semibold" : ""}`}>{children}</td>
+      <td className={`py-3 text-gray-800 ${bold ? "font-bold" : "font-medium"}`}>{children}</td>
     </tr>
   );
 }

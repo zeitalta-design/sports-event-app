@@ -93,6 +93,35 @@ export const DISTANCE_SLUGS = {
   },
 };
 
+// Phase118: トレイルラン距離slug → 表示情報
+export const TRAIL_DISTANCE_SLUGS = {
+  short: {
+    label: "ショート（〜20km）",
+    shortLabel: "ショート",
+    description: "20km以下のトレイルラン大会を検索できます。初めてのトレイルランにもおすすめです。",
+    range: [0, 20],
+  },
+  middle: {
+    label: "ミドル（20〜50km）",
+    shortLabel: "ミドル",
+    description: "20〜50kmのトレイルラン大会を検索できます。ステップアップしたいランナーに人気の距離帯です。",
+    range: [20.1, 50],
+  },
+  long: {
+    label: "ロング（50km〜）",
+    shortLabel: "ロング",
+    description: "50km以上のトレイルラン大会を検索できます。上級者向けの本格的な山岳レースです。",
+    range: [50.1, 999],
+  },
+};
+
+// トレイルラン距離APIキー変換
+export const TRAIL_DISTANCE_TO_API_KEY = {
+  short: "short",
+  middle: "middle",
+  long: "long",
+};
+
 // API用の距離key変換（既存APIとの整合）
 export const DISTANCE_TO_API_KEY = {
   full: "full",

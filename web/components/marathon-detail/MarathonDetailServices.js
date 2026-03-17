@@ -42,7 +42,7 @@ export default function MarathonDetailServices({ services, parkingInfo }) {
 
   return (
     <div className="card p-6">
-      <h2 className="text-lg font-bold text-gray-900 mb-4">
+      <h2 className="text-xl font-bold text-gray-900 mb-4">
         サービス・設備
       </h2>
 
@@ -75,7 +75,7 @@ export default function MarathonDetailServices({ services, parkingInfo }) {
 
       {hasParking && (
         <div className="text-sm">
-          <dt className="text-gray-500 text-sm mb-1 font-medium">🅿️ 駐車場</dt>
+          <dt className="text-gray-700 text-sm mb-1 font-bold">🅿️ 駐車場</dt>
           <dd className="text-gray-700 leading-relaxed whitespace-pre-wrap">
             {parkingInfo}
           </dd>

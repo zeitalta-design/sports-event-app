@@ -6,6 +6,9 @@
 
 import { getDb } from "@/lib/db";
 import { getDisplayEntryStatus } from "@/lib/entry-status";
+import { calculateTrustScore } from "@/lib/event-trust-score";
+import { getEventHistoryTimeline } from "@/lib/event-history-service";
+import { getEventReviewSummary } from "@/lib/review-service";
 
 // ─── JSON安全パース ──────────────────────────────
 
@@ -68,6 +71,26 @@ export function getCompareMarathons(ids) {
 
   const detailMap = new Map(details.map((d) => [d.marathon_id, d]));
 
+  // 追加データ（口コミ・信頼スコア・写真数・開催年数）を一括取得
+  const extraMap = new Map();
+  for (const id of eventIds) {
+    const extra = {};
+    // 口コミサマリー
+    try { extra.reviewSummary = getEventReviewSummary(id); } catch { extra.reviewSummary = null; }
+    // 信頼スコア
+    try { extra.trustScore = calculateTrustScore(id); } catch { extra.trustScore = null; }
+    // 写真数
+    try {
+      const photoCount = db.prepare(
+        `SELECT COUNT(*) as cnt FROM event_photos WHERE event_id = ?`
+      ).get(id);
+      extra.photoCount = photoCount?.cnt || 0;
+    } catch { extra.photoCount = 0; }
+    // 開催年数（ヒストリー）
+    try { extra.eventHistory = getEventHistoryTimeline(id); } catch { extra.eventHistory = null; }
+    extraMap.set(id, extra);
+  }
+
   // 入力順を維持して結果を構築
   return ids
     .map((id) => {
@@ -76,15 +99,16 @@ export function getCompareMarathons(ids) {
 
       const eventRaces = raceMap.get(id) || [];
       const detail = detailMap.get(id) || {};
+      const extra = extraMap.get(id) || {};
 
-      return buildCompareData(event, eventRaces, detail);
+      return buildCompareData(event, eventRaces, detail, extra);
     })
     .filter(Boolean);
 }
 
 // ─── データ構築 ──────────────────────────────────
 
-function buildCompareData(event, races, d) {
+function buildCompareData(event, races, d, extra = {}) {
   // 距離ラベル生成
   const distanceLabels = [
     ...new Set(
@@ -165,6 +189,12 @@ function buildCompareData(event, races, d) {
     // キャッチ
     tagline: d.tagline || null,
     summary: d.summary || null,
+
+    // Phase192: 比較強化フィールド
+    reviewSummary: extra.reviewSummary || null,
+    trustScore: extra.trustScore || null,
+    photoCount: extra.photoCount || 0,
+    eventHistory: extra.eventHistory || null,
   };
 }
 
