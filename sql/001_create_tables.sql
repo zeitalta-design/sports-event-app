@@ -28,7 +28,9 @@ CREATE TABLE IF NOT EXISTS events (
   is_active INTEGER NOT NULL DEFAULT 1,
   scraped_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  canonical_event_id INTEGER REFERENCES events(id),
+  normalized_key TEXT
 );
 
 -- ===== event_races: 大会内の種目 =====

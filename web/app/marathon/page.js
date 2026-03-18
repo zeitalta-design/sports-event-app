@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import EventCard from "@/components/EventCard";
 import EmptyState from "@/components/EmptyState";
 import ErrorState from "@/components/ErrorState";
@@ -37,6 +37,7 @@ export default function MarathonListPage() {
   const [error, setError] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [saveMsg, setSaveMsg] = useState("");
+  const [filtersReady, setFiltersReady] = useState(false);
   const [filters, setFilters] = useState({
     keyword: "",
     prefecture: "",
@@ -46,41 +47,53 @@ export default function MarathonListPage() {
     sort: "event_date",
   });
 
+  // 初回マウント: URLパラメータを読み取り→filtersにセット→即座にfetch
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const updates = {};
-    if (params.get("keyword")) updates.keyword = params.get("keyword");
-    if (params.get("prefecture")) updates.prefecture = params.get("prefecture");
-    if (params.get("month")) updates.month = params.get("month");
-    if (params.get("distance")) updates.distance = params.get("distance");
-    if (Object.keys(updates).length > 0) {
-      setFilters((f) => ({ ...f, ...updates }));
-    }
+    const initFilters = { ...filters };
+    if (params.get("keyword")) initFilters.keyword = params.get("keyword");
+    if (params.get("prefecture")) initFilters.prefecture = params.get("prefecture");
+    if (params.get("month")) initFilters.month = params.get("month");
+    if (params.get("distance")) initFilters.distance = params.get("distance");
+    setFilters(initFilters);
+    // 初回fetchはURL paramsから構築したfiltersで直接実行（stateの反映を待たない）
+    fetchEventsWithFilters(initFilters, 1);
+    setFiltersReady(true);
   }, []);
 
+  // フィルタ変更時: ready後のみ（初回はスキップ）
+  const isFirstRender = useRef(true);
   useEffect(() => {
+    if (!filtersReady) return;
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return; // 初回は上のuseEffectで既にfetch済み
+    }
     setPage(1);
+    fetchEventsWithFilters(filters, 1);
   }, [filters]);
 
+  // ページ変更時
   useEffect(() => {
-    fetchEvents();
-  }, [filters, page]);
+    if (!filtersReady || isFirstRender.current) return;
+    fetchEventsWithFilters(filters, page);
+  }, [page]);
 
   useEffect(() => {
     fetchFavoriteIds();
   }, []);
 
-  async function fetchEvents() {
+  async function fetchEventsWithFilters(f, p) {
     setLoading(true);
     setError(false);
     try {
-      const params = new URLSearchParams({ sport_type: "marathon", page: String(page) });
-      if (filters.keyword) params.set("keyword", filters.keyword);
-      if (filters.prefecture) params.set("prefecture", filters.prefecture);
-      if (filters.month) params.set("month", filters.month);
-      if (filters.distance) params.set("distance", filters.distance);
-      if (filters.entry_status) params.set("entry_status", filters.entry_status);
-      if (filters.sort) params.set("sort", filters.sort);
+      const params = new URLSearchParams({ sport_type: "marathon", page: String(p || 1) });
+      if (f.keyword) params.set("keyword", f.keyword);
+      if (f.prefecture) params.set("prefecture", f.prefecture);
+      if (f.month) params.set("month", f.month);
+      if (f.distance) params.set("distance", f.distance);
+      if (f.entry_status) params.set("entry_status", f.entry_status);
+      if (f.sort) params.set("sort", f.sort);
 
       const res = await fetch(`/api/events?${params}`);
       if (!res.ok) throw new Error("API error");

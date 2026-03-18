@@ -40,6 +40,12 @@ const VALID_ACTIONS = [
   "alert_action_click",
   "upgrade_prompt_view",
   "upgrade_prompt_click",
+  // CV改善: 行動ログ拡張
+  "search_execute",
+  "search_filter_change",
+  "card_click",
+  // 外部リンククリック（source_site別識別）
+  "external_link_click",
 ];
 
 /**
@@ -60,10 +66,11 @@ export function recordEventActivity({
   sessionId = null,
   sourcePage = null,
   metadata = null,
+  sourceSite = null,
 }) {
   try {
-    if (!eventId || !actionType) {
-      return { ok: false, error: "eventId and actionType required" };
+    if (eventId === undefined || eventId === null || !actionType) {
+      return { ok: false, error: "actionType required" };
     }
 
     if (!VALID_ACTIONS.includes(actionType)) {
@@ -87,13 +94,25 @@ export function recordEventActivity({
       }
     }
 
+    // canonical_event_id を自動解決
+    let canonicalEventId = null;
+    if (eventId && eventId > 0) {
+      try {
+        const ev = db.prepare("SELECT canonical_event_id, source_site FROM events WHERE id = ?").get(eventId);
+        if (ev) {
+          canonicalEventId = ev.canonical_event_id || null;
+          if (!sourceSite) sourceSite = ev.source_site || null;
+        }
+      } catch {}
+    }
+
     const metadataJson = metadata ? JSON.stringify(metadata) : null;
 
     db.prepare(
       `INSERT INTO event_activity_logs
-       (event_id, action_type, user_key, session_id, source_page, metadata_json, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
-    ).run(eventId, actionType, userKey, sessionId, sourcePage, metadataJson);
+       (event_id, action_type, user_key, session_id, source_page, metadata_json, canonical_event_id, source_site, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+    ).run(eventId, actionType, userKey, sessionId, sourcePage, metadataJson, canonicalEventId, sourceSite);
 
     return { ok: true };
   } catch (err) {

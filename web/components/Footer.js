@@ -111,11 +111,11 @@ export default function Footer() {
           <div className="border-t border-gray-700 pt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-3">
               <Image
-                src={siteConfig.logoImage}
-                alt={siteConfig.siteName}
+                src="/logo-banner.png"
+                alt="スポカツ"
                 width={100}
-                height={30}
-                className="h-7 w-auto brightness-0 invert"
+                height={24}
+                className="h-6 w-auto brightness-0 invert opacity-80"
               />
               <span className="text-sm text-gray-300">スポーツ大会検索・通知サービス</span>
             </div>
@@ -137,7 +137,12 @@ export default function Footer() {
               </Link>
             </nav>
           </div>
-          <p className="text-xs text-gray-400">&copy; 2026 スポ活 (SpoKatsu). All rights reserved.</p>
+          <p className="text-xs text-gray-500 mt-2">
+            掲載内容の修正・削除をご希望の場合は、
+            <Link href="/contact" className="text-gray-300 hover:text-white underline">お問い合わせ</Link>
+            よりご連絡ください。
+          </p>
+          <p className="text-xs text-gray-400 mt-2">&copy; 2026 スポカツ (SpoKatsu). All rights reserved.</p>
         </div>
       </div>
     </footer>

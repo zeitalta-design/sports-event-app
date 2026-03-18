@@ -17,17 +17,18 @@ import { recordEventActivity } from "@/lib/event-activity";
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { event_id, action_type, session_id, source_page, metadata } = body;
+    const { event_id, action_type, session_id, source_page, metadata, source_site } = body;
 
-    if (!event_id || !action_type) {
+    if (!action_type) {
       return NextResponse.json(
-        { error: "event_id and action_type are required" },
+        { error: "action_type is required" },
         { status: 400 }
       );
     }
 
-    const eventId = parseInt(event_id, 10);
-    if (isNaN(eventId) || eventId <= 0) {
+    // event_idが0やnullの場合も許容（検索ログ等、大会に紐づかないアクション用）
+    const eventId = event_id ? parseInt(event_id, 10) : 0;
+    if (isNaN(eventId) || eventId < 0) {
       return NextResponse.json(
         { error: "Invalid event_id" },
         { status: 400 }
@@ -40,6 +41,7 @@ export async function POST(request) {
       sessionId: session_id || null,
       sourcePage: source_page || null,
       metadata: metadata || null,
+      sourceSite: source_site || null,
     });
 
     return NextResponse.json(result);

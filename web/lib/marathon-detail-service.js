@@ -48,12 +48,16 @@ export function getMarathonDetailPageData(id) {
     .get(id);
   if (!event) return null;
 
-  // レース情報
+  // canonical グループ: 同一大会の別ソース情報を取得
+  const canonicalSources = getCanonicalSources(db, event);
+
+  // レース情報（canonicalグループ全体から統合）
+  const allEventIds = [event.id, ...canonicalSources.map((s) => s.id)];
   const races = db
     .prepare(
-      "SELECT * FROM event_races WHERE event_id = ? ORDER BY sort_order, distance_km DESC"
+      `SELECT * FROM event_races WHERE event_id IN (${allEventIds.join(",")}) ORDER BY sort_order, distance_km DESC`
     )
-    .all(id);
+    .all();
 
   // 詳細情報（存在しない場合もある）
   const detail = db
@@ -101,12 +105,40 @@ export function getMarathonDetailPageData(id) {
   } catch {}
 
   // 統合オブジェクトを構築
-  return buildPageData(event, races, detail, historySummary, urgencyMeta, reviews, reviewSummary, reviewInsights, resultsSummary, heroPhoto, galleryData, photoCount);
+  return buildPageData(event, races, detail, historySummary, urgencyMeta, reviews, reviewSummary, reviewInsights, resultsSummary, heroPhoto, galleryData, photoCount, canonicalSources);
+}
+
+// ─── canonical グループ取得 ─────────────────────
+
+/**
+ * 同一大会の別ソース情報を取得
+ * - このイベントがcanonical（代表）の場合: canonical_event_id = this.id のレコード
+ * - このイベントがマージ済みの場合: 同じcanonical_event_idを持つレコード + canonical本体
+ */
+function getCanonicalSources(db, event) {
+  try {
+    if (event.canonical_event_id) {
+      // このイベント自体がマージ済み → canonicalと同グループの他レコード
+      return db.prepare(`
+        SELECT id, source_site, source_url, official_url, hero_image_url, title, description
+        FROM events
+        WHERE (id = ? OR canonical_event_id = ?) AND id != ? AND is_active = 1
+      `).all(event.canonical_event_id, event.canonical_event_id, event.id);
+    }
+    // このイベントがcanonical → マージされたレコード
+    return db.prepare(`
+      SELECT id, source_site, source_url, official_url, hero_image_url, title, description
+      FROM events
+      WHERE canonical_event_id = ? AND is_active = 1
+    `).all(event.id);
+  } catch {
+    return [];
+  }
 }
 
 // ─── データ統合 ──────────────────────────────
 
-function buildPageData(event, races, detail, historySummary, urgencyMeta, reviews, reviewSummary, reviewInsights, resultsSummary, heroPhoto, galleryData, photoCount) {
+function buildPageData(event, races, detail, historySummary, urgencyMeta, reviews, reviewSummary, reviewInsights, resultsSummary, heroPhoto, galleryData, photoCount, canonicalSources = []) {
   const d = detail || {};
 
   return {
@@ -283,6 +315,16 @@ function buildPageData(event, races, detail, historySummary, urgencyMeta, review
     verification_conflict_level: event.verification_conflict_level || 0,
     verification_conflict_summary: event.verification_conflict_summary || null,
     verification_status: event.verification_status || "unverified",
+
+    // === 複数ソース統合情報 ===
+    canonicalSources: canonicalSources.map((s) => ({
+      id: s.id,
+      source_site: s.source_site,
+      source_url: s.source_url,
+      official_url: s.official_url,
+      title: s.title,
+    })),
+    hasMultipleSources: canonicalSources.length > 0,
   };
 }
 

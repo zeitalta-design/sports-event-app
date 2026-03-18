@@ -532,11 +532,15 @@ export default async function MarathonDetailPage({ params }) {
           />
 
           {/* 掲載情報に関する注意 */}
-          <p className="text-xs text-gray-400 leading-relaxed">
-            ※
-            掲載情報は外部サイトより取得したものです。最新の情報・申込条件は掲載元ページでご確認ください。
-            スポ活は大会情報の検索・比較・通知を支援するサービスです。
-          </p>
+          <div className="bg-gray-50 rounded-lg p-4 text-xs text-gray-500 leading-relaxed space-y-1">
+            <p>
+              ※ 掲載情報は外部サイトより取得したものです。最新の情報・申込条件は必ず公式サイトでご確認ください。
+            </p>
+            <p>
+              スポカツは大会情報の検索・比較・通知を支援するサービスです。
+              掲載内容の修正・削除は<a href="/contact" className="text-blue-500 hover:text-blue-700 underline">お問い合わせ</a>よりご連絡ください。
+            </p>
+          </div>
 
           {/* Phase129: 運営向け情報修正リクエスト導線 */}
           <OrganizerUpdateLink eventId={data.id} eventTitle={data.title} />
@@ -555,6 +559,7 @@ export default async function MarathonDetailPage({ params }) {
             sourcePriority={data.source_priority}
             eventId={data.id}
             eventTitle={data.title}
+            canonicalSources={data.canonicalSources || []}
           />
 
           {/* アクション */}

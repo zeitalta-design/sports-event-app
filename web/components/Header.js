@@ -58,17 +58,17 @@ export default function Header() {
     <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
       {/* メインヘッダー */}
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        {/* 左: ロゴ */}
-        <Link href="/" className="flex items-center gap-2 shrink-0 group">
+        {/* 左: ロゴ — PNG画像バナー（フォント非依存） */}
+        <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
           <Image
-            src={siteConfig.logoImage}
-            alt={siteConfig.siteName}
-            width={120}
-            height={36}
-            className="h-8 w-auto group-hover:opacity-90 transition-opacity"
+            src="/logo-banner.png"
+            alt="スポカツ"
+            width={160}
+            height={38}
+            className="h-9 sm:h-10 w-auto group-hover:opacity-80 transition-opacity"
             priority
           />
-          <span className="text-xs hidden md:inline border-l border-gray-200 pl-2 ml-0.5 leading-tight text-gray-600 font-medium">
+          <span className="text-[10px] hidden md:inline border-l border-gray-200 pl-2 ml-0.5 leading-tight text-gray-500 font-medium">
             全国のスポーツ大会を探す
           </span>
         </Link>

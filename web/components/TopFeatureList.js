@@ -52,9 +52,16 @@ export default function TopFeatureList() {
             </div>
           ))}
         </div>
-        <div className="text-center mt-8">
-          <p className="text-[11px] text-gray-400">
+        <div className="text-center mt-8 space-y-2" suppressHydrationWarning>
+          <p className="text-[11px] text-gray-400" suppressHydrationWarning>
             ※ 大会情報はRUNNET等の公開情報をもとに掲載しています。最終的な条件確認は掲載元ページでご確認ください。
+          </p>
+          <p className="text-[11px] text-gray-400" suppressHydrationWarning>
+            掲載内容の修正・削除をご希望の場合は、
+            <Link href="/contact" className="text-blue-500 hover:text-blue-700 underline">
+              お問い合わせ
+            </Link>
+            よりご連絡ください。
           </p>
         </div>
       </div>

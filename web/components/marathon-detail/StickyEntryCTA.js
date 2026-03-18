@@ -81,27 +81,38 @@ export default function StickyEntryCTA({
 
         {/* ボタン群 */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          {sourceUrl && (
+          {sourceUrl && !hasEntry && (
             <a
               href={sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-lg transition-colors shadow-md"
             >
-              公式サイト
+              RUNNETで詳細を見る ↗
             </a>
           )}
           {hasEntry && (
-            <a
-              href={entryUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={handleEntryClick}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-lg transition-colors shadow-md"
-            >
-              エントリーする
-              <span className="text-xs">↗</span>
-            </a>
+            <>
+              <a
+                href={entryUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handleEntryClick}
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold text-base rounded-lg transition-colors shadow-md"
+              >
+                エントリーする ↗
+              </a>
+              {sourceUrl && (
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  公式サイト
+                </a>
+              )}
+            </>
           )}
         </div>
       </div>

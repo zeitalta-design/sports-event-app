@@ -156,7 +156,7 @@ export default function MarathonDetailHero({ data }) {
               <img
                 src={heroImageSrc}
                 alt={heroAlt}
-                style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", backgroundColor: "#f9fafb" }}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 onError={() => setImgError(true)}
               />
             ) : (
@@ -327,38 +327,39 @@ export default function MarathonDetailHero({ data }) {
           <SuitabilityBadge event={data} variant="detail" />
 
           {/* エントリーCTA */}
-          <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-gray-100">
-            {hasEntryUrl && (
-              <MarathonDetailEntryButton
-                entryUrl={data.entry_url}
-                eventId={data.id}
-                eventTitle={data.title}
-              />
-            )}
-            {data.source_url && (
-              <a
-                href={data.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
+          <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
+            {/* 主CTA: エントリー or RUNNET */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              {hasEntryUrl ? (
+                <MarathonDetailEntryButton
+                  entryUrl={data.entry_url}
+                  eventId={data.id}
+                  eventTitle={data.title}
+                />
+              ) : data.source_url ? (
+                <a
+                  href={data.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold text-base rounded-xl transition-colors shadow-md"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
-                  />
-                </svg>
-                公式サイトで確認
-              </a>
-            )}
-            <div className="flex items-center gap-2 ml-auto">
+                  RUNNETで見る（外部サイト）
+                  <span className="text-sm">↗</span>
+                </a>
+              ) : null}
+              {hasEntryUrl && data.source_url && (
+                <a
+                  href={data.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  公式サイトで確認 ↗
+                </a>
+              )}
+            </div>
+            {/* 副アクション */}
+            <div className="flex items-center gap-2">
               <SaveButton eventId={data.id} variant="compact" />
               <CompareButton
                 eventId={data.id}

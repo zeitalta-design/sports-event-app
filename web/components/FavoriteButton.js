@@ -18,6 +18,12 @@ export default function FavoriteButton({ eventId }) {
         await fetch(`/api/favorites/${eventId}`, { method: "DELETE" });
         setIsFavorite(false);
         trackEvent(EVENTS.FAVORITE_REMOVE, { event_id: eventId });
+        // 行動ログDB記録
+        fetch("/api/track", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event_id: eventId, action_type: "favorite_remove", source_page: window.location.pathname }),
+        }).catch(() => {});
       } else {
         await fetch("/api/favorites", {
           method: "POST",
@@ -26,6 +32,12 @@ export default function FavoriteButton({ eventId }) {
         });
         setIsFavorite(true);
         trackEvent(EVENTS.FAVORITE_ADD, { event_id: eventId });
+        // 行動ログDB記録
+        fetch("/api/track", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event_id: eventId, action_type: "favorite_add", source_page: window.location.pathname }),
+        }).catch(() => {});
       }
     } catch (err) {
       console.error(err);

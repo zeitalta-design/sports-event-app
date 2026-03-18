@@ -4,6 +4,9 @@ import { getFeatureSummaries } from "@/lib/feature-marathons";
 import { getEventDisplayStatus } from "@/lib/entry-status";
 import { getPopularEvents } from "@/lib/event-popularity";
 
+// 名寄せ済みレコード除外条件
+const NOT_MERGED = "AND canonical_event_id IS NULL";
+
 export async function GET() {
   try {
     const db = getDb();
@@ -15,17 +18,21 @@ export async function GET() {
         return { ...e, entry_status: ds.status };
       });
 
-    // 掲載大会数
+    // 掲載大会数（名寄せ済みは除外）
     const { total } = db
-      .prepare("SELECT COUNT(*) as total FROM events WHERE is_active = 1")
+      .prepare(`SELECT COUNT(*) as total FROM events WHERE is_active = 1 ${NOT_MERGED}`)
       .get();
 
-    // 直近締切の大会（締切が今日以降で近い順、最大6件）
+    // 共通SELECT — 画像URL含む（カード表示に必要）
+    const CARD_COLS = `id, title, event_date, entry_end_date, prefecture, entry_status, sport_type,
+                       hero_image_url`;
+
+    // 直近締切の大会
     let deadlineEvents = db
       .prepare(`
-        SELECT id, title, event_date, entry_end_date, prefecture, entry_status, sport_type
+        SELECT ${CARD_COLS}
         FROM events
-        WHERE is_active = 1
+        WHERE is_active = 1 ${NOT_MERGED}
           AND entry_end_date IS NOT NULL
           AND entry_end_date >= date('now')
           AND entry_status = 'open'
@@ -34,13 +41,12 @@ export async function GET() {
       `)
       .all();
 
-    // Phase230: 締切データが少ない場合、受付中の大会をフォールバック
     if (deadlineEvents.length < 3) {
       const fallback = db
         .prepare(`
-          SELECT id, title, event_date, entry_end_date, prefecture, entry_status, sport_type
+          SELECT ${CARD_COLS}
           FROM events
-          WHERE is_active = 1
+          WHERE is_active = 1 ${NOT_MERGED}
             AND event_date >= date('now')
             AND entry_status = 'open'
           ORDER BY event_date ASC
@@ -52,25 +58,24 @@ export async function GET() {
       }
     }
 
-    // 新着・注目大会（更新日が新しい順、最大6件）
+    // 新着・注目大会
     let newEvents = db
       .prepare(`
-        SELECT id, title, event_date, entry_end_date, prefecture, entry_status, sport_type
+        SELECT ${CARD_COLS}
         FROM events
-        WHERE is_active = 1
+        WHERE is_active = 1 ${NOT_MERGED}
           AND event_date >= date('now')
         ORDER BY updated_at DESC
         LIMIT 6
       `)
       .all();
 
-    // Phase230: 未来の大会が少ない場合、全大会から表示
     if (newEvents.length < 3) {
       const fallback = db
         .prepare(`
-          SELECT id, title, event_date, entry_end_date, prefecture, entry_status, sport_type
+          SELECT ${CARD_COLS}
           FROM events
-          WHERE is_active = 1
+          WHERE is_active = 1 ${NOT_MERGED}
           ORDER BY updated_at DESC
           LIMIT 6
         `)
@@ -80,18 +85,19 @@ export async function GET() {
       }
     }
 
-    // Phase45: 人気大会を行動ログベースの人気指数で取得
+    // 人気大会
     let popularEvents = getPopularEvents({ limit: 5, days: 30 });
 
-    // Phase230: 人気データが少ない場合、直近開催の大会をフォールバック
     if (!popularEvents || popularEvents.length < 3) {
       const fallback = db
         .prepare(`
-          SELECT id, title, event_date, entry_end_date, prefecture, entry_status, sport_type
+          SELECT id, title, event_date, entry_end_date, prefecture, entry_status, sport_type,
+                 hero_image_url, popularity_score, popularity_label, popularity_key
           FROM events
-          WHERE is_active = 1
+          WHERE is_active = 1 ${NOT_MERGED}
+            AND entry_status = 'open'
             AND event_date >= date('now')
-          ORDER BY event_date ASC
+          ORDER BY popularity_score DESC, event_date ASC
           LIMIT 5
         `)
         .all();

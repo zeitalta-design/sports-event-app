@@ -18,7 +18,7 @@ export async function GET(request) {
     const offset = (page - 1) * limit;
 
     const db = getDb();
-    let where = ["e.is_active = 1", "e.sport_type = ?"];
+    let where = ["e.is_active = 1", "e.canonical_event_id IS NULL", "e.sport_type = ?"];
     let params = [sportType];
     let joins = "";
 

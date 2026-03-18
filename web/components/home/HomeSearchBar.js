@@ -113,6 +113,23 @@ export default function HomeSearchBar({ totalEvents = 0 }) {
       .map((i) => i.key) || [];
     if (distKeys.length === 1) params.set("distance", distKeys[0]);
 
+    // 検索実行ログ（fire-and-forget）
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_id: 0,
+        action_type: "search_execute",
+        source_page: "search_bar",
+        metadata: {
+          keyword: params.get("keyword") || null,
+          prefecture: prefecture || null,
+          month: month || null,
+          distance: params.get("distance") || null,
+          chips: [...selectedChips],
+        },
+      }),
+    }).catch(() => {});
     router.push(`/marathon?${params.toString()}`);
   };
 

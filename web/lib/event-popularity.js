@@ -102,6 +102,7 @@ export function getPopularEvents({ limit = 5, days = 30, sportType = null } = {}
         `SELECT e.id, e.title, e.event_date, e.entry_end_date,
                 e.entry_start_date, e.prefecture, e.city, e.venue_name,
                 e.entry_status, e.sport_type, e.hero_image_url, e.description,
+                e.popularity_score as db_popularity_score,
                 (SELECT COUNT(*) FROM favorites f WHERE f.event_id = e.id) as fav_count,
                 (SELECT COUNT(*) FROM event_reviews rv WHERE rv.event_id = e.id) as review_count,
                 (SELECT GROUP_CONCAT(d, ',') FROM (
@@ -135,7 +136,12 @@ export function getPopularEvents({ limit = 5, days = 30, sportType = null } = {}
       };
 
       const { raw_score, popularity_score } = calculatePopularityScore(metrics);
-      const label = getPopularityLabel(popularity_score);
+
+      // 行動ログベースのスコアが0の場合、DB保存済みの暫定スコアをフォールバック
+      const effectiveScore = popularity_score > 0
+        ? popularity_score
+        : (event.db_popularity_score || 0);
+      const label = getPopularityLabel(effectiveScore);
 
       // 受付状態を再計算
       const ds = getEventDisplayStatus(event);
@@ -147,7 +153,7 @@ export function getPopularEvents({ limit = 5, days = 30, sportType = null } = {}
         favorites_30d: activity.favorites,
         entry_clicks_30d: activity.entry_clicks,
         raw_score,
-        popularity_score,
+        popularity_score: effectiveScore,
         popularity_label: label?.label || null,
         popularity_key: label?.key || null,
       };
