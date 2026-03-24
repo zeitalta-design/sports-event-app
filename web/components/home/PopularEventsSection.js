@@ -1,8 +1,10 @@
 "use client";
 import Link from "next/link";
 import EventShowcaseCard from "./EventShowcaseCard";
+import { useImpressionTracker } from "@/hooks/useImpressionTracker";
 
 export default function PopularEventsSection({ events = [] }) {
+  useImpressionTracker(events, "popular");
   if (events.length === 0) return null;
 
   return (

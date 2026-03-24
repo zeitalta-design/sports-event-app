@@ -6,7 +6,7 @@ export const metadata = {
   title: "距離別トレイルラン大会",
   description: "ショート・ミドル・ロングなど距離別にトレイルラン大会を探せます。",
   openGraph: {
-    title: "距離別トレイルラン大会 | スポ活",
+    title: "距離別トレイルラン大会 | スポログ",
     description: "距離で絞ってトレイルラン大会を探せます。ショート、ミドル、ロング対応。",
     type: "website",
   },

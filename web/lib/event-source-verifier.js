@@ -17,6 +17,11 @@ import {
   fetchMoshicomHtml,
   extractEventInfo as extractMoshicomInfo,
 } from "@/lib/moshicom-fetcher";
+import {
+  isSportsentryUrl,
+  fetchSportsentryHtml,
+  extractEventInfo as extractSportsentryInfo,
+} from "@/lib/sportsentry-fetcher";
 import { getMonitorableSourceLinks, ensureEventSourceLinks } from "@/lib/event-sources";
 import { detectVerificationConflict, buildConflictSummary } from "@/lib/verification-conflict";
 
@@ -58,6 +63,10 @@ export async function verifySingleSourceLink(sourceLink, options = {}) {
       const html = await fetchMoshicomHtml(url);
       const $ = cheerio.load(html);
       eventInfo = extractMoshicomInfo($, url);
+    } else if (sourceLink.source_type === "sportsentry" || isSportsentryUrl(url)) {
+      const html = await fetchSportsentryHtml(url);
+      const $ = cheerio.load(html);
+      eventInfo = extractSportsentryInfo($, url);
     } else {
       snapshot.error_message = "unsupported_source_type";
       return snapshot;

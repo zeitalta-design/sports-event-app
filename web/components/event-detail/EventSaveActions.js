@@ -10,6 +10,7 @@
 import { useState, useCallback } from "react";
 import { useSavedEvents } from "@/hooks/useSavedEvents";
 import { trackEvent, EVENTS } from "@/lib/analytics";
+import AddToCalendarButton from "@/components/AddToCalendarButton";
 
 export default function EventSaveActions({
   eventId,
@@ -50,7 +51,9 @@ export default function EventSaveActions({
   );
 
   return (
-    <div className="relative">
+    <div className="flex items-center gap-2">
+      <AddToCalendarButton eventId={eventId} variant="default" />
+      <div className="relative">
       <button
         onClick={handleToggle}
         className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
@@ -81,6 +84,7 @@ export default function EventSaveActions({
           {showToast}
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -18,7 +18,7 @@ export async function generateMetadata({ params }) {
     title: `${label}開催のトレイルラン大会`,
     description: getMonthDescription(month, "trail"),
     openGraph: {
-      title: `${label}開催のトレイルラン大会 | スポ活`,
+      title: `${label}開催のトレイルラン大会 | スポログ`,
       description: getMonthDescription(month, "trail"),
       type: "website",
     },

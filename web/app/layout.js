@@ -20,7 +20,7 @@ export const metadata = {
     default: `${siteConfig.siteName} | 全国のスポーツ大会を探す`,
     template: `%s | ${siteConfig.siteName}`,
   },
-  description: "スポ活は、全国のスポーツ大会を検索・比較・通知できるサービスです。まずはマラソン大会検索に対応。",
+  description: "スポログは、全国のスポーツ大会を検索・比較・通知できるサービスです。まずはマラソン大会検索に対応。",
   openGraph: {
     siteName: siteConfig.siteName,
     locale: "ja_JP",

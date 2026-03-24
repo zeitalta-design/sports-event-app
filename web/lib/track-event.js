@@ -5,7 +5,7 @@
  * 失敗しても画面に影響しない（fire-and-forget）。
  */
 
-export async function trackEvent(actionType, { eventId, sourcePage, metadata } = {}) {
+export async function trackEvent(actionType, { eventId, sourcePage, metadata, placement } = {}) {
   try {
     await fetch("/api/events/activity", {
       method: "POST",
@@ -15,6 +15,7 @@ export async function trackEvent(actionType, { eventId, sourcePage, metadata } =
         action_type: actionType,
         source_page: sourcePage || (typeof window !== "undefined" ? window.location.pathname : null),
         metadata: metadata || null,
+        placement: placement || null,
       }),
     });
   } catch {
@@ -71,6 +72,25 @@ export const TRACK_ACTIONS = {
   TOP_CALENDAR_MORE: "top_calendar_more",
   TOP_CALENDAR_CTA: "top_calendar_cta_main",
 };
+
+/**
+ * 掲載効果分析: インプレッション一括送信
+ * 画面に表示されたイベントのplacement付きインプレッションをバッチ送信する。
+ *
+ * @param {Array<{eventId: number, placement: string}>} items
+ */
+export async function trackImpressions(items) {
+  if (!items || items.length === 0) return;
+  try {
+    await fetch("/api/impressions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    });
+  } catch {
+    // 計測失敗は無視
+  }
+}
 
 /**
  * Phase175: data-track属性の自動計測を初期化

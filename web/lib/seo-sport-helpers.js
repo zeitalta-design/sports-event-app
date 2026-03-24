@@ -54,7 +54,7 @@ export function getSportSeoConfig(sportSlug) {
       title: `地方別${sportEventLabel}`,
       description: `北海道から九州・沖縄まで、地方別に${sportEventLabel}を探せます。`,
       openGraph: {
-        title: `地方別${sportEventLabel} | スポ活`,
+        title: `地方別${sportEventLabel} | スポログ`,
         description: `全国8地方の${sportEventLabel}を地域ごとに探せます。`,
         type: "website",
       },
@@ -65,7 +65,7 @@ export function getSportSeoConfig(sportSlug) {
       title: `季節別${sportEventLabel}`,
       description: `春・夏・秋・冬の季節ごとに${sportEventLabel}を探せます。`,
       openGraph: {
-        title: `季節別${sportEventLabel} | スポ活`,
+        title: `季節別${sportEventLabel} | スポログ`,
         description: `春夏秋冬の季節別に${sportEventLabel}を探せます。`,
         type: "website",
       },
@@ -76,7 +76,7 @@ export function getSportSeoConfig(sportSlug) {
       title: `テーマ別${sportEventLabel}`,
       description: `目的に合った${sportEventLabel}を探せます。`,
       openGraph: {
-        title: `テーマ別${sportEventLabel} | スポ活`,
+        title: `テーマ別${sportEventLabel} | スポログ`,
         description: `目的やテーマ別に${sportEventLabel}を探せます。`,
         type: "website",
       },
@@ -87,7 +87,7 @@ export function getSportSeoConfig(sportSlug) {
       title: `距離別${sportEventLabel}`,
       description: `距離別に${sportEventLabel}を探せます。`,
       openGraph: {
-        title: `距離別${sportEventLabel} | スポ活`,
+        title: `距離別${sportEventLabel} | スポログ`,
         description: `距離で絞って${sportEventLabel}を探せます。`,
         type: "website",
       },

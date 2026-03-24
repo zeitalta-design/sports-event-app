@@ -36,12 +36,12 @@ export async function POST(request) {
 
       try {
         const { transporter, info } = await getTransporter();
-        const from = process.env.MAIL_FROM || "スポ活 <noreply@spokatsu.com>";
+        const from = process.env.MAIL_FROM || "スポログ <noreply@sportlog.com>";
 
         const mailResult = await transporter.sendMail({
           from,
           to: email,
-          subject: "【スポ活】パスワードリセットのご案内",
+          subject: "【スポログ】パスワードリセットのご案内",
           text: buildResetEmailText(resetUrl),
         });
 
@@ -77,7 +77,7 @@ export async function POST(request) {
  * リセットメール本文
  */
 function buildResetEmailText(resetUrl) {
-  return `スポ活をご利用いただきありがとうございます。
+  return `スポログをご利用いただきありがとうございます。
 
 パスワードリセットのリクエストを受け付けました。
 下記のURLにアクセスして、新しいパスワードを設定してください。
@@ -91,6 +91,6 @@ ${resetUrl}
 アカウントのパスワードは変更されません。
 
 ---
-スポ活 - スポーツ大会検索・通知サービス
+スポログ - スポーツ大会検索・通知サービス
 `;
 }

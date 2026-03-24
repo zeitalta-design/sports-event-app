@@ -18,8 +18,16 @@ export async function GET(request) {
     const offset = (page - 1) * limit;
 
     const db = getDb();
-    let where = ["e.is_active = 1", "e.canonical_event_id IS NULL", "e.sport_type = ?"];
-    let params = [sportType];
+    // 過去開催大会の公開ルール: 終了後31日以降は一般一覧から除外
+    // ただし event_date が NULL の場合は除外しない（日付未設定は表示継続）
+    const archiveCutoff = new Date(Date.now() - 31 * 86400000).toISOString().split("T")[0];
+    let where = [
+      "e.is_active = 1",
+      "e.canonical_event_id IS NULL",
+      "e.sport_type = ?",
+      "(e.event_date IS NULL OR e.event_date = '' OR e.event_date >= ?)",
+    ];
+    let params = [sportType, archiveCutoff];
     let joins = "";
 
     if (prefecture) {

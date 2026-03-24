@@ -5,7 +5,7 @@ export const metadata = {
   title: "月別マラソン大会",
   description: "開催月ごとにマラソン大会を探せます。シーズンに合わせて大会を見つけましょう。",
   openGraph: {
-    title: "月別マラソン大会 | スポ活",
+    title: "月別マラソン大会 | スポログ",
     description: "1月〜12月の開催月別にマラソン大会を探せます。",
     type: "website",
   },

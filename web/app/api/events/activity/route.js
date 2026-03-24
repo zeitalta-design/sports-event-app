@@ -17,7 +17,7 @@ import { recordEventActivity } from "@/lib/event-activity";
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { event_id, action_type, session_id, source_page, metadata, source_site } = body;
+    const { event_id, action_type, session_id, source_page, metadata, source_site, placement } = body;
 
     if (!action_type) {
       return NextResponse.json(
@@ -42,6 +42,7 @@ export async function POST(request) {
       sourcePage: source_page || null,
       metadata: metadata || null,
       sourceSite: source_site || null,
+      placement: placement || null,
     });
 
     return NextResponse.json(result);

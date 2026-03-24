@@ -327,16 +327,35 @@ export default function HomeSearchBar({ totalEvents = 0 }) {
               </div>
             )}
 
-            {/* 検索ボタン — 大きく目立つ */}
+            {/* 検索ボタン */}
             <button
               type="submit"
-              className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl
-                         hover:bg-blue-700 active:bg-blue-800 transition-colors text-base
-                         shadow-md hover:shadow-lg"
+              className="w-full py-3 text-white font-semibold rounded-lg
+                         transition-all duration-200 text-[15px] tracking-wide"
+              style={{
+                background: "linear-gradient(to bottom, #4874b8, #3a63a3)",
+                boxShadow: "0 1px 3px rgba(58,99,163,0.25), inset 0 1px 0 rgba(255,255,255,0.1)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "linear-gradient(to bottom, #5282c4, #4270b0)";
+                e.currentTarget.style.boxShadow = "0 2px 6px rgba(58,99,163,0.3), inset 0 1px 0 rgba(255,255,255,0.12)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "linear-gradient(to bottom, #4874b8, #3a63a3)";
+                e.currentTarget.style.boxShadow = "0 1px 3px rgba(58,99,163,0.25), inset 0 1px 0 rgba(255,255,255,0.1)";
+              }}
+              onMouseDown={(e) => {
+                e.currentTarget.style.background = "linear-gradient(to bottom, #3d6399, #345894)";
+                e.currentTarget.style.boxShadow = "0 0 2px rgba(58,99,163,0.2), inset 0 1px 2px rgba(0,0,0,0.1)";
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.background = "linear-gradient(to bottom, #5282c4, #4270b0)";
+                e.currentTarget.style.boxShadow = "0 2px 6px rgba(58,99,163,0.3), inset 0 1px 0 rgba(255,255,255,0.12)";
+              }}
             >
               大会を検索する
               {activeCount > 0 && (
-                <span className="ml-2 text-blue-200">({activeCount}件の条件)</span>
+                <span className="ml-2 text-blue-100/80">({activeCount}件の条件)</span>
               )}
             </button>
           </form>

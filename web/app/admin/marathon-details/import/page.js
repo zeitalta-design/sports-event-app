@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AdminNav from "@/components/AdminNav";
 
 // ─── ソース種別 ──────────────────────────
@@ -9,6 +9,7 @@ import AdminNav from "@/components/AdminNav";
 const SOURCE_TYPES = [
   { value: "moshicom", label: "moshicom" },
   { value: "runnet", label: "RUNNET" },
+  { value: "sportsentry", label: "スポーツエントリー" },
   { value: "official", label: "公式サイト" },
   { value: "manual", label: "手入力" },
 ];
@@ -17,6 +18,8 @@ const SOURCE_TYPES = [
 
 export default function AdminMarathonDetailImportPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefilledEventId = searchParams.get("eventId") || "";
 
   // モード切替: "url" or "text"
   const [mode, setMode] = useState("url");
@@ -54,7 +57,7 @@ export default function AdminMarathonDetailImportPage() {
       </div>
 
       {mode === "url" ? (
-        <UrlImportMode />
+        <UrlImportMode prefilledEventId={prefilledEventId} />
       ) : (
         <TextImportMode router={router} />
       )}
@@ -66,9 +69,9 @@ export default function AdminMarathonDetailImportPage() {
 // URL自動取得モード
 // ═══════════════════════════════════════════════════
 
-function UrlImportMode() {
+function UrlImportMode({ prefilledEventId = "" }) {
   const [url, setUrl] = useState("");
-  const [existingId, setExistingId] = useState("");
+  const [existingId, setExistingId] = useState(prefilledEventId);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState("");
   const [error, setError] = useState(null);
@@ -121,7 +124,7 @@ function UrlImportMode() {
     <>
       <div className="card p-6 mb-6">
         <h2 className="text-lg font-bold text-gray-900 mb-1">
-          URL自動取得（moshicom / RUNNET）
+          URL自動取得（RUNNET / MOSHICOM / スポーツエントリー）
         </h2>
         <p className="text-xs text-gray-400 mb-4">
           URLを入力するだけで、HTML取得 → 解析 → LLM構造化 → DB保存を一括で行います。
@@ -136,7 +139,7 @@ function UrlImportMode() {
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://moshicom.com/... または https://runnet.jp/entry/..."
+            placeholder="https://runnet.jp/entry/... / https://moshicom.com/... / https://www.sportsentry.ne.jp/event/t/..."
             className="border border-gray-300 rounded px-3 py-2 w-full text-sm"
             onKeyDown={(e) => e.key === "Enter" && !loading && handleImport()}
           />

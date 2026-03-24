@@ -112,6 +112,9 @@ export function getDb() {
       "ALTER TABLE events ADD COLUMN popularity_score INTEGER DEFAULT 0",
       "ALTER TABLE events ADD COLUMN popularity_label TEXT",
       "ALTER TABLE events ADD COLUMN popularity_key TEXT",
+      // Phase240: 巡回パトロール — 手動対応フラグ
+      "ALTER TABLE events ADD COLUMN patrol_status TEXT DEFAULT 'auto'",
+      "ALTER TABLE events ADD COLUMN patrol_note TEXT",
     ];
     for (const sql of migrations) {
       try { _db.exec(sql); } catch { /* duplicate column → ignore */ }
@@ -469,6 +472,130 @@ export function getDb() {
     _db.exec(`
       CREATE INDEX IF NOT EXISTS idx_prt_user
         ON password_reset_tokens(user_id, created_at DESC)
+    `);
+
+    // 掲載効果分析: event_placements（掲載区分履歴）
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS event_placements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id INTEGER NOT NULL,
+        placement TEXT NOT NULL,
+        started_at TEXT NOT NULL DEFAULT (datetime('now')),
+        ended_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (event_id) REFERENCES events(id)
+      )
+    `);
+    _db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_event_placements_event
+        ON event_placements(event_id, placement, started_at DESC)
+    `);
+    _db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_event_placements_placement
+        ON event_placements(placement, started_at DESC)
+    `);
+
+    // 掲載効果分析: event_impressions（表示回数・日次集計）
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS event_impressions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id INTEGER NOT NULL,
+        placement TEXT NOT NULL,
+        impression_date TEXT NOT NULL,
+        impressions INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (event_id) REFERENCES events(id),
+        UNIQUE(event_id, placement, impression_date)
+      )
+    `);
+    _db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_event_impressions_event
+        ON event_impressions(event_id, placement, impression_date)
+    `);
+    _db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_event_impressions_date
+        ON event_impressions(impression_date, placement)
+    `);
+
+    // Phase240: 巡回パトロール再取得ログ
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS patrol_refetch_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id INTEGER NOT NULL,
+        source_url TEXT,
+        source_site TEXT,
+        status TEXT NOT NULL,
+        failure_reason TEXT,
+        failure_detail TEXT,
+        updated_fields TEXT,
+        remaining_missing TEXT,
+        races_added INTEGER DEFAULT 0,
+        duration_ms INTEGER,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (event_id) REFERENCES events(id)
+      )
+    `);
+    _db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_patrol_refetch_logs_event
+        ON patrol_refetch_logs(event_id, created_at DESC)
+    `);
+
+    // event_activity_logs に placement カラム追加
+    const placementMigrations = [
+      "ALTER TABLE event_activity_logs ADD COLUMN placement TEXT",
+    ];
+    for (const sql of placementMigrations) {
+      try { _db.exec(sql); } catch { /* duplicate column → ignore */ }
+    }
+    _db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_activity_logs_placement
+        ON event_activity_logs(placement, action_type, created_at)
+    `);
+
+    // マイカレンダー: ユーザーカレンダーイベント
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS user_calendar_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        event_id INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'considering',
+        entry_date TEXT,
+        memo TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (event_id) REFERENCES events(id),
+        UNIQUE(user_id, event_id)
+      )
+    `);
+    _db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_uce_user
+        ON user_calendar_events(user_id, status, created_at DESC)
+    `);
+
+    // マイカレンダー: ユーザー参加記録
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS user_event_results (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        event_id INTEGER NOT NULL,
+        finish_time TEXT,
+        net_time TEXT,
+        overall_rank INTEGER,
+        gender_rank INTEGER,
+        age_rank INTEGER,
+        is_personal_best INTEGER DEFAULT 0,
+        memo TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (event_id) REFERENCES events(id),
+        UNIQUE(user_id, event_id)
+      )
+    `);
+    _db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_uer_user
+        ON user_event_results(user_id, created_at DESC)
     `);
   }
   return _db;

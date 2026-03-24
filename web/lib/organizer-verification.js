@@ -17,7 +17,7 @@ export const ORGANIZER_VERIFICATION_STATUSES = {
   },
   taikainavi_verified: {
     key: "taikainavi_verified",
-    label: "スポ活確認",
+    label: "スポログ確認",
     shortLabel: "確認済",
     className: "bg-blue-50 text-blue-700 border-blue-200",
     showInList: true,

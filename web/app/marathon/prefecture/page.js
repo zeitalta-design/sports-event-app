@@ -6,7 +6,7 @@ export const metadata = {
   title: "都道府県別マラソン大会",
   description: "都道府県ごとにマラソン大会を探せます。お住まいの地域や旅先の大会をチェックしましょう。",
   openGraph: {
-    title: "都道府県別マラソン大会 | スポ活",
+    title: "都道府県別マラソン大会 | スポログ",
     description: "全国47都道府県のマラソン大会を地域ごとに探せます。",
     type: "website",
   },

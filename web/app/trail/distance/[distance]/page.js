@@ -13,7 +13,7 @@ export async function generateMetadata({ params }) {
     title: `${info.shortLabel}トレイルラン大会`,
     description: info.description,
     openGraph: {
-      title: `${info.shortLabel}トレイルラン大会 | スポ活`,
+      title: `${info.shortLabel}トレイルラン大会 | スポログ`,
       description: info.description,
       type: "website",
     },

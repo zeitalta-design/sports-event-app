@@ -34,7 +34,7 @@ const GUIDE_ITEMS = [
   },
 ];
 
-const STORAGE_KEY = "spokatsu_guide_dismissed";
+const STORAGE_KEY = "sportlog_guide_dismissed";
 
 export default function FirstVisitGuide() {
   const [show, setShow] = useState(false);
@@ -68,7 +68,7 @@ export default function FirstVisitGuide() {
           ✕
         </button>
         <h2 className="text-base font-bold text-gray-900 mb-1">
-          スポ活へようこそ
+          スポログへようこそ
         </h2>
         <p className="text-sm text-gray-600 mb-4">
           全国のスポーツ大会を探せるサービスです。まずはこちらからどうぞ。

@@ -11,9 +11,9 @@ import { PLAN_FEATURES } from "@/lib/tier-config";
  */
 
 export const metadata = {
-  title: "料金プラン | スポ活",
+  title: "料金プラン | スポログ",
   description:
-    "スポ活の無料プランとプレミアムプランの機能比較。大会の保存・比較・通知など、無料で始められます。",
+    "スポログの無料プランとプレミアムプランの機能比較。大会の保存・比較・通知など、無料で始められます。",
 };
 
 export default function PricingPage() {

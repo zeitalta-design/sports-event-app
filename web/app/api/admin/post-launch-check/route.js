@@ -148,7 +148,7 @@ export async function GET() {
   results.checks.push({
     name: "サイト名",
     category: "SEO",
-    status: siteConfig.siteName === "スポ活" ? "pass" : "warn",
+    status: siteConfig.siteName === "スポログ" ? "pass" : "warn",
     detail: siteConfig.siteName,
   });
 

@@ -155,11 +155,31 @@ export default function HomeHeroSlider({ totalEvents = 0 }) {
             <button
               data-hero-search-btn
               type="button"
-              className="w-full mt-4 py-3.5 bg-blue-600 text-white font-bold rounded-xl
-                         hover:bg-blue-700 active:bg-blue-800 transition-colors text-base
-                         shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+              className="group w-full mt-3.5 py-[11px] text-white font-semibold rounded-lg
+                         transition-all duration-200 text-[15px] tracking-wide
+                         flex items-center justify-center gap-2"
+              style={{
+                background: "linear-gradient(to bottom, #4874b8, #3a63a3)",
+                boxShadow: "0 1px 3px rgba(58,99,163,0.25), inset 0 1px 0 rgba(255,255,255,0.1)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "linear-gradient(to bottom, #5282c4, #4270b0)";
+                e.currentTarget.style.boxShadow = "0 2px 6px rgba(58,99,163,0.3), inset 0 1px 0 rgba(255,255,255,0.12)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "linear-gradient(to bottom, #4874b8, #3a63a3)";
+                e.currentTarget.style.boxShadow = "0 1px 3px rgba(58,99,163,0.25), inset 0 1px 0 rgba(255,255,255,0.1)";
+              }}
+              onMouseDown={(e) => {
+                e.currentTarget.style.background = "linear-gradient(to bottom, #3d6399, #345894)";
+                e.currentTarget.style.boxShadow = "0 0 2px rgba(58,99,163,0.2), inset 0 1px 2px rgba(0,0,0,0.1)";
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.background = "linear-gradient(to bottom, #5282c4, #4270b0)";
+                e.currentTarget.style.boxShadow = "0 2px 6px rgba(58,99,163,0.3), inset 0 1px 0 rgba(255,255,255,0.12)";
+              }}
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <svg className="w-[17px] h-[17px] opacity-90" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
               大会を探す

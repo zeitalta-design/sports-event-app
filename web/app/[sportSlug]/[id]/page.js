@@ -475,10 +475,8 @@ export default async function SportDetailPage({ params }) {
           />
 
           {/* 掲載情報に関する注意 */}
-          <p className="text-xs text-gray-400 mt-4 leading-relaxed">
-            ※
-            掲載情報は外部サイトより取得したものです。最新の情報・申込条件は掲載元ページでご確認ください。
-            スポ活は大会情報の検索・比較・通知を支援するサービスです。
+          <p className="text-[11px] text-gray-400 mt-2">
+            ※ 最新の情報・申込条件は公式サイトでご確認ください。
           </p>
 
           {/* Phase129: 運営向け情報修正リクエスト導線 */}

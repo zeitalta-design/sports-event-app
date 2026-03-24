@@ -69,7 +69,7 @@ export async function sendEmailJob(job, { dryRun = false } = {}) {
   }
 
   const { transporter, info } = await getTransporter();
-  const from = process.env.MAIL_FROM || "スポ活 <noreply@spokatsu.com>";
+  const from = process.env.MAIL_FROM || "スポログ <noreply@sportlog.com>";
 
   try {
     const result = await transporter.sendMail({

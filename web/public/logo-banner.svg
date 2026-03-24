@@ -1,24 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 56" fill="none">
-  <style>
-    @font-face {
-      font-family: 'LogoFont';
-      src: local('A P-OTF 凸版文久見出ゴ StdN'),
-           local('ToppanBunkyuMidashiGothicStdN-ExtraBold'),
-           local('A-OTF 凸版文久見出ゴシック StdN'),
-           local('Noto Sans JP Black'),
-           local('Noto Sans JP'),
-           local('Hiragino Sans W9'),
-           local('Yu Gothic Bold');
-      font-weight: 900;
-    }
-  </style>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 60" fill="none">
+  <defs>
+    <linearGradient id="iconGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1e3a5f"/>
+      <stop offset="100%" stop-color="#2d5a8e"/>
+    </linearGradient>
+    <linearGradient id="waveGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4da6ff" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#a0d4ff" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+  <!-- 走る人アイコン -->
+  <!-- 頭 -->
+  <circle cx="32" cy="7" r="4.5" fill="#3b9aed"/>
+  <!-- 体（前傾で走るポーズ） -->
+  <path d="M28 13 L34 22 L40 18" stroke="url(#iconGrad)" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 腕 -->
+  <path d="M30 17 L24 14 M34 18 L40 13" stroke="url(#iconGrad)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- 脚 -->
+  <path d="M34 22 L28 30 L24 28 M34 22 L40 28 L44 26" stroke="url(#iconGrad)" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- ダブルシェブロン矢印（>>） -->
+  <path d="M6 22 L18 34 L6 46" stroke="url(#iconGrad)" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M20 22 L32 34 L20 46" stroke="url(#iconGrad)" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- スポ活 テキスト -->
   <text
-    x="4"
-    y="43"
-    font-family="LogoFont, 'A P-OTF 凸版文久見出ゴ StdN', 'Noto Sans JP', 'Hiragino Sans', sans-serif"
+    x="56"
+    y="38"
+    font-family="'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif"
     font-weight="900"
-    font-size="42"
-    letter-spacing="5"
-    fill="#2563EB"
-  >スポカツ</text>
+    font-size="34"
+    letter-spacing="2"
+    fill="#1a2744"
+    font-style="italic"
+  >スポ活</text>
+  <!-- Sports Event Search サブテキスト -->
+  <text
+    x="58"
+    y="54"
+    font-family="'Inter', 'Helvetica Neue', Arial, sans-serif"
+    font-weight="500"
+    font-size="11"
+    letter-spacing="1.5"
+    fill="#7a9ab5"
+    font-style="italic"
+  >Sports Event Search</text>
+  <!-- 波線アクセント -->
+  <path d="M195 50 Q215 44 235 50 Q255 56 275 50" stroke="url(#waveGrad)" stroke-width="2" fill="none" stroke-linecap="round"/>
 </svg>

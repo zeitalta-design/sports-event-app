@@ -63,24 +63,28 @@ export default function TopRecommendedSection() {
 
   if (!mounted) return null;
 
-  // プロフィール未設定時: 設定誘導
+  // プロフィール未設定時: 洗練CTA表示
   if (!has) {
     return (
       <section className="max-w-6xl mx-auto px-4 py-6">
-        <div className="p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="flex-1">
-            <h2 className="text-sm font-bold text-blue-800 mb-1">
-              ✨ あなたにぴったりの大会を見つけよう
+        <div className="bg-white border border-gray-200 rounded-xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-5"
+             style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[13px] font-bold text-gray-800">
+              自分専用の大会リストを作る
             </h2>
-            <p className="text-xs text-blue-600">
-              希望の距離・エリア・レベルを登録すると、おすすめ大会が表示されます
+            <p className="text-xs text-gray-500 mt-0.5">
+              距離・エリアを設定すると、条件に合う大会だけが表示されます
             </p>
           </div>
           <Link
             href="/my-events"
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shrink-0"
+            className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors shrink-0"
           >
-            プロフィールを設定
+            条件を設定する
+            <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
           </Link>
         </div>
       </section>

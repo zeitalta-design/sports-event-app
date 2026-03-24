@@ -4,6 +4,7 @@ import { getStatusLabel } from "@/lib/entry-status";
 import { getEventImageUrl, getPlaceholderProps } from "@/lib/event-image";
 import { getEventDetailPath, SPORT_CONFIGS } from "@/lib/sport-config";
 import { formatEventDate, formatEventLocation, formatDistanceBadges } from "@/lib/event-list-formatters";
+import AddToCalendarButton from "@/components/AddToCalendarButton";
 
 /**
  * 統一イベントカード — トップページ全セクション共通
@@ -176,13 +177,14 @@ export default function EventShowcaseCard({ event, rank, variant = "popular" }) 
           )}
 
           {/* CTA */}
-          <div className="mt-auto pt-3">
+          <div className="mt-auto pt-3 flex items-center justify-between">
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 group-hover:text-blue-800 transition-colors">
               詳細を見る
               <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
               </svg>
             </span>
+            <AddToCalendarButton eventId={event.id} variant="icon" />
           </div>
         </div>
       </div>

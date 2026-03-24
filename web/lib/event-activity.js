@@ -67,6 +67,7 @@ export function recordEventActivity({
   sourcePage = null,
   metadata = null,
   sourceSite = null,
+  placement = null,
 }) {
   try {
     if (eventId === undefined || eventId === null || !actionType) {
@@ -110,9 +111,9 @@ export function recordEventActivity({
 
     db.prepare(
       `INSERT INTO event_activity_logs
-       (event_id, action_type, user_key, session_id, source_page, metadata_json, canonical_event_id, source_site, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
-    ).run(eventId, actionType, userKey, sessionId, sourcePage, metadataJson, canonicalEventId, sourceSite);
+       (event_id, action_type, user_key, session_id, source_page, metadata_json, canonical_event_id, source_site, placement, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+    ).run(eventId, actionType, userKey, sessionId, sourcePage, metadataJson, canonicalEventId, sourceSite, placement);
 
     return { ok: true };
   } catch (err) {

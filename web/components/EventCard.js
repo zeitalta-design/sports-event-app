@@ -2,6 +2,7 @@ import { memo, useMemo } from "react";
 import Link from "next/link";
 import CompareButton from "@/components/CompareButton";
 import SaveButton from "@/components/SaveButton";
+import AddToCalendarButton from "@/components/AddToCalendarButton";
 import PopularityBadge from "@/components/PopularityBadge";
 import OfficialStatusBadge from "@/components/OfficialStatusBadge";
 import OrganizerVerifiedBadge from "@/components/OrganizerVerifiedBadge";
@@ -237,6 +238,12 @@ export default memo(function EventCard({ event, isFavorite, onFavoriteToggle }) 
 
               {/* Phase63: 保存ボタン */}
               <SaveButton
+                eventId={event.id}
+                variant="compact"
+              />
+
+              {/* カレンダーに追加 */}
+              <AddToCalendarButton
                 eventId={event.id}
                 variant="compact"
               />

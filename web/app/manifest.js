@@ -1,7 +1,7 @@
 export default function manifest() {
   return {
-    name: "スポ活",
-    short_name: "スポ活",
+    name: "スポログ",
+    short_name: "スポログ",
     description: "全国のスポーツ大会を探せる検索・通知サービス",
     start_url: "/",
     display: "standalone",

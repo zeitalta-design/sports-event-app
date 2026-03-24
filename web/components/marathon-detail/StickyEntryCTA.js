@@ -88,7 +88,10 @@ export default function StickyEntryCTA({
               rel="noopener noreferrer"
               className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-lg transition-colors shadow-md"
             >
-              RUNNETで詳細を見る ↗
+              {sourceUrl.includes("sportsentry.ne.jp") ? "スポーツエントリー"
+                : sourceUrl.includes("moshicom.com") && !sourceUrl.includes("runnet.jp") ? "MOSHICOM"
+                : sourceUrl.includes("runnet.jp") ? "RUNNET"
+                : "公式サイト"}で詳細を見る ↗
             </a>
           )}
           {hasEntry && (

@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { getDb } from "@/lib/db";
 
 export const runtime = "nodejs";
-export const alt = "スポ活";
+export const alt = "スポログ";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -99,7 +99,7 @@ export default async function Image({ params }) {
               color: "rgba(255,255,255,0.7)",
             }}
           >
-            スポ活 — spokatsu.com
+            スポログ — sportlog.com
           </div>
         </div>
       </div>

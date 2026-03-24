@@ -10,6 +10,10 @@ import {
   isRunnetUrl,
   fetchAndParseRunnet,
 } from "@/lib/runnet-fetcher";
+import {
+  isSportsentryUrl,
+  fetchAndParseSportsentry,
+} from "@/lib/sportsentry-fetcher";
 import { recordEntryStatusSnapshot } from "@/lib/entry-history";
 import { getEntryUrgencyMeta } from "@/lib/entry-urgency";
 import { getEntryHistorySummary } from "@/lib/entry-history";
@@ -43,35 +47,33 @@ export async function POST(request) {
       sourceSite = "moshicom";
     } else if (isRunnetUrl(url)) {
       sourceSite = "runnet";
+    } else if (isSportsentryUrl(url)) {
+      sourceSite = "sportsentry";
     } else {
       return NextResponse.json(
         {
           success: false,
-          error: "moshicom.com または runnet.jp のURLを入力してください。",
+          error: "moshicom.com / runnet.jp / sportsentry.ne.jp のURLを入力してください。",
           step: "validate",
         },
         { status: 400 }
       );
     }
 
-    if (!isLlmAvailable()) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "LLMが設定されていません。環境変数 LLM_ENABLED, LLM_API_KEY を確認してください。",
-          step: "validate",
-        },
-        { status: 503 }
-      );
-    }
+    const llmAvailable = isLlmAvailable();
 
     // ─── Step 1: HTML取得 + パース ───────────
 
     let eventInfo, races, pageText;
     try {
-      const result = sourceSite === "moshicom"
-        ? await fetchAndParseMoshicom(url)
-        : await fetchAndParseRunnet(url);
+      let result;
+      if (sourceSite === "moshicom") {
+        result = await fetchAndParseMoshicom(url);
+      } else if (sourceSite === "runnet") {
+        result = await fetchAndParseRunnet(url);
+      } else {
+        result = await fetchAndParseSportsentry(url);
+      }
       eventInfo = result.eventInfo;
       races = result.races;
       pageText = result.pageText;
@@ -98,36 +100,30 @@ export async function POST(request) {
       );
     }
 
-    // ─── Step 2: LLM構造化 ────────────────
+    // ─── Step 2: LLM構造化（利用可能な場合のみ） ────────────────
 
-    let structureResult;
-    try {
-      structureResult = await structureMarathonDetailText({
-        text: pageText,
-        sourceUrl: url,
-        sourceType: sourceSite,
-        marathonName: eventInfo.title,
-      });
-    } catch (err) {
-      console.error("Structure error:", err);
-      return NextResponse.json(
-        {
-          success: false,
-          error: `構造化処理に失敗しました: ${err.message}`,
-          step: "structure",
-          partialData: {
-            title: eventInfo.title,
-            racesCount: races.length,
-            pageTextLength: pageText.length,
-          },
-        },
-        { status: 500 }
-      );
+    let structureResult = null;
+    let mergedDetail = {};
+
+    if (llmAvailable) {
+      try {
+        structureResult = await structureMarathonDetailText({
+          text: pageText,
+          sourceUrl: url,
+          sourceType: sourceSite,
+          marathonName: eventInfo.title,
+        });
+        // Parser-LLMマージ
+        mergedDetail = mergeParserWithLlm(eventInfo, structureResult.data);
+      } catch (err) {
+        console.error("Structure error:", err);
+        // LLMエラーでも パーサー結果のみで続行
+        mergedDetail = mergeParserWithLlm(eventInfo, {});
+      }
+    } else {
+      // LLM未設定: パーサー抽出結果のみで保存
+      mergedDetail = mergeParserWithLlm(eventInfo, {});
     }
-
-    // ─── Step 2.5: Parser-LLMマージ ──────────
-
-    const mergedDetail = mergeParserWithLlm(eventInfo, structureResult.data);
 
     // ─── Step 3: DB保存 ─────────────────
 
@@ -306,11 +302,13 @@ export async function POST(request) {
       sourceSite,
       racesCount: races.length,
       hasDetail: true,
-      structureResult: {
-        model: structureResult.model,
-        usage: structureResult.usage,
-        validation: structureResult.validation,
-      },
+      structureResult: structureResult
+        ? {
+            model: structureResult.model,
+            usage: structureResult.usage,
+            validation: structureResult.validation,
+          }
+        : { model: "parser-only", usage: null, validation: null },
       entryHistory: historyResult
         ? {
             inserted: historyResult.inserted,

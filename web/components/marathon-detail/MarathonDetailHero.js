@@ -343,7 +343,10 @@ export default function MarathonDetailHero({ data }) {
                   rel="noopener noreferrer"
                   className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold text-base rounded-xl transition-colors shadow-md"
                 >
-                  RUNNETで見る（外部サイト）
+                  {data.source_url.includes("sportsentry.ne.jp") ? "スポーツエントリーで見る"
+                    : data.source_url.includes("moshicom.com") && !data.source_url.includes("runnet.jp") ? "MOSHICOMで見る"
+                    : data.source_url.includes("runnet.jp") ? "RUNNETで見る"
+                    : "公式サイトを見る"}（外部サイト）
                   <span className="text-sm">↗</span>
                 </a>
               ) : null}
@@ -354,7 +357,10 @@ export default function MarathonDetailHero({ data }) {
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
                 >
-                  公式サイトで確認 ↗
+                  {data.source_url.includes("sportsentry.ne.jp") ? "スポーツエントリー"
+                    : data.source_url.includes("moshicom.com") && !data.source_url.includes("runnet.jp") ? "MOSHICOM"
+                    : data.source_url.includes("runnet.jp") ? "RUNNET"
+                    : "公式サイト"}で確認 ↗
                 </a>
               )}
             </div>

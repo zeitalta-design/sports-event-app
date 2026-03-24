@@ -9,6 +9,7 @@
 import { getDb } from "@/lib/db";
 import { isRunnetUrl } from "@/lib/runnet-fetcher";
 import { isMoshicomUrl } from "@/lib/moshicom-fetcher";
+import { isSportsentryUrl } from "@/lib/sportsentry-fetcher";
 
 // ─── URL → source_type 判定 ─────────────────────────
 
@@ -16,12 +17,13 @@ import { isMoshicomUrl } from "@/lib/moshicom-fetcher";
  * URLからソース種別を判定する
  *
  * @param {string} url
- * @returns {string} "runnet" | "moshicom" | "official" | "unknown"
+ * @returns {string} "runnet" | "moshicom" | "sportsentry" | "official" | "unknown"
  */
 export function detectSourceTypeFromUrl(url) {
   if (!url) return "unknown";
   if (isRunnetUrl(url)) return "runnet";
   if (isMoshicomUrl(url)) return "moshicom";
+  if (isSportsentryUrl(url)) return "sportsentry";
   return "official";
 }
 

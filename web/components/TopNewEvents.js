@@ -1,12 +1,12 @@
 "use client";
 import Link from "next/link";
 import EventShowcaseCard from "./home/EventShowcaseCard";
+import { useImpressionTracker } from "@/hooks/useImpressionTracker";
 
 export default function TopNewEvents({ events = [] }) {
-  if (events.length === 0) return null;
-
-  // 最大5件に絞る
   const display = events.slice(0, 5);
+  useImpressionTracker(display, "standard");
+  if (events.length === 0) return null;
 
   return (
     <section className="max-w-6xl mx-auto px-4 py-10 sm:py-14">
