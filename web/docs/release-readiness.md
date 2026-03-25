@@ -164,5 +164,6 @@ npx next build
 | [import-operations.md](./import-operations.md) | importer 日常運用 | Step 6 / 運用時 |
 | [domain-platform-guide.md](./domain-platform-guide.md) | 基盤設計・API・scaffold | 新ドメイン追加時 |
 | [hosting-decision.md](./hosting-decision.md) | ホスティング方式比較・推奨案 | デプロイ先決定時 |
+| [deployment-input-sheet.md](./deployment-input-sheet.md) | 本番デプロイ入力シート | VPS 情報回収時 |
 | [vps-setup-guide.md](./vps-setup-guide.md) | VPS 選定・確認・初期セットアップ | VPS 調達時 |
 | [deploy-guide.md](./deploy-guide.md) | Docker + VPS デプロイ手順 | 本番デプロイ時 |
