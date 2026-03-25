@@ -167,3 +167,4 @@ npx next build
 | [deployment-input-sheet.md](./deployment-input-sheet.md) | 本番デプロイ入力シート | VPS 情報回収時 |
 | [vps-setup-guide.md](./vps-setup-guide.md) | VPS 選定・確認・初期セットアップ | VPS 調達時 |
 | [deploy-guide.md](./deploy-guide.md) | Docker + VPS デプロイ手順 | 本番デプロイ時 |
+| [domain-go-live-checklist.md](./domain-go-live-checklist.md) | ドメイン取得後の正式公開手順 | ドメイン取得後 |
