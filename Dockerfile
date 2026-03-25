@@ -37,8 +37,8 @@ ENV NODE_ENV=production
 # ビルド時の env チェックをスキップ（本番 env はランタイムで設定）
 ENV SESSION_SECRET=build-time-placeholder
 ENV APP_BASE_URL=http://localhost:3000
-# SSG ページが参照する events テーブルをビルド時に空で作成
-RUN node -e "const Database=require('better-sqlite3');const db=new Database('./data/sports-event.db');db.exec('CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, slug TEXT, name TEXT, date TEXT, location TEXT, prefecture TEXT, category TEXT, sub_category TEXT, distance TEXT, capacity INTEGER, entry_fee TEXT, entry_status TEXT, official_url TEXT, hero_image_url TEXT, summary TEXT, features_json TEXT, course_info TEXT, access_info TEXT, past_results_url TEXT, organizer TEXT, created_at TEXT, updated_at TEXT, event_group TEXT, month INTEGER, region TEXT, terrain TEXT, difficulty TEXT, elevation_gain INTEGER, aid_stations INTEGER, time_limit TEXT, popularity_score REAL, rating REAL, review_count INTEGER, is_featured INTEGER DEFAULT 0)');db.close();console.log('Build DB ready')"
+# SSG ページが参照する全テーブルをビルド時に初期化
+RUN node -e "const {getDb}=require('./lib/db.js');const db=getDb();console.log('Build DB initialized')"
 RUN npx next build
 
 # ─── 3. 本番イメージ ─────────────────────
