@@ -51,5 +51,12 @@ function adaptFields(raw) {
     summary: raw.summary || raw.description || raw.outline || null,
     status: raw.status || null,
     is_published: raw.is_published != null ? raw.is_published : true,
+    qualification: raw.qualification || raw.eligibility || raw.requirements || null,
+    announcement_url: raw.announcement_url || raw.notice_url || raw.url || null,
+    contact_info: raw.contact_info || raw.contact || raw.inquiry || null,
+    delivery_location: raw.delivery_location || raw.place || raw.delivery_place || null,
+    has_attachment: raw.has_attachment || raw.attachment || false,
+    announcement_date: raw.announcement_date || raw.notice_date || raw.published_date || null,
+    contract_period: raw.contract_period || raw.period || raw.duration || null,
   };
 }

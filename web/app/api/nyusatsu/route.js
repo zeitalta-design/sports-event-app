@@ -12,6 +12,11 @@ export async function GET(request) {
     const result = listNyusatsuItems({
       keyword: searchParams.get("keyword") || "",
       category: searchParams.get("category") || "",
+      area: searchParams.get("area") || "",
+      bidding_method: searchParams.get("bidding_method") || "",
+      budget_range: searchParams.get("budget_range") || "",
+      deadline_within: searchParams.get("deadline_within") || "",
+      status: searchParams.get("status") || "",
       sort: searchParams.get("sort") || "popular",
       page: parseInt(searchParams.get("page") || "1"),
       pageSize: parseInt(searchParams.get("page_size") || "20"),

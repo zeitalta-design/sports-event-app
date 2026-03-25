@@ -23,7 +23,7 @@ export async function PUT(request, { params }) {
     const before = getNyusatsuAdminById(numId);
     const body = await request.json();
     if (!body.title) return NextResponse.json({ error: "title は必須です" }, { status: 400 });
-    const item = { slug: body.slug || "", title: String(body.title).trim(), category: body.category || "other", issuer_name: body.issuer_name || null, target_area: body.target_area || null, deadline: body.deadline || null, budget_amount: body.budget_amount ? Number(body.budget_amount) : null, bidding_method: body.bidding_method || null, summary: body.summary || null, status: body.status || "open", is_published: body.is_published != null ? (body.is_published ? 1 : 0) : 1 };
+    const item = { slug: body.slug || "", title: String(body.title).trim(), category: body.category || "other", issuer_name: body.issuer_name || null, target_area: body.target_area || null, deadline: body.deadline || null, budget_amount: body.budget_amount ? Number(body.budget_amount) : null, bidding_method: body.bidding_method || null, summary: body.summary || null, status: body.status || "open", is_published: body.is_published != null ? (body.is_published ? 1 : 0) : 1, qualification: body.qualification || null, announcement_url: body.announcement_url || null, contact_info: body.contact_info || null, delivery_location: body.delivery_location || null, has_attachment: body.has_attachment ? 1 : 0, announcement_date: body.announcement_date || null, contract_period: body.contract_period || null };
     updateNyusatsuItem(numId, item);
     const { ipAddress, userAgent } = extractRequestInfo(request);
     const details = { domain: "nyusatsu", slug: item.slug, title: item.title };

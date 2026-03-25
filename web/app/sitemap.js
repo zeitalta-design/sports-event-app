@@ -318,9 +318,20 @@ export default function sitemap() {
   ];
 
   // 入札ナビ: 静的ページ
+  const nyusatsuCategories = ["it", "construction", "consulting", "goods", "service", "other"];
+  const nyusatsuAreas = ["全国", "北海道", "東北", "関東", "中部", "近畿", "中国", "四国", "九州", "沖縄"];
+
   const nyusatsuStaticPages = [
     { url: `${baseUrl}/nyusatsu`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
     { url: `${baseUrl}/nyusatsu/compare`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.6 },
+    ...nyusatsuCategories.map((cat) => ({
+      url: `${baseUrl}/nyusatsu/category/${cat}`,
+      lastModified: new Date(), changeFrequency: "weekly", priority: 0.7,
+    })),
+    ...nyusatsuAreas.map((area) => ({
+      url: `${baseUrl}/nyusatsu/area/${encodeURIComponent(area)}`,
+      lastModified: new Date(), changeFrequency: "weekly", priority: 0.7,
+    })),
   ];
 
   const minpakuStaticPages = [

@@ -119,6 +119,13 @@ export function normalize(raw) {
       summary: raw.summary ? String(raw.summary).trim() : null,
       status: normalizeStatus(raw.status),
       is_published: raw.is_published != null ? (raw.is_published ? 1 : 0) : 1,
+      qualification: raw.qualification ? String(raw.qualification).trim() : null,
+      announcement_url: raw.announcement_url ? String(raw.announcement_url).trim() : null,
+      contact_info: raw.contact_info ? String(raw.contact_info).trim() : null,
+      delivery_location: raw.delivery_location ? String(raw.delivery_location).trim() : null,
+      has_attachment: raw.has_attachment ? 1 : 0,
+      announcement_date: normalizeDeadline(raw.announcement_date),
+      contract_period: raw.contract_period ? String(raw.contract_period).trim() : null,
     },
     errors,
   };

@@ -8,6 +8,11 @@ import { getDb } from "@/lib/db";
 export function listNyusatsuItems({
   keyword = "",
   category = "",
+  area = "",
+  bidding_method = "",
+  budget_range = "",
+  deadline_within = "",
+  status = "",
   sort = "popular",
   page = 1,
   pageSize = 20,
@@ -24,6 +29,41 @@ export function listNyusatsuItems({
     where.push("category = @category");
     params.category = category;
   }
+  if (area) {
+    where.push("target_area LIKE @area");
+    params.area = `%${area}%`;
+  }
+  if (bidding_method) {
+    where.push("bidding_method = @bidding_method");
+    params.bidding_method = bidding_method;
+  }
+  if (budget_range) {
+    switch (budget_range) {
+      case "under1m": where.push("budget_amount > 0 AND budget_amount <= 1000000"); break;
+      case "under10m": where.push("budget_amount > 0 AND budget_amount <= 10000000"); break;
+      case "under100m": where.push("budget_amount > 0 AND budget_amount <= 100000000"); break;
+      case "over100m": where.push("budget_amount > 100000000"); break;
+    }
+  }
+  if (deadline_within) {
+    const now = new Date().toISOString().slice(0, 10);
+    let days = 0;
+    switch (deadline_within) {
+      case "this_week": days = 7; break;
+      case "this_month": days = 30; break;
+      case "3months": days = 90; break;
+    }
+    if (days > 0) {
+      const future = new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+      where.push("deadline >= @now AND deadline <= @future");
+      params.now = now;
+      params.future = future;
+    }
+  }
+  if (status) {
+    where.push("status = @status");
+    params.status = status;
+  }
 
   const whereClause = `WHERE ${where.join(" AND ")}`;
 
@@ -33,7 +73,10 @@ export function listNyusatsuItems({
       orderBy = "CASE WHEN deadline IS NULL THEN 1 ELSE 0 END, deadline ASC";
       break;
     case "budget_desc":
-      orderBy = "budget_amount DESC";
+      orderBy = "COALESCE(budget_amount, 0) DESC";
+      break;
+    case "budget_asc":
+      orderBy = "CASE WHEN budget_amount IS NULL OR budget_amount = 0 THEN 1 ELSE 0 END, budget_amount ASC";
       break;
     case "newest":
       orderBy = "created_at DESC";
@@ -88,9 +131,12 @@ export function upsertNyusatsuItem(item) {
         target_area = @target_area, deadline = @deadline,
         budget_amount = @budget_amount, bidding_method = @bidding_method,
         summary = @summary, status = @status, is_published = @is_published,
-        updated_at = datetime('now')
+        qualification = @qualification, announcement_url = @announcement_url,
+        contact_info = @contact_info, delivery_location = @delivery_location,
+        has_attachment = @has_attachment, announcement_date = @announcement_date,
+        contract_period = @contract_period, updated_at = datetime('now')
       WHERE id = @id
-    `).run({ ...item, id: existing.id });
+    `).run({ qualification: null, announcement_url: null, contact_info: null, delivery_location: null, has_attachment: 0, announcement_date: null, contract_period: null, ...item, id: existing.id });
     return { action: "update", id: existing.id };
   }
 
@@ -98,12 +144,16 @@ export function upsertNyusatsuItem(item) {
     INSERT INTO nyusatsu_items
       (slug, title, category, issuer_name, target_area, deadline,
        budget_amount, bidding_method, summary, status, is_published,
+       qualification, announcement_url, contact_info, delivery_location,
+       has_attachment, announcement_date, contract_period,
        created_at, updated_at)
     VALUES
       (@slug, @title, @category, @issuer_name, @target_area, @deadline,
        @budget_amount, @bidding_method, @summary, @status, @is_published,
+       @qualification, @announcement_url, @contact_info, @delivery_location,
+       @has_attachment, @announcement_date, @contract_period,
        datetime('now'), datetime('now'))
-  `).run(item);
+  `).run({ qualification: null, announcement_url: null, contact_info: null, delivery_location: null, has_attachment: 0, announcement_date: null, contract_period: null, ...item });
   return { action: "insert", id: result.lastInsertRowid };
 }
 
@@ -138,10 +188,14 @@ export function createNyusatsuItem(item) {
   const db = getDb();
   const result = db.prepare(`
     INSERT INTO nyusatsu_items (slug, title, category, issuer_name, target_area, deadline,
-      budget_amount, bidding_method, summary, status, is_published, created_at, updated_at)
+      budget_amount, bidding_method, summary, status, is_published,
+      qualification, announcement_url, contact_info, delivery_location,
+      has_attachment, announcement_date, contract_period, created_at, updated_at)
     VALUES (@slug, @title, @category, @issuer_name, @target_area, @deadline,
-      @budget_amount, @bidding_method, @summary, @status, @is_published, datetime('now'), datetime('now'))
-  `).run(item);
+      @budget_amount, @bidding_method, @summary, @status, @is_published,
+      @qualification, @announcement_url, @contact_info, @delivery_location,
+      @has_attachment, @announcement_date, @contract_period, datetime('now'), datetime('now'))
+  `).run({ qualification: null, announcement_url: null, contact_info: null, delivery_location: null, has_attachment: 0, announcement_date: null, contract_period: null, ...item });
   return { id: result.lastInsertRowid };
 }
 
@@ -151,8 +205,12 @@ export function updateNyusatsuItem(id, item) {
     UPDATE nyusatsu_items SET slug = @slug, title = @title, category = @category,
       issuer_name = @issuer_name, target_area = @target_area, deadline = @deadline,
       budget_amount = @budget_amount, bidding_method = @bidding_method,
-      summary = @summary, status = @status, is_published = @is_published, updated_at = datetime('now')
+      summary = @summary, status = @status, is_published = @is_published,
+      qualification = @qualification, announcement_url = @announcement_url,
+      contact_info = @contact_info, delivery_location = @delivery_location,
+      has_attachment = @has_attachment, announcement_date = @announcement_date,
+      contract_period = @contract_period, updated_at = datetime('now')
     WHERE id = @id
-  `).run({ ...item, id });
+  `).run({ qualification: null, announcement_url: null, contact_info: null, delivery_location: null, has_attachment: 0, announcement_date: null, contract_period: null, ...item, id });
   return { id };
 }

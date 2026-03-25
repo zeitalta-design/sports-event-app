@@ -25,11 +25,12 @@ const { getDb } = await import(pathToFileURL(resolve(__dirname, "../lib/db.js"))
 function upsertNyusatsuItem(item) {
   const db = getDb();
   const existing = item.slug ? db.prepare("SELECT id FROM nyusatsu_items WHERE slug = ?").get(item.slug) : null;
+  const defaults = { qualification: null, announcement_url: null, contact_info: null, delivery_location: null, has_attachment: 0, announcement_date: null, contract_period: null };
   if (existing) {
-    db.prepare(`UPDATE nyusatsu_items SET title=@title, category=@category, issuer_name=@issuer_name, target_area=@target_area, deadline=@deadline, budget_amount=@budget_amount, bidding_method=@bidding_method, summary=@summary, status=@status, is_published=@is_published, updated_at=datetime('now') WHERE id=@id`).run({ ...item, id: existing.id });
+    db.prepare(`UPDATE nyusatsu_items SET title=@title, category=@category, issuer_name=@issuer_name, target_area=@target_area, deadline=@deadline, budget_amount=@budget_amount, bidding_method=@bidding_method, summary=@summary, status=@status, is_published=@is_published, qualification=@qualification, announcement_url=@announcement_url, contact_info=@contact_info, delivery_location=@delivery_location, has_attachment=@has_attachment, announcement_date=@announcement_date, contract_period=@contract_period, updated_at=datetime('now') WHERE id=@id`).run({ ...defaults, ...item, id: existing.id });
     return { action: "update", id: existing.id };
   }
-  const r = db.prepare(`INSERT INTO nyusatsu_items (slug, title, category, issuer_name, target_area, deadline, budget_amount, bidding_method, summary, status, is_published, created_at, updated_at) VALUES (@slug, @title, @category, @issuer_name, @target_area, @deadline, @budget_amount, @bidding_method, @summary, @status, @is_published, datetime('now'), datetime('now'))`).run(item);
+  const r = db.prepare(`INSERT INTO nyusatsu_items (slug, title, category, issuer_name, target_area, deadline, budget_amount, bidding_method, summary, status, is_published, qualification, announcement_url, contact_info, delivery_location, has_attachment, announcement_date, contract_period, created_at, updated_at) VALUES (@slug, @title, @category, @issuer_name, @target_area, @deadline, @budget_amount, @bidding_method, @summary, @status, @is_published, @qualification, @announcement_url, @contact_info, @delivery_location, @has_attachment, @announcement_date, @contract_period, datetime('now'), datetime('now'))`).run({ ...defaults, ...item });
   return { action: "insert", id: r.lastInsertRowid };
 }
 

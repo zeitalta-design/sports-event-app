@@ -20,9 +20,42 @@ export const nyusatsuConfig = {
     { value: "negotiated", label: "随意契約" },
   ],
 
+  areas: [
+    { value: "全国", label: "全国" },
+    { value: "北海道", label: "北海道" },
+    { value: "東北", label: "東北" },
+    { value: "関東", label: "関東" },
+    { value: "中部", label: "中部" },
+    { value: "近畿", label: "近畿" },
+    { value: "中国", label: "中国" },
+    { value: "四国", label: "四国" },
+    { value: "九州", label: "九州" },
+    { value: "沖縄", label: "沖縄" },
+  ],
+
+  budgetRanges: [
+    { value: "under1m", label: "〜100万円", max: 1000000 },
+    { value: "under10m", label: "〜1,000万円", max: 10000000 },
+    { value: "under100m", label: "〜1億円", max: 100000000 },
+    { value: "over100m", label: "1億円超", min: 100000000 },
+  ],
+
+  deadlineOptions: [
+    { value: "this_week", label: "今週中", days: 7 },
+    { value: "this_month", label: "今月中", days: 30 },
+    { value: "3months", label: "3ヶ月以内", days: 90 },
+  ],
+
+  statusOptions: [
+    { value: "open", label: "募集中" },
+    { value: "upcoming", label: "募集予定" },
+    { value: "closed", label: "終了" },
+  ],
+
   sorts: [
     { key: "deadline", label: "締切が近い順" },
     { key: "budget_desc", label: "予算が大きい順" },
+    { key: "budget_asc", label: "予算が小さい順" },
     { key: "newest", label: "新着順" },
     { key: "popular", label: "人気順" },
   ],
@@ -76,4 +109,26 @@ export function formatDeadline(dateStr) {
   if (!dateStr) return "—";
   const d = new Date(dateStr);
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function getStatusBadge(status) {
+  switch (status) {
+    case "open": return { label: "募集中", color: "badge-green" };
+    case "upcoming": return { label: "募集予定", color: "badge-amber" };
+    case "closed": return { label: "終了", color: "badge-gray" };
+    default: return { label: status || "—", color: "badge-gray" };
+  }
+}
+
+export function getDeadlineRemaining(dateStr) {
+  if (!dateStr) return null;
+  const deadline = new Date(dateStr + "T23:59:59");
+  const now = new Date();
+  const diffMs = deadline - now;
+  const diffDays = Math.ceil(diffMs / 86400000);
+  if (diffDays < 0) return { text: "終了", urgent: false, expired: true };
+  if (diffDays === 0) return { text: "今日締切", urgent: true, expired: false };
+  if (diffDays <= 3) return { text: `あと${diffDays}日`, urgent: true, expired: false };
+  if (diffDays <= 7) return { text: `あと${diffDays}日`, urgent: false, expired: false };
+  return { text: `あと${diffDays}日`, urgent: false, expired: false };
 }

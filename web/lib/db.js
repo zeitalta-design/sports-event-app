@@ -840,6 +840,16 @@ export function getDb() {
     `);
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_nyusatsu_items_category ON nyusatsu_items(category)`);
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_nyusatsu_items_published ON nyusatsu_items(is_published)`);
+
+    // nyusatsu_items: P2 拡張カラム（既存テーブルへの後方互換追加）
+    const nyusatsuCols = _db.prepare("PRAGMA table_info('nyusatsu_items')").all().map(c => c.name);
+    if (!nyusatsuCols.includes("qualification")) _db.exec("ALTER TABLE nyusatsu_items ADD COLUMN qualification TEXT");
+    if (!nyusatsuCols.includes("announcement_url")) _db.exec("ALTER TABLE nyusatsu_items ADD COLUMN announcement_url TEXT");
+    if (!nyusatsuCols.includes("contact_info")) _db.exec("ALTER TABLE nyusatsu_items ADD COLUMN contact_info TEXT");
+    if (!nyusatsuCols.includes("delivery_location")) _db.exec("ALTER TABLE nyusatsu_items ADD COLUMN delivery_location TEXT");
+    if (!nyusatsuCols.includes("has_attachment")) _db.exec("ALTER TABLE nyusatsu_items ADD COLUMN has_attachment INTEGER DEFAULT 0");
+    if (!nyusatsuCols.includes("announcement_date")) _db.exec("ALTER TABLE nyusatsu_items ADD COLUMN announcement_date TEXT");
+    if (!nyusatsuCols.includes("contract_period")) _db.exec("ALTER TABLE nyusatsu_items ADD COLUMN contract_period TEXT");
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_nyusatsu_items_slug ON nyusatsu_items(slug)`);
 
     // nyusatsu_favorites: 入札ナビお気に入り

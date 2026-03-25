@@ -6,6 +6,7 @@ const nextConfig = {
   output: "standalone",
   serverExternalPackages: ["better-sqlite3"],
 
+
   // セキュリティ & パフォーマンスヘッダー
   async headers() {
     const securityHeaders = [
