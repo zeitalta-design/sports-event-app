@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import {
   getAdminPhotos,
   updatePhotoStatus,
@@ -15,7 +15,9 @@ import {
  */
 
 export async function GET(request) {
-  try { await requireAdmin(); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
+  try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error; await requireAdmin(); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
 
   try {
     const { searchParams } = new URL(request.url);
@@ -35,7 +37,9 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  try { await requireAdmin(); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
+  try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error; await requireAdmin(); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
 
   try {
     const body = await request.json();

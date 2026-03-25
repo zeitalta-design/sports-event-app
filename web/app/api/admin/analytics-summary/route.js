@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { getDb } from "@/lib/db";
 
 /**
@@ -8,6 +9,8 @@ import { getDb } from "@/lib/db";
  */
 export async function GET(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const { searchParams } = new URL(request.url);
     const days = Math.min(parseInt(searchParams.get("days")) || 7, 90);
 

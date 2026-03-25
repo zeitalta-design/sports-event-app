@@ -10,6 +10,13 @@ import { usePathname } from "next/navigation";
 
 const TAB_GROUPS = [
   {
+    label: "SaaSナビ",
+    tabs: [
+      { href: "/admin/saas-items", label: "ツール" },
+      { href: "/admin/saas-providers", label: "ベンダー" },
+    ],
+  },
+  {
     label: "データ管理",
     tabs: [
       { href: "/admin/events", label: "大会" },

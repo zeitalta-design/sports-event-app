@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { getCurrentUser } from "@/lib/auth";
 import { detectDuplicates } from "@/lib/quality/duplicate-checker";
 import { getCompletenessStats, getIncompleteEvents } from "@/lib/quality/data-completeness";
@@ -15,6 +16,8 @@ import { getDb } from "@/lib/db";
  */
 export async function GET(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const user = await getCurrentUser();
     if (!user?.is_admin) {
       return NextResponse.json({ error: "管理者権限が必要です" }, { status: 403 });

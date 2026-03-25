@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import {
   getPlacementEffectSummary,
   getPlacementAverageStats,
@@ -16,6 +17,8 @@ import {
  */
 export async function GET(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get("days") || "14", 10);
     const limit = parseInt(searchParams.get("limit") || "50", 10);
@@ -45,6 +48,8 @@ export async function GET(request) {
  */
 export async function POST(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const body = await request.json();
     const { action, eventId, placement } = body;
 

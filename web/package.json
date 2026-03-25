@@ -32,12 +32,19 @@
     "rebuild:details": "node ../scripts/rebuild-event-details.js",
     "rebuild:details:all": "node ../scripts/rebuild-event-details.js --all --force",
     "rebuild:details:new": "node ../scripts/rebuild-event-details.js --all",
-    "admin:create": "node ../scripts/create-admin.js"
+    "admin:create": "node ../scripts/create-admin.js",
+    "seed:saas": "node scripts/seed-saas.js",
+    "scaffold": "node scripts/scaffold-domain.js",
+    "imports:run": "node scripts/run-imports.js",
+    "imports:source": "node scripts/run-imports.js --all --source primary",
+    "imports:source:dry": "node scripts/run-imports.js --all --source primary --dry-run",
+    "imports:source:verbose": "node scripts/run-imports.js --all --source primary --verbose"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.6.2",
     "cheerio": "^1.2.0",
+    "dotenv": "^17.3.1",
     "next": "16.1.6",
     "nodemailer": "^8.0.2",
     "react": "19.2.3",

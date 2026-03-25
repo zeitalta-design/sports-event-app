@@ -3,12 +3,14 @@ import { generateAllNotifications } from "@/lib/notification-service";
 import { generateEmailJobs } from "@/lib/email-service";
 import { sendPendingEmailJobs } from "@/lib/email-sender";
 import { getDb } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const admin = await requireAdmin();
     if (!admin) return NextResponse.json({ error: "管理者権限が必要です" }, { status: 403 });
     const body = await request.json().catch(() => ({}));

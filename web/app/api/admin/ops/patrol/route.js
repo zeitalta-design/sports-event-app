@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 
 /**
  * Phase240: 巡回パトロール / 品質確認API（改善版）
@@ -10,6 +10,8 @@ import { requireAdmin } from "@/lib/auth";
  */
 export async function GET(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     await requireAdmin();
   } catch {
     return NextResponse.json({ error: "認証エラー" }, { status: 401 });

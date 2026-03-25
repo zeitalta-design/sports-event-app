@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import {
   runEntryStatusMonitor,
   getMonitorTargetEvents,
@@ -16,6 +17,8 @@ import {
  */
 export async function GET(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action") || "stats";
 
@@ -65,6 +68,8 @@ export async function GET(request) {
  */
 export async function POST(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const body = await request.json().catch(() => ({}));
     const limit = Math.min(body.limit || 10, 50);
     const delayMs = Math.max(body.delayMs || 1000, 500);

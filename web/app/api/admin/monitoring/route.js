@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 
 /**
  * Phase224: 本番監視サマリーAPI
@@ -8,6 +8,8 @@ import { requireAdmin } from "@/lib/auth";
  * GET /api/admin/monitoring — 運用KPIと品質指標を返す
  */
 export async function GET(request) {
+  const guard = await requireAdminApi();
+  if (guard.error) return guard.error;
   const authError = await requireAdmin(request);
   if (authError) return authError;
 

@@ -597,6 +597,302 @@ export function getDb() {
       CREATE INDEX IF NOT EXISTS idx_uer_user
         ON user_event_results(user_id, created_at DESC)
     `);
+
+    // ============================================================
+    // SaaS Navi: 共通ナビ基盤テーブル
+    // 既存 events 系テーブルには一切影響しない追加テーブル群
+    // ============================================================
+
+    // providers: ベンダー / 提供者
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS providers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        slug TEXT UNIQUE,
+        url TEXT,
+        logo_url TEXT,
+        description TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+
+    // items: 中立化されたアイテムテーブル（SaaS ツール等）
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        slug TEXT UNIQUE,
+        category TEXT,
+        subcategory TEXT,
+        status TEXT NOT NULL DEFAULT 'active',
+        description TEXT,
+        summary TEXT,
+        url TEXT,
+        hero_image_url TEXT,
+        prefecture TEXT,
+        city TEXT,
+        date_primary TEXT,
+        date_secondary TEXT,
+        price_min INTEGER,
+        price_max INTEGER,
+        popularity_score REAL DEFAULT 0,
+        provider_id INTEGER REFERENCES providers(id),
+        source_site TEXT,
+        source_item_id TEXT,
+        extension_json TEXT,
+        is_published INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_items_category ON items(category)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_items_status ON items(status)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_items_provider ON items(provider_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_items_popularity ON items(popularity_score DESC)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_items_published ON items(is_published)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_items_slug ON items(slug)`);
+
+    // saas_details: SaaS固有の検索/フィルタ用属性
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS saas_details (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL UNIQUE REFERENCES items(id),
+        price_monthly INTEGER,
+        price_display TEXT,
+        has_free_plan INTEGER DEFAULT 0,
+        has_free_trial INTEGER DEFAULT 0,
+        trial_days INTEGER,
+        company_size_min INTEGER,
+        company_size_max INTEGER,
+        company_size_label TEXT,
+        api_available INTEGER DEFAULT 0,
+        mobile_app INTEGER DEFAULT 0,
+        support_type TEXT,
+        deployment_type TEXT DEFAULT 'cloud',
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_saas_price ON saas_details(price_monthly)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_saas_free_plan ON saas_details(has_free_plan)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_saas_free_trial ON saas_details(has_free_trial)`);
+
+    // item_variants: プラン / バリアント
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS item_variants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL REFERENCES items(id),
+        name TEXT NOT NULL,
+        attributes_json TEXT,
+        sort_order INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_item_variants_item ON item_variants(item_id, sort_order)`);
+
+    // item_tags: タグ / 特徴
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS item_tags (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL REFERENCES items(id),
+        tag TEXT NOT NULL,
+        tag_group TEXT DEFAULT 'feature',
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(item_id, tag)
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_item_tags_item ON item_tags(item_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_item_tags_tag ON item_tags(tag)`);
+
+    // item_reviews: アイテムレビュー
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS item_reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL REFERENCES items(id),
+        user_id INTEGER REFERENCES users(id),
+        rating_overall REAL,
+        review_title TEXT,
+        review_body TEXT,
+        ratings_json TEXT,
+        company_size TEXT,
+        usage_period TEXT,
+        is_approved INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_item_reviews_item ON item_reviews(item_id, is_approved)`);
+
+    // item_favorites: アイテムお気に入り（既存 favorites テーブルは events 用なので分離）
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS item_favorites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_key TEXT NOT NULL,
+        item_id INTEGER NOT NULL REFERENCES items(id),
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(user_key, item_id)
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_item_favorites_user ON item_favorites(user_key)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_item_favorites_item ON item_favorites(item_id)`);
+
+    // item_saved_searches: アイテム保存検索
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS item_saved_searches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_key TEXT NOT NULL,
+        name TEXT,
+        filters_json TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_item_saved_searches_user ON item_saved_searches(user_key)`);
+
+    // yutai_items: 株主優待 本体データ
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS yutai_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL UNIQUE,
+        slug TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        category TEXT,
+        confirm_months TEXT,
+        min_investment INTEGER,
+        benefit_summary TEXT,
+        dividend_yield REAL,
+        benefit_yield REAL,
+        is_published INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_yutai_items_category ON yutai_items(category)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_yutai_items_published ON yutai_items(is_published)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_yutai_items_slug ON yutai_items(slug)`);
+
+    // yutai_favorites: 株主優待お気に入り
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS yutai_favorites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_key TEXT NOT NULL,
+        yutai_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(user_key, yutai_id)
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_yutai_favorites_user ON yutai_favorites(user_key)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_yutai_favorites_item ON yutai_favorites(yutai_id)`);
+
+    // hojokin_items: 補助金 本体データ
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS hojokin_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        category TEXT,
+        target_type TEXT,
+        max_amount INTEGER,
+        subsidy_rate TEXT,
+        deadline TEXT,
+        status TEXT DEFAULT 'open',
+        provider_name TEXT,
+        summary TEXT,
+        is_published INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_hojokin_items_category ON hojokin_items(category)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_hojokin_items_published ON hojokin_items(is_published)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_hojokin_items_slug ON hojokin_items(slug)`);
+
+    // hojokin_favorites: 補助金お気に入り
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS hojokin_favorites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_key TEXT NOT NULL,
+        hojokin_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(user_key, hojokin_id)
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_hojokin_favorites_user ON hojokin_favorites(user_key)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_hojokin_favorites_item ON hojokin_favorites(hojokin_id)`);
+
+    // nyusatsu_items: 入札ナビ 本体データ
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS nyusatsu_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        category TEXT,
+        issuer_name TEXT,
+        target_area TEXT,
+        deadline TEXT,
+        budget_amount INTEGER,
+        bidding_method TEXT,
+        summary TEXT,
+        status TEXT DEFAULT 'open',
+        is_published INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_nyusatsu_items_category ON nyusatsu_items(category)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_nyusatsu_items_published ON nyusatsu_items(is_published)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_nyusatsu_items_slug ON nyusatsu_items(slug)`);
+
+    // nyusatsu_favorites: 入札ナビお気に入り
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS nyusatsu_favorites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_key TEXT NOT NULL,
+        nyusatsu_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(user_key, nyusatsu_id)
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_nyusatsu_favorites_user ON nyusatsu_favorites(user_key)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_nyusatsu_favorites_item ON nyusatsu_favorites(nyusatsu_id)`);
+
+    // minpaku_items: 民泊ナビ 本体データ
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS minpaku_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        category TEXT,
+        area TEXT,
+        property_type TEXT,
+        capacity INTEGER,
+        price_per_night INTEGER,
+        min_nights INTEGER DEFAULT 1,
+        host_name TEXT,
+        rating REAL,
+        review_count INTEGER DEFAULT 0,
+        summary TEXT,
+        status TEXT DEFAULT 'active',
+        is_published INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_minpaku_items_category ON minpaku_items(category)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_minpaku_items_published ON minpaku_items(is_published)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_minpaku_items_slug ON minpaku_items(slug)`);
+
+    // minpaku_favorites: 民泊ナビお気に入り
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS minpaku_favorites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_key TEXT NOT NULL,
+        minpaku_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(user_key, minpaku_id)
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_minpaku_favorites_user ON minpaku_favorites(user_key)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_minpaku_favorites_item ON minpaku_favorites(minpaku_id)`);
   }
   return _db;
 }

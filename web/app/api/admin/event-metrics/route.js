@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { getEventValueMetrics, getTopEventsByEngagement } from "@/lib/event-value-metrics";
 
 /**
@@ -9,6 +9,8 @@ import { getEventValueMetrics, getTopEventsByEngagement } from "@/lib/event-valu
  * GET /api/admin/event-metrics?sort=engagement&limit=50 — 上位イベント一覧
  */
 export async function GET(request) {
+  const guard = await requireAdminApi();
+  if (guard.error) return guard.error;
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { getDb } from "@/lib/db";
 import { verifyEventSources } from "@/lib/event-source-verifier";
 import { getEventsWithMultipleSources, getSourceLinkStats } from "@/lib/event-sources";
@@ -15,6 +16,8 @@ import { getEventsWithMultipleSources, getSourceLinkStats } from "@/lib/event-so
  */
 export async function GET(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const db = getDb();
     const { searchParams } = new URL(request.url);
     const view = searchParams.get("view") || "stats";
@@ -135,6 +138,8 @@ export async function GET(request) {
  */
 export async function POST(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const db = getDb();
     const body = await request.json().catch(() => ({}));
     const limit = Math.min(body.limit || 10, 50);

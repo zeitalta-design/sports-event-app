@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { getDb } from "@/lib/db";
 
 /**
@@ -15,6 +16,8 @@ import { getDb } from "@/lib/db";
  */
 export async function GET() {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const db = getDb();
 
     // 1. ステータス別件数

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { isLlmAvailable } from "@/lib/llm-client";
 import { structureMarathonDetailText } from "@/lib/marathon-detail-structurer";
 
@@ -15,6 +16,8 @@ import { structureMarathonDetailText } from "@/lib/marathon-detail-structurer";
  */
 export async function POST(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     // LLM有効チェック
     if (!isLlmAvailable()) {
       return NextResponse.json(

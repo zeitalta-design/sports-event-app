@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, changePassword, getCurrentUser } from "@/lib/auth";
+import { changePassword, getCurrentUser } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { extractRequestInfo } from "@/lib/audit-log";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,8 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const admin = await requireAdmin();
     if (!admin) {
       return NextResponse.json(

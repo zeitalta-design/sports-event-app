@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { getEntryHistoryRecords, getEntryHistorySummary } from "@/lib/entry-history";
 import { getEntryUrgencyMeta } from "@/lib/entry-urgency";
 import { getDb } from "@/lib/db";
@@ -10,6 +11,8 @@ import { getDb } from "@/lib/db";
  */
 export async function GET(request, { params }) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const { id } = await params;
     const eventId = parseInt(id, 10);
     if (isNaN(eventId)) {

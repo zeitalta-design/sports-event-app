@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 
 /**
  * Phase132: 管理メモAPI
@@ -10,6 +10,8 @@ import { requireAdmin } from "@/lib/auth";
  */
 
 export async function GET(request) {
+  const guard = await requireAdminApi();
+  if (guard.error) return guard.error;
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -37,6 +39,8 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
+  const guard = await requireAdminApi();
+  if (guard.error) return guard.error;
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

@@ -3,6 +3,10 @@ import { siteConfig } from "@/lib/site-config";
 import { PREFECTURE_NAME_TO_SLUG, DISTANCE_SLUGS, TRAIL_DISTANCE_SLUGS } from "@/lib/seo-mappings";
 import { SPORT_CONFIGS } from "@/lib/sport-config";
 import { REGION_SLUGS, SEASON_SLUGS, THEME_SLUGS, TRAIL_THEME_SLUGS } from "@/lib/seo-config";
+import { listYutaiSlugsForSitemap } from "@/lib/repositories/yutai";
+import { listHojokinSlugsForSitemap } from "@/lib/repositories/hojokin";
+import { listNyusatsuSlugsForSitemap } from "@/lib/repositories/nyusatsu";
+import { listMinpakuSlugsForSitemap } from "@/lib/repositories/minpaku";
 
 export default function sitemap() {
   const baseUrl = siteConfig.siteUrl;
@@ -131,6 +135,27 @@ export default function sitemap() {
     priority: 0.6,
   }));
 
+  // SaaSナビ: 静的ページ
+  const saasStaticPages = [
+    { url: `${baseUrl}/saas`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+    { url: `${baseUrl}/saas/compare`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.6 },
+  ];
+
+  // SaaSナビ: カテゴリ別ページ
+  const saasCategories = ["crm", "accounting", "hr", "ma", "project", "communication", "security", "infra"];
+  const saasCategoryPages = saasCategories.map((cat) => ({
+    url: `${baseUrl}/saas?category=${cat}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.7,
+  }));
+
+  let saasDetailPages = [];
+  let yutaiDetailPages = [];
+  let hojokinDetailPages = [];
+  let nyusatsuDetailPages = [];
+  let minpakuDetailPages = [];
+
   let eventPages = [];
   let prefecturePages = [];
   let monthPages = [];
@@ -213,9 +238,95 @@ export default function sitemap() {
       changeFrequency: "weekly",
       priority: 0.6,
     }));
+
+    // SaaSナビ: 公開ツール詳細ページ
+    const saasItems = db
+      .prepare("SELECT slug, updated_at FROM items WHERE is_published = 1 AND slug IS NOT NULL ORDER BY id")
+      .all();
+    saasDetailPages = saasItems.map((item) => ({
+      url: `${baseUrl}/saas/${item.slug}`,
+      lastModified: item.updated_at ? new Date(item.updated_at) : new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    }));
+
+    // 株主優待ナビ: 公開中の詳細ページ
+    try {
+      const yutaiSlugs = listYutaiSlugsForSitemap();
+      yutaiDetailPages = yutaiSlugs.map((item) => ({
+        url: `${baseUrl}/yutai/${item.slug}`,
+        lastModified: item.updated_at ? new Date(item.updated_at) : new Date(),
+        changeFrequency: "weekly",
+        priority: 0.7,
+      }));
+    } catch {
+      // yutai DB unavailable — skip detail pages
+    }
+
+    // 補助金ナビ: 公開中の詳細ページ
+    try {
+      const hojokinSlugs = listHojokinSlugsForSitemap();
+      hojokinDetailPages = hojokinSlugs.map((item) => ({
+        url: `${baseUrl}/hojokin/${item.slug}`,
+        lastModified: item.updated_at ? new Date(item.updated_at) : new Date(),
+        changeFrequency: "weekly",
+        priority: 0.7,
+      }));
+    } catch {
+      // hojokin DB unavailable — skip detail pages
+    }
+
+    // 入札ナビ: 公開中の詳細ページ
+    try {
+      const nyusatsuSlugs = listNyusatsuSlugsForSitemap();
+      nyusatsuDetailPages = nyusatsuSlugs.map((item) => ({
+        url: `${baseUrl}/nyusatsu/${item.slug}`,
+        lastModified: item.updated_at ? new Date(item.updated_at) : new Date(),
+        changeFrequency: "weekly",
+        priority: 0.7,
+      }));
+    } catch {
+      // nyusatsu DB unavailable — skip detail pages
+    }
+
+    // 民泊ナビ: 公開中の詳細ページ
+    try {
+      const minpakuSlugs = listMinpakuSlugsForSitemap();
+      minpakuDetailPages = minpakuSlugs.map((item) => ({
+        url: `${baseUrl}/minpaku/${item.slug}`,
+        lastModified: item.updated_at ? new Date(item.updated_at) : new Date(),
+        changeFrequency: "weekly",
+        priority: 0.7,
+      }));
+    } catch {
+      // minpaku DB unavailable — skip detail pages
+    }
   } catch {
     // DB unavailable during build — return static pages only
   }
+
+  // 補助金ナビ: 静的ページ
+  const hojokinStaticPages = [
+    { url: `${baseUrl}/hojokin`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+    { url: `${baseUrl}/hojokin/compare`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.6 },
+  ];
+
+  // 株主優待ナビ: 静的ページ
+  const yutaiStaticPages = [
+    { url: `${baseUrl}/yutai`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+    { url: `${baseUrl}/yutai/compare`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.6 },
+  ];
+
+  // 入札ナビ: 静的ページ
+  const nyusatsuStaticPages = [
+    { url: `${baseUrl}/nyusatsu`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+    { url: `${baseUrl}/nyusatsu/compare`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.6 },
+  ];
+
+  const minpakuStaticPages = [
+    { url: `${baseUrl}/minpaku`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+    { url: `${baseUrl}/minpaku/compare`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.6 },
+  ];
 
   return [
     ...staticPages,
@@ -235,5 +346,21 @@ export default function sitemap() {
     ...trailPrefecturePages,
     ...trailMonthPages,
     ...eventPages,
+    // SaaSナビ
+    ...saasStaticPages,
+    ...saasCategoryPages,
+    ...saasDetailPages,
+    // 株主優待ナビ
+    ...yutaiStaticPages,
+    ...yutaiDetailPages,
+    // 補助金ナビ
+    ...hojokinStaticPages,
+    ...hojokinDetailPages,
+    // 入札ナビ
+    ...nyusatsuStaticPages,
+    ...nyusatsuDetailPages,
+    // 民泊ナビ
+    ...minpakuStaticPages,
+    ...minpakuDetailPages,
   ];
 }

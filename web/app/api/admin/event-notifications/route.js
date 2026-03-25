@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import {
   getEventNotificationStats,
   getRecentEventNotifications,
@@ -21,6 +22,8 @@ import {
  */
 export async function GET(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const { searchParams } = new URL(request.url);
     const view = searchParams.get("view") || "stats";
     const limit = parseInt(searchParams.get("limit") || "50", 10);
@@ -68,6 +71,8 @@ export async function GET(request) {
  */
 export async function POST(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const body = await request.json().catch(() => ({}));
     const action = body.action || "dispatch";
     const limit = Math.min(body.limit || 100, 500);

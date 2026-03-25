@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { getDb } from "@/lib/db";
 import { isLlmAvailable } from "@/lib/llm-client";
 import { structureMarathonDetailText } from "@/lib/marathon-detail-structurer";
@@ -29,6 +30,8 @@ import { getEntryHistorySummary } from "@/lib/entry-history";
  */
 export async function POST(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const body = await request.json();
     const { url, existingEventId } = body;
 

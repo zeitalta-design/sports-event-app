@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { getDb } from "@/lib/db";
 import { findMoshicomMatch } from "@/lib/moshicom-search";
 import { mergeSourceData, detectDifferences } from "@/lib/source-merge-service";
@@ -15,6 +16,8 @@ import { fetchAndParseMoshicom } from "@/lib/moshicom-fetcher";
  */
 export async function GET(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get("eventId");
     const q = searchParams.get("q") || "";
@@ -116,6 +119,8 @@ export async function GET(request) {
  */
 export async function POST(request) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const body = await request.json();
     const { eventId, moshicomUrl, dryRun = false } = body;
 

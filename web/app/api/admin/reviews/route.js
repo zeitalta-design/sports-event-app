@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { getAdminReviews, updateReviewStatus } from "@/lib/review-service";
 
 /**
@@ -10,6 +10,8 @@ import { getAdminReviews, updateReviewStatus } from "@/lib/review-service";
  */
 
 export async function GET(request) {
+  const guard = await requireAdminApi();
+  if (guard.error) return guard.error;
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

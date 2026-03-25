@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { getDb } from "@/lib/db";
 import { getEventSourceLinks, ensureEventSourceLinks } from "@/lib/event-sources";
 import { verifyEventSources, getLatestSnapshots } from "@/lib/event-source-verifier";
@@ -10,6 +11,8 @@ import { verifyEventSources, getLatestSnapshots } from "@/lib/event-source-verif
  */
 export async function GET(request, { params }) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const { id } = await params;
     const eventId = parseInt(id, 10);
     if (isNaN(eventId)) {

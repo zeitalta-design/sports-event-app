@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { generateEventNotificationManual } from "@/lib/event-notification-service";
 
 /**
@@ -13,6 +14,8 @@ import { generateEventNotificationManual } from "@/lib/event-notification-servic
  */
 export async function POST(request, { params }) {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     const { id } = await params;
     const eventId = parseInt(id, 10);
     if (isNaN(eventId)) {

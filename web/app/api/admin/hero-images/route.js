@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 
@@ -11,6 +12,8 @@ const DATA_PATH = join(process.cwd(), "data", "hero-images.json");
  */
 export async function GET() {
   try {
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
     if (!existsSync(DATA_PATH)) {
       return NextResponse.json({
         exists: false,
