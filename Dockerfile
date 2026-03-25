@@ -38,7 +38,7 @@ ENV NODE_ENV=production
 ENV SESSION_SECRET=build-time-placeholder
 ENV APP_BASE_URL=http://localhost:3000
 # SSG ページが参照する全テーブルをビルド時に初期化
-RUN node -e "const {getDb}=require('./lib/db.js');const db=getDb();console.log('Build DB initialized')"
+RUN node scripts/init-build-db.mjs
 RUN npx next build
 
 # ─── 3. 本番イメージ ─────────────────────
