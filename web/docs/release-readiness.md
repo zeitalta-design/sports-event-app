@@ -158,9 +158,11 @@ npx next build
 | ドキュメント | 目的 | いつ見るか |
 |------------|------|----------|
 | **release-readiness.md**（このファイル） | 完了状況・残課題・デプロイ順序 | 最初に |
+| [production-env-template.md](./production-env-template.md) | 本番 .env 記入ガイド | .env 作成時 |
 | [deploy-checklist.md](./deploy-checklist.md) | env 設定の詳細チェック | Step 1 |
 | [source-rollout-guide.md](./source-rollout-guide.md) | source URL 投入手順 | Step 4 |
 | [import-operations.md](./import-operations.md) | importer 日常運用 | Step 6 / 運用時 |
 | [domain-platform-guide.md](./domain-platform-guide.md) | 基盤設計・API・scaffold | 新ドメイン追加時 |
 | [hosting-decision.md](./hosting-decision.md) | ホスティング方式比較・推奨案 | デプロイ先決定時 |
+| [vps-setup-guide.md](./vps-setup-guide.md) | VPS 選定・確認・初期セットアップ | VPS 調達時 |
 | [deploy-guide.md](./deploy-guide.md) | Docker + VPS デプロイ手順 | 本番デプロイ時 |
