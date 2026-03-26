@@ -903,6 +903,122 @@ export function getDb() {
     `);
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_minpaku_favorites_user ON minpaku_favorites(user_key)`);
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_minpaku_favorites_item ON minpaku_favorites(minpaku_id)`);
+
+    // food_recall_items: 食品リコール監視
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS food_recall_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        product_name TEXT NOT NULL,
+        manufacturer TEXT,
+        category TEXT,
+        recall_type TEXT DEFAULT 'voluntary',
+        reason TEXT,
+        risk_level TEXT DEFAULT 'unknown',
+        affected_area TEXT,
+        lot_number TEXT,
+        recall_date TEXT,
+        status TEXT DEFAULT 'active',
+        consumer_action TEXT,
+        source_url TEXT,
+        manufacturer_url TEXT,
+        summary TEXT,
+        is_published INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_food_recall_items_slug ON food_recall_items(slug)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_food_recall_items_published ON food_recall_items(is_published)`);
+
+    // sanpai_items: 産廃処理業者
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS sanpai_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        company_name TEXT NOT NULL,
+        corporate_number TEXT,
+        prefecture TEXT,
+        city TEXT,
+        license_type TEXT DEFAULT 'other',
+        waste_category TEXT DEFAULT 'industrial',
+        business_area TEXT,
+        status TEXT DEFAULT 'active',
+        risk_level TEXT DEFAULT 'none',
+        penalty_count INTEGER NOT NULL DEFAULT 0,
+        latest_penalty_date TEXT,
+        source_name TEXT,
+        source_url TEXT,
+        detail_url TEXT,
+        notes TEXT,
+        is_published INTEGER NOT NULL DEFAULT 1,
+        published_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sanpai_items_slug ON sanpai_items(slug)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sanpai_items_published ON sanpai_items(is_published)`);
+
+    // kyoninka_entities: 許認可・登録事業者
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS kyoninka_entities (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        entity_name TEXT NOT NULL,
+        normalized_name TEXT,
+        corporate_number TEXT,
+        prefecture TEXT,
+        city TEXT,
+        address TEXT,
+        entity_status TEXT DEFAULT 'active',
+        primary_license_family TEXT DEFAULT 'other',
+        registration_count INTEGER NOT NULL DEFAULT 0,
+        latest_update_date TEXT,
+        source_name TEXT,
+        source_url TEXT,
+        notes TEXT,
+        is_published INTEGER NOT NULL DEFAULT 1,
+        published_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_entities_slug ON kyoninka_entities(slug)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_entities_published ON kyoninka_entities(is_published)`);
+
+    // shitei_items: 指定管理・委託公募案件
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS shitei_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        municipality_name TEXT,
+        prefecture TEXT,
+        facility_category TEXT DEFAULT 'other',
+        facility_name TEXT,
+        recruitment_status TEXT DEFAULT 'unknown',
+        application_start_date TEXT,
+        application_deadline TEXT,
+        opening_date TEXT,
+        contract_start_date TEXT,
+        contract_end_date TEXT,
+        summary TEXT,
+        eligibility TEXT,
+        application_method TEXT,
+        detail_url TEXT,
+        source_name TEXT,
+        source_url TEXT,
+        attachment_count INTEGER NOT NULL DEFAULT 0,
+        notes TEXT,
+        is_published INTEGER NOT NULL DEFAULT 1,
+        published_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_shitei_items_slug ON shitei_items(slug)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_shitei_items_published ON shitei_items(is_published)`);
   }
   return _db;
 }
