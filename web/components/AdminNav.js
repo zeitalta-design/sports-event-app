@@ -29,6 +29,15 @@ const TAB_GROUPS = [
     ],
   },
   {
+    label: "ドメイン",
+    tabs: [
+      { href: "/admin/sanpai", label: "産廃" },
+      { href: "/admin/kyoninka", label: "許認可" },
+      { href: "/admin/shitei", label: "指定管理" },
+      { href: "/admin/automation", label: "自動化" },
+    ],
+  },
+  {
     label: "品質・分析",
     tabs: [
       { href: "/admin/quality", label: "品質管理" },

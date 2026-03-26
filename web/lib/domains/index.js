@@ -15,12 +15,10 @@ import "./hojokin";
 
 import "./nyusatsu";
 import "./minpaku";
-
-// 将来のドメイン追加テンプレート:
-
-// import "./subsidy";
-// import "./procurement";
-// import "./minpaku";
+import "./food-recall";
+import "./sanpai";
+import "./kyoninka";
+import "./shitei";
 
 export {
   getDomain,
