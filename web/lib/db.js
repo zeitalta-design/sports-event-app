@@ -903,6 +903,357 @@ export function getDb() {
     `);
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_minpaku_favorites_user ON minpaku_favorites(user_key)`);
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_minpaku_favorites_item ON minpaku_favorites(minpaku_id)`);
+
+    // food_recall_items: 食品リコール監視ダッシュボード 本体データ
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS food_recall_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        product_name TEXT NOT NULL,
+        manufacturer TEXT,
+        category TEXT,
+        recall_type TEXT DEFAULT 'voluntary',
+        reason TEXT,
+        risk_level TEXT DEFAULT 'unknown',
+        affected_area TEXT,
+        lot_number TEXT,
+        recall_date TEXT,
+        status TEXT DEFAULT 'active',
+        consumer_action TEXT,
+        source_url TEXT,
+        manufacturer_url TEXT,
+        summary TEXT,
+        is_published INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_food_recall_items_category ON food_recall_items(category)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_food_recall_items_published ON food_recall_items(is_published)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_food_recall_items_slug ON food_recall_items(slug)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_food_recall_items_risk ON food_recall_items(risk_level)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_food_recall_items_recall_date ON food_recall_items(recall_date)`);
+
+    // food_recall_favorites: 食品リコール ウォッチリスト
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS food_recall_favorites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_key TEXT NOT NULL,
+        food_recall_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(user_key, food_recall_id)
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_food_recall_favorites_user ON food_recall_favorites(user_key)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_food_recall_favorites_item ON food_recall_favorites(food_recall_id)`);
+
+    // sanpai_items: 産廃処理業者 本体データ
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS sanpai_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        company_name TEXT NOT NULL,
+        corporate_number TEXT,
+        prefecture TEXT,
+        city TEXT,
+        license_type TEXT DEFAULT 'other',
+        waste_category TEXT DEFAULT 'industrial',
+        business_area TEXT,
+        status TEXT DEFAULT 'active',
+        risk_level TEXT DEFAULT 'none',
+        penalty_count INTEGER NOT NULL DEFAULT 0,
+        latest_penalty_date TEXT,
+        source_name TEXT,
+        source_url TEXT,
+        detail_url TEXT,
+        notes TEXT,
+        is_published INTEGER NOT NULL DEFAULT 1,
+        published_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sanpai_items_slug ON sanpai_items(slug)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sanpai_items_published ON sanpai_items(is_published)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sanpai_items_prefecture ON sanpai_items(prefecture)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sanpai_items_license_type ON sanpai_items(license_type)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sanpai_items_risk_level ON sanpai_items(risk_level)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sanpai_items_status ON sanpai_items(status)`);
+
+    // sanpai_penalties: 行政処分履歴
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS sanpai_penalties (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sanpai_item_id INTEGER NOT NULL REFERENCES sanpai_items(id) ON DELETE CASCADE,
+        penalty_date TEXT,
+        penalty_type TEXT DEFAULT 'other',
+        authority_name TEXT,
+        summary TEXT,
+        disposition_period TEXT,
+        source_url TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sanpai_penalties_item ON sanpai_penalties(sanpai_item_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sanpai_penalties_date ON sanpai_penalties(penalty_date)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sanpai_penalties_type ON sanpai_penalties(penalty_type)`);
+
+    // sanpai_favorites: 産廃 ウォッチリスト
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS sanpai_favorites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_key TEXT NOT NULL,
+        sanpai_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(user_key, sanpai_id)
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sanpai_favorites_user ON sanpai_favorites(user_key)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sanpai_favorites_item ON sanpai_favorites(sanpai_id)`);
+
+    // kyoninka_entities: 許認可・登録事業者 本体データ
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS kyoninka_entities (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        entity_name TEXT NOT NULL,
+        normalized_name TEXT,
+        corporate_number TEXT,
+        prefecture TEXT,
+        city TEXT,
+        address TEXT,
+        entity_status TEXT DEFAULT 'active',
+        primary_license_family TEXT DEFAULT 'other',
+        registration_count INTEGER NOT NULL DEFAULT 0,
+        latest_update_date TEXT,
+        source_name TEXT,
+        source_url TEXT,
+        notes TEXT,
+        is_published INTEGER NOT NULL DEFAULT 1,
+        published_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_entities_slug ON kyoninka_entities(slug)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_entities_published ON kyoninka_entities(is_published)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_entities_prefecture ON kyoninka_entities(prefecture)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_entities_license_family ON kyoninka_entities(primary_license_family)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_entities_corporate_number ON kyoninka_entities(corporate_number)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_entities_normalized_name ON kyoninka_entities(normalized_name)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_entities_status ON kyoninka_entities(entity_status)`);
+
+    // kyoninka_registrations: 許認可・登録情報
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS kyoninka_registrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_id INTEGER NOT NULL REFERENCES kyoninka_entities(id) ON DELETE CASCADE,
+        license_family TEXT NOT NULL DEFAULT 'other',
+        license_type TEXT,
+        registration_number TEXT,
+        authority_name TEXT,
+        prefecture TEXT,
+        valid_from TEXT,
+        valid_to TEXT,
+        registration_status TEXT DEFAULT 'active',
+        disciplinary_flag INTEGER NOT NULL DEFAULT 0,
+        source_name TEXT,
+        source_url TEXT,
+        detail_url TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_registrations_entity ON kyoninka_registrations(entity_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_registrations_family ON kyoninka_registrations(license_family)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_registrations_status ON kyoninka_registrations(registration_status)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_registrations_number ON kyoninka_registrations(registration_number)`);
+
+    // kyoninka_favorites: 許認可 ウォッチリスト
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS kyoninka_favorites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_key TEXT NOT NULL,
+        kyoninka_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(user_key, kyoninka_id)
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_favorites_user ON kyoninka_favorites(user_key)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_kyoninka_favorites_item ON kyoninka_favorites(kyoninka_id)`);
+
+    // shitei_items: 指定管理・委託公募案件
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS shitei_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        municipality_name TEXT,
+        prefecture TEXT,
+        facility_category TEXT DEFAULT 'other',
+        facility_name TEXT,
+        recruitment_status TEXT DEFAULT 'unknown',
+        application_start_date TEXT,
+        application_deadline TEXT,
+        opening_date TEXT,
+        contract_start_date TEXT,
+        contract_end_date TEXT,
+        summary TEXT,
+        eligibility TEXT,
+        application_method TEXT,
+        detail_url TEXT,
+        source_name TEXT,
+        source_url TEXT,
+        attachment_count INTEGER NOT NULL DEFAULT 0,
+        notes TEXT,
+        is_published INTEGER NOT NULL DEFAULT 1,
+        published_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_shitei_items_slug ON shitei_items(slug)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_shitei_items_published ON shitei_items(is_published)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_shitei_items_prefecture ON shitei_items(prefecture)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_shitei_items_category ON shitei_items(facility_category)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_shitei_items_status ON shitei_items(recruitment_status)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_shitei_items_deadline ON shitei_items(application_deadline)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_shitei_items_municipality ON shitei_items(municipality_name)`);
+
+    // shitei_favorites: 指定管理 ウォッチリスト
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS shitei_favorites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_key TEXT NOT NULL,
+        shitei_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(user_key, shitei_id)
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_shitei_favorites_user ON shitei_favorites(user_key)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_shitei_favorites_item ON shitei_favorites(shitei_id)`);
+
+    // ─── 自動化共通基盤 ─────────────────────
+
+    // data_sources: ドメイン横断ソース管理
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS data_sources (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        domain_id TEXT NOT NULL,
+        source_name TEXT NOT NULL,
+        source_type TEXT DEFAULT 'web',
+        source_url TEXT,
+        fetch_method TEXT DEFAULT 'manual',
+        status TEXT DEFAULT 'active',
+        review_policy TEXT DEFAULT 'review_required',
+        publish_policy TEXT DEFAULT 'manual',
+        run_frequency TEXT DEFAULT 'daily',
+        last_success_at TEXT,
+        last_checked_at TEXT,
+        notes TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_data_sources_domain ON data_sources(domain_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_data_sources_status ON data_sources(status)`);
+
+    // sync_runs: 同期実行履歴
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS sync_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        domain_id TEXT NOT NULL,
+        source_id INTEGER REFERENCES data_sources(id),
+        run_type TEXT DEFAULT 'manual',
+        run_status TEXT DEFAULT 'running',
+        fetched_count INTEGER NOT NULL DEFAULT 0,
+        created_count INTEGER NOT NULL DEFAULT 0,
+        updated_count INTEGER NOT NULL DEFAULT 0,
+        unchanged_count INTEGER NOT NULL DEFAULT 0,
+        review_count INTEGER NOT NULL DEFAULT 0,
+        failed_count INTEGER NOT NULL DEFAULT 0,
+        started_at TEXT NOT NULL DEFAULT (datetime('now')),
+        finished_at TEXT,
+        error_summary TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sync_runs_domain ON sync_runs(domain_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sync_runs_source ON sync_runs(source_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_sync_runs_status ON sync_runs(run_status)`);
+
+    // change_logs: 差分記録
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS change_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        domain_id TEXT NOT NULL,
+        sync_run_id INTEGER REFERENCES sync_runs(id),
+        source_id INTEGER REFERENCES data_sources(id),
+        entity_type TEXT NOT NULL,
+        entity_id INTEGER NOT NULL,
+        entity_slug TEXT,
+        change_type TEXT NOT NULL,
+        field_name TEXT,
+        before_value TEXT,
+        after_value TEXT,
+        confidence_score REAL DEFAULT 1.0,
+        requires_review INTEGER NOT NULL DEFAULT 0,
+        reviewed_at TEXT,
+        reviewed_by TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_change_logs_domain ON change_logs(domain_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_change_logs_sync_run ON change_logs(sync_run_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_change_logs_entity ON change_logs(entity_type, entity_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_change_logs_review ON change_logs(requires_review)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_change_logs_type ON change_logs(change_type)`);
+
+    // admin_notifications: 管理画面内通知
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS admin_notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        domain_id TEXT,
+        notification_type TEXT NOT NULL DEFAULT 'info',
+        title TEXT NOT NULL,
+        message TEXT,
+        related_entity_type TEXT,
+        related_entity_id INTEGER,
+        read_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_admin_notifications_domain ON admin_notifications(domain_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_admin_notifications_read ON admin_notifications(read_at)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_admin_notifications_type ON admin_notifications(notification_type)`);
+
+    // ai_extractions: AI下書き・構造化抽出結果
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS ai_extractions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        domain_id TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id INTEGER,
+        entity_slug TEXT,
+        source_url TEXT,
+        extraction_type TEXT DEFAULT 'detail_page',
+        input_text_length INTEGER,
+        extracted_json TEXT,
+        missing_fields TEXT,
+        review_reasons TEXT,
+        confidence_score REAL DEFAULT 0.5,
+        quality_level TEXT DEFAULT 'draft',
+        summary_text TEXT,
+        llm_model TEXT,
+        llm_tokens_used INTEGER,
+        applied_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_ai_extractions_domain ON ai_extractions(domain_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_ai_extractions_entity ON ai_extractions(entity_type, entity_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_ai_extractions_quality ON ai_extractions(quality_level)`);
   }
   return _db;
 }

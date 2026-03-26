@@ -7,6 +7,10 @@ import { listYutaiSlugsForSitemap } from "@/lib/repositories/yutai";
 import { listHojokinSlugsForSitemap } from "@/lib/repositories/hojokin";
 import { listNyusatsuSlugsForSitemap } from "@/lib/repositories/nyusatsu";
 import { listMinpakuSlugsForSitemap } from "@/lib/repositories/minpaku";
+import { listFoodRecallSlugsForSitemap } from "@/lib/repositories/food-recall";
+import { listSanpaiSlugsForSitemap } from "@/lib/repositories/sanpai";
+import { listKyoninkaSlugsForSitemap } from "@/lib/repositories/kyoninka";
+import { listShiteiSlugsForSitemap } from "@/lib/repositories/shitei";
 
 export default function sitemap() {
   const baseUrl = siteConfig.siteUrl;
@@ -155,6 +159,10 @@ export default function sitemap() {
   let hojokinDetailPages = [];
   let nyusatsuDetailPages = [];
   let minpakuDetailPages = [];
+  let foodRecallDetailPages = [];
+  let sanpaiDetailPages = [];
+  let kyoninkaDetailPages = [];
+  let shiteiDetailPages = [];
 
   let eventPages = [];
   let prefecturePages = [];
@@ -301,6 +309,58 @@ export default function sitemap() {
     } catch {
       // minpaku DB unavailable — skip detail pages
     }
+
+    // 食品リコール: 公開中の詳細ページ
+    try {
+      const foodRecallSlugs = listFoodRecallSlugsForSitemap();
+      foodRecallDetailPages = foodRecallSlugs.map((item) => ({
+        url: `${baseUrl}/food-recall/${item.slug}`,
+        lastModified: item.updated_at ? new Date(item.updated_at) : new Date(),
+        changeFrequency: "weekly",
+        priority: 0.7,
+      }));
+    } catch {
+      // food-recall DB unavailable — skip detail pages
+    }
+
+    // 産廃処分ウォッチ: 公開中の詳細ページ
+    try {
+      const sanpaiSlugs = listSanpaiSlugsForSitemap();
+      sanpaiDetailPages = sanpaiSlugs.map((item) => ({
+        url: `${baseUrl}/sanpai/${item.slug}`,
+        lastModified: item.updated_at ? new Date(item.updated_at) : new Date(),
+        changeFrequency: "weekly",
+        priority: 0.7,
+      }));
+    } catch {
+      // sanpai DB unavailable — skip detail pages
+    }
+
+    // 許認可検索: 公開中の詳細ページ
+    try {
+      const kyoninkaSlugs = listKyoninkaSlugsForSitemap();
+      kyoninkaDetailPages = kyoninkaSlugs.map((item) => ({
+        url: `${baseUrl}/kyoninka/${item.slug}`,
+        lastModified: item.updated_at ? new Date(item.updated_at) : new Date(),
+        changeFrequency: "weekly",
+        priority: 0.7,
+      }));
+    } catch {
+      // kyoninka DB unavailable — skip detail pages
+    }
+
+    // 指定管理公募: 公開中の詳細ページ
+    try {
+      const shiteiSlugs = listShiteiSlugsForSitemap();
+      shiteiDetailPages = shiteiSlugs.map((item) => ({
+        url: `${baseUrl}/shitei/${item.slug}`,
+        lastModified: item.updated_at ? new Date(item.updated_at) : new Date(),
+        changeFrequency: "weekly",
+        priority: 0.7,
+      }));
+    } catch {
+      // shitei DB unavailable — skip detail pages
+    }
   } catch {
     // DB unavailable during build — return static pages only
   }
@@ -339,6 +399,31 @@ export default function sitemap() {
     { url: `${baseUrl}/minpaku/compare`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.6 },
   ];
 
+  // 食品リコール監視
+  const foodRecallCategories = ["processed", "fresh", "beverage", "dairy", "confectionery", "frozen", "seasoning", "supplement", "other"];
+  const foodRecallStaticPages = [
+    { url: `${baseUrl}/food-recall`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+    ...foodRecallCategories.map((cat) => ({
+      url: `${baseUrl}/food-recall/category/${cat}`,
+      lastModified: new Date(), changeFrequency: "weekly", priority: 0.7,
+    })),
+  ];
+
+  // 指定管理公募
+  const shiteiStaticPages = [
+    { url: `${baseUrl}/shitei`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+  ];
+
+  // 許認可検索
+  const kyoninkaStaticPages = [
+    { url: `${baseUrl}/kyoninka`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+  ];
+
+  // 産廃処分ウォッチ
+  const sanpaiStaticPages = [
+    { url: `${baseUrl}/sanpai`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+  ];
+
   return [
     ...staticPages,
     ...distancePages,
@@ -373,5 +458,17 @@ export default function sitemap() {
     // 民泊ナビ
     ...minpakuStaticPages,
     ...minpakuDetailPages,
+    // 食品リコール監視
+    ...foodRecallStaticPages,
+    ...foodRecallDetailPages,
+    // 産廃処分ウォッチ
+    ...sanpaiStaticPages,
+    ...sanpaiDetailPages,
+    // 許認可検索
+    ...kyoninkaStaticPages,
+    ...kyoninkaDetailPages,
+    // 指定管理公募
+    ...shiteiStaticPages,
+    ...shiteiDetailPages,
   ];
 }
