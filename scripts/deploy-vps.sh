@@ -43,6 +43,11 @@ docker run -d \
   -e SESSION_SECRET="${SESSION_SECRET:-$(cat /dev/urandom | tr -dc 'a-f0-9' | head -c 64)}" \
   -e ALLOW_SIGNUP="${ALLOW_SIGNUP:-false}" \
   -e OPS_ADMIN_EMAIL="${OPS_ADMIN_EMAIL:-futoshitatoki@me.com}" \
+  -e SMTP_HOST="${SMTP_HOST:-smtp.mail.me.com}" \
+  -e SMTP_PORT="${SMTP_PORT:-587}" \
+  -e SMTP_USER="${SMTP_USER:-futoshitatoki@icloud.com}" \
+  -e SMTP_PASS="${SMTP_PASS}" \
+  -e MAIL_FROM="${MAIL_FROM:-大会ナビ <futoshitatoki@icloud.com>}" \
   -e NODE_ENV=production \
   -v "${DATA_VOLUME}" \
   --restart unless-stopped \
