@@ -75,9 +75,9 @@ export default function Header() {
         <nav className="hidden lg:flex items-center gap-1" aria-label="メインナビゲーション">
           <NavLink href="/search" label="大会を探す" active={pathname === "/search"} />
           <NavLink href="/entry-deadlines" label="締切間近" active={pathname === "/entry-deadlines"} />
-          <NavLink href="/marathon/theme/beginner" label="初心者向け" active={pathname.includes("/beginner")} />
-          <NavLink href="/popular" label="人気" active={pathname === "/popular"} />
-          <NavLink href="/features/beginner-friendly-marathons" label="特集" active={pathname.startsWith("/features")} />
+          <NavLink href="/marathon/theme/beginner" label="初心者向け" active={pathname.includes("/theme/beginner")} />
+          <NavLink href="/marathon/theme/sightseeing" label="旅ラン・遠征" active={pathname.includes("/theme/sightseeing")} />
+          <NavLink href="/search?q=親子" label="親子・ファミリー" active={pathname === "/search" && false} />
         </nav>
 
         {/* 右: ユーザー導線（PC） */}
@@ -168,10 +168,10 @@ export default function Header() {
       {menuOpen && (
         <div className="sm:hidden border-t border-gray-100 bg-white px-4 py-3 space-y-1">
           <MobileNavLink href="/search" label="大会を探す" onClick={() => setMenuOpen(false)} />
-          <MobileNavLink href="/entry-deadlines" label="締切間近の大会" onClick={() => setMenuOpen(false)} />
-          <MobileNavLink href="/marathon/theme/beginner" label="初心者向けの大会" onClick={() => setMenuOpen(false)} />
-          <MobileNavLink href="/popular" label="人気の大会" onClick={() => setMenuOpen(false)} />
-          <MobileNavLink href="/features/beginner-friendly-marathons" label="特集" onClick={() => setMenuOpen(false)} />
+          <MobileNavLink href="/entry-deadlines" label="締切間近" onClick={() => setMenuOpen(false)} />
+          <MobileNavLink href="/marathon/theme/beginner" label="初心者向け" onClick={() => setMenuOpen(false)} />
+          <MobileNavLink href="/marathon/theme/sightseeing" label="旅ラン・遠征" onClick={() => setMenuOpen(false)} />
+          <MobileNavLink href="/search?q=親子" label="親子・ファミリー" onClick={() => setMenuOpen(false)} />
           <div className="my-2 border-t border-gray-100" />
           <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider pt-1 pb-0.5">種目で探す</p>
           {sportNavLinks.map((link) => (
