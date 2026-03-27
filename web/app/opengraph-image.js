@@ -3,7 +3,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 
 export const runtime = "nodejs";
-export const alt = "スポログ — 全国のスポーツ大会を探す";
+export const alt = "大会ナビ — 全国のスポーツ大会を探す";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -50,7 +50,7 @@ export default function Image() {
               letterSpacing: "0.05em",
             }}
           >
-            スポログ
+            大会ナビ
           </div>
         )}
 
@@ -75,7 +75,7 @@ export default function Image() {
             letterSpacing: "0.1em",
           }}
         >
-          sportlog.com
+          taikainavi.jp
         </div>
       </div>
     ),

@@ -56,7 +56,7 @@ export default function SnsShareButtons({
   className = "",
 }) {
   const [copied, setCopied] = useState(false);
-  const shareText = title ? `${title} | スポログ` : "スポログ - スポーツ大会検索";
+  const shareText = title ? `${title} | 大会ナビ` : "大会ナビ - スポーツ大会検索";
 
   const handleCopy = async () => {
     try {

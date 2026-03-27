@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "プライバシーポリシー",
-  description: "スポログ（スポーツ大会検索・通知サービス）のプライバシーポリシーです。",
+  description: "大会ナビ（スポーツ大会検索・通知サービス）のプライバシーポリシーです。",
 };
 
 export default function PrivacyPage() {

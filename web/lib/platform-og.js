@@ -71,7 +71,7 @@ export function createPlatformOgImage({ title, subtitle, icon, alt }) {
               letterSpacing: "0.08em",
             }}
           >
-            スポログ データプラットフォーム
+            大会ナビ データプラットフォーム
           </div>
         </div>
       </div>

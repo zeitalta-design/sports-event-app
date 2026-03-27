@@ -65,7 +65,7 @@ export function buildGoogleCalendarUrl(event) {
     text: event.title || "",
     dates: formatGCalDate(event.event_date),
     location: [event.venue_name, event.prefecture].filter(Boolean).join(", "),
-    details: `スポログで詳細を見る: ${typeof window !== "undefined" ? window.location.origin : ""}/${event.sport_type || "marathon"}/${event.id}`,
+    details: `大会ナビで詳細を見る: ${typeof window !== "undefined" ? window.location.origin : ""}/${event.sport_type || "marathon"}/${event.id}`,
   });
   return `https://calendar.google.com/calendar/render?${params}`;
 }
@@ -99,7 +99,7 @@ export function buildIcsEvent(event) {
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//SPORTLOG//Calendar//JP",
+    "PRODID:-//TAIKAINAVI//Calendar//JP",
     "BEGIN:VEVENT",
     `UID:${uid}`,
     `DTSTART;VALUE=DATE:${dtstart}`,

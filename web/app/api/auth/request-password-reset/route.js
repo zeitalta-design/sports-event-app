@@ -36,12 +36,12 @@ export async function POST(request) {
 
       try {
         const { transporter, info } = await getTransporter();
-        const from = process.env.MAIL_FROM || "スポログ <noreply@sportlog.com>";
+        const from = process.env.MAIL_FROM || "大会ナビ <noreply@taikainavi.jp>";
 
         const mailResult = await transporter.sendMail({
           from,
           to: email,
-          subject: "【スポログ】パスワードリセットのご案内",
+          subject: "【大会ナビ】パスワードリセットのご案内",
           text: buildResetEmailText(resetUrl),
         });
 
@@ -77,7 +77,7 @@ export async function POST(request) {
  * リセットメール本文
  */
 function buildResetEmailText(resetUrl) {
-  return `スポログをご利用いただきありがとうございます。
+  return `大会ナビをご利用いただきありがとうございます。
 
 パスワードリセットのリクエストを受け付けました。
 下記のURLにアクセスして、新しいパスワードを設定してください。
@@ -91,6 +91,6 @@ ${resetUrl}
 アカウントのパスワードは変更されません。
 
 ---
-スポログ - スポーツ大会検索・通知サービス
+大会ナビ - スポーツ大会検索・通知サービス
 `;
 }

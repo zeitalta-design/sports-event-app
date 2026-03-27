@@ -62,7 +62,7 @@ export default function Header() {
         <Link href="/" className="flex items-center shrink-0 group">
           <Image
             src="/banner_logo.png"
-            alt="スポログ"
+            alt="大会ナビ"
             width={160}
             height={54}
             style={{ height: "40px", width: "auto" }}

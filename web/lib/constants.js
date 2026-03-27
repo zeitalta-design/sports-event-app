@@ -1,4 +1,4 @@
-export const SITE_NAME = "スポログ";
+export const SITE_NAME = "大会ナビ";
 export const SITE_DESCRIPTION = "スポーツ大会検索・通知サービス";
 
 /**

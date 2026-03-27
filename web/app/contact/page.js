@@ -2,8 +2,8 @@ import Link from "next/link";
 import ContactForm from "@/components/ContactForm";
 
 export const metadata = {
-  title: "お問い合わせ | スポログ",
-  description: "スポログへのお問い合わせ。掲載内容の修正・削除依頼、サービスに関するご質問はこちらからご連絡ください。",
+  title: "お問い合わせ | 大会ナビ",
+  description: "大会ナビへのお問い合わせ。掲載内容の修正・削除依頼、サービスに関するご質問はこちらからご連絡ください。",
   robots: { index: true, follow: true },
 };
 
@@ -16,13 +16,13 @@ export default function ContactPage() {
       {/* 本文 */}
       <div className="bg-white border border-gray-200 rounded-xl p-6 sm:p-8 mb-8 space-y-5">
         <p className="text-sm text-gray-700 leading-relaxed">
-          スポログをご利用いただきありがとうございます。
+          大会ナビをご利用いただきありがとうございます。
         </p>
         <p className="text-sm text-gray-700 leading-relaxed">
           掲載内容の修正依頼、削除依頼、サービスに関するお問い合わせは、以下のフォームよりご連絡ください。
         </p>
         <p className="text-sm text-gray-700 leading-relaxed">
-          スポログでは、公開されている大会情報をもとに情報を掲載しています。
+          大会ナビでは、公開されている大会情報をもとに情報を掲載しています。
           掲載内容に誤りがある場合や、掲載停止・削除をご希望の場合は、内容を確認のうえ迅速に対応いたします。
         </p>
 

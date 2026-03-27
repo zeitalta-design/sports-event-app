@@ -161,7 +161,7 @@ export async function notifyInquiryCreated(inquiry) {
   await dispatch({
     event: OPS_EVENT.INQUIRY_CREATED,
     level: inquiry.priority === "urgent" ? "danger" : "info",
-    title: "[スポログ] 新規問い合わせが届きました",
+    title: "[大会ナビ] 新規問い合わせが届きました",
     body: `*${inquiry.subject}*\n${inquiry.name} さんからの${typeLabels[inquiry.inquiry_type] || "問い合わせ"}です。`,
     fields: [
       { label: "ID", value: `#${inquiry.id}` },
@@ -180,7 +180,7 @@ export async function notifyScrapingFailed(log) {
   await dispatch({
     event: OPS_EVENT.SCRAPING_FAILED,
     level: "danger",
-    title: `[スポログ] スクレイピング失敗: ${log.source_name}`,
+    title: `[大会ナビ] スクレイピング失敗: ${log.source_name}`,
     body: `*${log.source_name}* の巡回でエラーが発生しました。${
       log.error_summary ? `\n> ${log.error_summary}` : ""
     }`,
@@ -207,7 +207,7 @@ export async function notifyPatrolDanger(report) {
   await dispatch({
     event: OPS_EVENT.PATROL_DANGER,
     level: "warning",
-    title: `[スポログ] 品質パトロール: ${totalCount}件の問題を検出`,
+    title: `[大会ナビ] 品質パトロール: ${totalCount}件の問題を検出`,
     body: `以下の品質問題が検出されました。\n${issueList}`,
     fields: [
       { label: "問題種別数", value: `${dangerIssues.length} 種別` },

@@ -92,7 +92,7 @@ registerDomain({
   },
 
   seo: {
-    titleTemplate: "{title} | スポログ",
+    titleTemplate: "{title} | 大会ナビ",
     descriptionTemplate: "{title}の詳細情報。開催日、エントリー状況、コース情報など。",
     jsonLdType: "SportsEvent",
   },

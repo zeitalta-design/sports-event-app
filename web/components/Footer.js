@@ -10,7 +10,7 @@ export default function Footer() {
           <div className="flex items-center gap-2.5">
             <Image
               src="/banner_logo.png"
-              alt="スポログ"
+              alt="大会ナビ"
               width={120}
               height={28}
               style={{ height: "28px", width: "auto" }}
@@ -28,7 +28,7 @@ export default function Footer() {
 
         {/* 下段: コピーライト */}
         <div className="mt-6 pt-4 border-t border-gray-100">
-          <p className="text-[11px] text-gray-400">&copy; 2026 スポログ (SPORTLOG)</p>
+          <p className="text-[11px] text-gray-400">&copy; 2026 大会ナビ (TAIKAI NAVI)</p>
         </div>
       </div>
     </footer>

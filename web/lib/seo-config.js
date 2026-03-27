@@ -180,7 +180,7 @@ export function buildRegionMetadata(regionSlug, sportType = "marathon") {
     title: `${info.label}の${sportLabel}`,
     description: `${info.label}で開催される${sportLabel}を探せます。開催日、締切、距離を比較して大会を見つけられます。`,
     openGraph: {
-      title: `${info.label}の${sportLabel} | スポログ`,
+      title: `${info.label}の${sportLabel} | 大会ナビ`,
       description: `${info.label}の${sportLabel}一覧。日程・距離・締切で比較できます。`,
       type: "website",
     },
@@ -197,7 +197,7 @@ export function buildRegionDistanceMetadata(regionSlug, distanceSlug, sportType 
     title: `${regionInfo.label}の${distanceInfo.label}大会`,
     description: `${regionInfo.label}で開催される${distanceInfo.label}大会を探せます。開催日、締切を比較して大会を見つけられます。`,
     openGraph: {
-      title: `${regionInfo.label}の${distanceInfo.label}大会 | スポログ`,
+      title: `${regionInfo.label}の${distanceInfo.label}大会 | 大会ナビ`,
       description: `${regionInfo.label}の${distanceInfo.label}大会一覧。`,
       type: "website",
     },
@@ -213,7 +213,7 @@ export function buildSeasonMetadata(seasonSlug, sportType = "marathon") {
     title: `${info.label}開催の${sportLabel}`,
     description: info.description,
     openGraph: {
-      title: `${info.label}開催の${sportLabel} | スポログ`,
+      title: `${info.label}開催の${sportLabel} | 大会ナビ`,
       description: info.description,
       type: "website",
     },
@@ -229,7 +229,7 @@ export function buildThemeMetadata(themeSlug, sportType = "marathon") {
     title: info.label,
     description: info.description,
     openGraph: {
-      title: `${info.label} | スポログ`,
+      title: `${info.label} | 大会ナビ`,
       description: info.description,
       type: "website",
     },
