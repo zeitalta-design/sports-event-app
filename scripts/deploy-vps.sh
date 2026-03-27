@@ -42,6 +42,7 @@ docker run -d \
   -e APP_BASE_URL="${APP_BASE_URL:-https://taikainavi.jp}" \
   -e SESSION_SECRET="${SESSION_SECRET:-$(cat /dev/urandom | tr -dc 'a-f0-9' | head -c 64)}" \
   -e ALLOW_SIGNUP="${ALLOW_SIGNUP:-false}" \
+  -e OPS_ADMIN_EMAIL="${OPS_ADMIN_EMAIL:-futoshitatoki@me.com}" \
   -e NODE_ENV=production \
   -v "${DATA_VOLUME}" \
   --restart unless-stopped \

@@ -104,15 +104,44 @@ const channels = {
     },
   },
 
-  // ── 将来拡張: メール通知 ──
-  // email: {
-  //   type: "email",
-  //   async send(payload) {
-  //     // SMTP経由で管理者メールに送信
-  //     // const { sendMail } = await import("./mailer");
-  //     // await sendMail({ to: process.env.OPS_ADMIN_EMAIL, subject: payload.title, body: ... });
-  //   },
-  // },
+  // ── メール通知チャネル ──
+  email: {
+    type: "email",
+    async send(payload) {
+      const adminEmail = process.env.OPS_ADMIN_EMAIL;
+      if (!adminEmail) {
+        console.warn("[ops-notify] OPS_ADMIN_EMAIL が未設定のためメール通知をスキップしました");
+        return;
+      }
+
+      try {
+        const { getTransporter } = await import("./email-sender.js");
+        const { transporter } = await getTransporter();
+        const from = process.env.MAIL_FROM || "大会ナビ <noreply@taikainavi.jp>";
+
+        const bodyText = [
+          payload.title,
+          "",
+          payload.body,
+          "",
+          ...payload.fields.map((f) => `${f.label}: ${f.value}`),
+          "",
+          payload.url ? `管理画面: ${payload.url}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        await transporter.sendMail({
+          from,
+          to: adminEmail,
+          subject: payload.title,
+          text: bodyText,
+        });
+      } catch (err) {
+        console.error("[ops-notify] メール送信エラー:", err.message);
+      }
+    },
+  },
 };
 
 // ──────────────────────────────
@@ -124,7 +153,7 @@ const channels = {
  * @param {NotifyPayload} payload
  */
 async function dispatch(payload) {
-  const enabledStr = process.env.OPS_NOTIFY_CHANNELS || "slack";
+  const enabledStr = process.env.OPS_NOTIFY_CHANNELS || "slack,email";
   const enabled = enabledStr.split(",").map((s) => s.trim()).filter(Boolean);
 
   const tasks = enabled
