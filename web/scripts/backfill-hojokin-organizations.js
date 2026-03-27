@@ -80,6 +80,24 @@ async function main() {
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
 
+  // organizations テーブル初期化（直接DBアクセスのため getDb() を通らない）
+  db.exec(`CREATE TABLE IF NOT EXISTS organizations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, normalized_name TEXT NOT NULL, display_name TEXT NOT NULL,
+    entity_type TEXT DEFAULT 'company', corporate_number TEXT, prefecture TEXT, city TEXT, address TEXT,
+    merged_into_id INTEGER, is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+  db.exec("CREATE INDEX IF NOT EXISTS idx_organizations_normalized ON organizations(normalized_name)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_organizations_corporate ON organizations(corporate_number)");
+  db.exec(`CREATE TABLE IF NOT EXISTS organization_name_variants (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, organization_id INTEGER NOT NULL,
+    raw_name TEXT NOT NULL, normalized_name TEXT NOT NULL, source_domain TEXT,
+    source_entity_type TEXT, source_entity_id INTEGER, match_method TEXT DEFAULT 'exact',
+    confidence REAL DEFAULT 1.0, verified_at TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+  db.exec("CREATE INDEX IF NOT EXISTS idx_org_variants_org ON organization_name_variants(organization_id)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_org_variants_normalized ON organization_name_variants(normalized_name)");
+
   // organization_id カラムがなければ追加
   try {
     db.exec("ALTER TABLE hojokin_items ADD COLUMN organization_id INTEGER REFERENCES organizations(id)");

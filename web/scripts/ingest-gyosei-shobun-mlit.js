@@ -293,6 +293,33 @@ async function main() {
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
 
+  // organizations / administrative_actions テーブル初期化
+  db.exec(`CREATE TABLE IF NOT EXISTS organizations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, normalized_name TEXT NOT NULL, display_name TEXT NOT NULL,
+    entity_type TEXT DEFAULT 'company', corporate_number TEXT, prefecture TEXT, city TEXT, address TEXT,
+    merged_into_id INTEGER, is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+  db.exec("CREATE INDEX IF NOT EXISTS idx_organizations_normalized ON organizations(normalized_name)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_organizations_corporate ON organizations(corporate_number)");
+  db.exec(`CREATE TABLE IF NOT EXISTS organization_name_variants (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, organization_id INTEGER NOT NULL,
+    raw_name TEXT NOT NULL, normalized_name TEXT NOT NULL, source_domain TEXT,
+    source_entity_type TEXT, source_entity_id INTEGER, match_method TEXT DEFAULT 'exact',
+    confidence REAL DEFAULT 1.0, verified_at TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+  db.exec("CREATE INDEX IF NOT EXISTS idx_org_variants_org ON organization_name_variants(organization_id)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_org_variants_normalized ON organization_name_variants(normalized_name)");
+  db.exec(`CREATE TABLE IF NOT EXISTS administrative_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT NOT NULL UNIQUE,
+    organization_id INTEGER, organization_name_raw TEXT NOT NULL,
+    action_type TEXT NOT NULL DEFAULT 'other', action_date TEXT, authority_name TEXT,
+    authority_level TEXT DEFAULT 'national', prefecture TEXT, city TEXT, industry TEXT,
+    summary TEXT, detail TEXT, legal_basis TEXT, penalty_period TEXT, source_url TEXT, source_name TEXT,
+    is_published INTEGER NOT NULL DEFAULT 0, review_status TEXT DEFAULT 'pending',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+
   // --clear-sample: サンプルデータを削除（実データ投入前に）
   if (process.argv.includes("--clear-sample")) {
     const deleted = db.prepare("DELETE FROM administrative_actions WHERE source_url LIKE '%example%'").run();
