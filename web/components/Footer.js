@@ -22,6 +22,8 @@ export default function Footer() {
             <span className="text-gray-300 mx-1">|</span>
             <Link href="/privacy" className="hover:text-gray-800 transition-colors">プライバシー</Link>
             <span className="text-gray-300 mx-1">|</span>
+            <Link href="/about-data" className="hover:text-gray-800 transition-colors">データについて</Link>
+            <span className="text-gray-300 mx-1">|</span>
             <Link href="/contact" className="hover:text-gray-800 transition-colors">お問い合わせ</Link>
           </nav>
         </div>
