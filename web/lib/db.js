@@ -115,6 +115,13 @@ export function getDb() {
       // Phase240: 巡回パトロール — 手動対応フラグ
       "ALTER TABLE events ADD COLUMN patrol_status TEXT DEFAULT 'auto'",
       "ALTER TABLE events ADD COLUMN patrol_note TEXT",
+      // hojokin: ソース追跡カラム
+      "ALTER TABLE hojokin_items ADD COLUMN source_name TEXT",
+      "ALTER TABLE hojokin_items ADD COLUMN source_url TEXT",
+      "ALTER TABLE hojokin_items ADD COLUMN detail_url TEXT",
+      // organizations 連携
+      "ALTER TABLE hojokin_items ADD COLUMN organization_id INTEGER REFERENCES organizations(id)",
+      "ALTER TABLE kyoninka_entities ADD COLUMN organization_id INTEGER REFERENCES organizations(id)",
     ];
     for (const sql of migrations) {
       try { _db.exec(sql); } catch { /* duplicate column → ignore */ }
@@ -1254,6 +1261,100 @@ export function getDb() {
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_ai_extractions_domain ON ai_extractions(domain_id)`);
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_ai_extractions_entity ON ai_extractions(entity_type, entity_id)`);
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_ai_extractions_quality ON ai_extractions(quality_level)`);
+
+    // ─── 共通基盤: 事業者/法人エンティティ ─────────────────────
+
+    // organizations: ドメイン横断の法人・事業者マスタ
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS organizations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        normalized_name TEXT NOT NULL,
+        display_name TEXT NOT NULL,
+        entity_type TEXT DEFAULT 'company',
+        corporate_number TEXT,
+        prefecture TEXT,
+        city TEXT,
+        address TEXT,
+        merged_into_id INTEGER REFERENCES organizations(id),
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_organizations_normalized ON organizations(normalized_name)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_organizations_corporate ON organizations(corporate_number)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_organizations_active ON organizations(is_active)`);
+    _db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_organizations_corp_unique ON organizations(corporate_number) WHERE corporate_number IS NOT NULL`);
+
+    // organization_name_variants: 名寄せ用の表記ゆれ記録
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS organization_name_variants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        raw_name TEXT NOT NULL,
+        normalized_name TEXT NOT NULL,
+        source_domain TEXT,
+        source_entity_type TEXT,
+        source_entity_id INTEGER,
+        match_method TEXT DEFAULT 'exact',
+        confidence REAL DEFAULT 1.0,
+        verified_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_org_variants_org ON organization_name_variants(organization_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_org_variants_normalized ON organization_name_variants(normalized_name)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_org_variants_raw ON organization_name_variants(raw_name)`);
+
+    // ─── 行政処分DB ─────────────────────
+
+    // administrative_actions: 行政処分案件
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS administrative_actions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        organization_id INTEGER REFERENCES organizations(id),
+        organization_name_raw TEXT NOT NULL,
+        action_type TEXT NOT NULL DEFAULT 'other',
+        action_date TEXT,
+        authority_name TEXT,
+        authority_level TEXT DEFAULT 'national',
+        prefecture TEXT,
+        city TEXT,
+        industry TEXT,
+        summary TEXT,
+        detail TEXT,
+        legal_basis TEXT,
+        penalty_period TEXT,
+        source_url TEXT,
+        source_name TEXT,
+        is_published INTEGER NOT NULL DEFAULT 0,
+        review_status TEXT DEFAULT 'pending',
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_admin_actions_slug ON administrative_actions(slug)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_admin_actions_org ON administrative_actions(organization_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_admin_actions_type ON administrative_actions(action_type)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_admin_actions_date ON administrative_actions(action_date)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_admin_actions_prefecture ON administrative_actions(prefecture)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_admin_actions_published ON administrative_actions(is_published)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_admin_actions_review ON administrative_actions(review_status)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_admin_actions_industry ON administrative_actions(industry)`);
+
+    // administrative_action_favorites: お気に入り
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS administrative_action_favorites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_key TEXT NOT NULL,
+        action_id INTEGER NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(user_key, action_id)
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_aa_favorites_user ON administrative_action_favorites(user_key)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_aa_favorites_action ON administrative_action_favorites(action_id)`);
   }
   return _db;
 }

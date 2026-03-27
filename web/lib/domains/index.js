@@ -19,6 +19,7 @@ import "./food-recall";
 import "./sanpai";
 import "./kyoninka";
 import "./shitei";
+import "./gyosei-shobun";
 
 export {
   getDomain,
