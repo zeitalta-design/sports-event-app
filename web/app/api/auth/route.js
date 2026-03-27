@@ -35,6 +35,13 @@ export async function POST(request) {
     const { ipAddress, userAgent } = extractRequestInfo(request);
 
     if (action === "signup") {
+      // ALLOW_SIGNUP が明示的に "true" でなければ登録を拒否
+      if (process.env.ALLOW_SIGNUP !== "true") {
+        return NextResponse.json(
+          { error: "現在、新規ユーザー登録は停止中です" },
+          { status: 403 }
+        );
+      }
       const { email, password, name } = body;
       if (!email || !password) {
         return NextResponse.json(
