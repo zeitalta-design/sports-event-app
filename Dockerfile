@@ -40,7 +40,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 # ビルド時の env チェックをスキップ（本番 env はランタイムで設定）
 ENV SESSION_SECRET=build-time-placeholder
-ENV APP_BASE_URL=http://localhost:3000
+ENV APP_BASE_URL=https://taikainavi.jp
 # SSG ページが参照するDBはソースから COPY 済み（web/data/ 内）
 # 本番ランタイムでは volume マウントで上書きされる
 RUN npx next build
