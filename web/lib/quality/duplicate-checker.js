@@ -117,7 +117,7 @@ export function detectDuplicates({ threshold = 50, limit = 100 } = {}) {
 
   // アクティブな大会を取得
   const events = db.prepare(`
-    SELECT id, title, event_date, prefecture, city, distance_list,
+    SELECT id, title, event_date, prefecture, city,
            official_url, sport_type
     FROM events
     WHERE is_active = 1
@@ -160,14 +160,14 @@ export function detectDuplicates({ threshold = 50, limit = 100 } = {}) {
 export function detectDuplicatesForEvent(eventId, { threshold = 40 } = {}) {
   const db = getDb();
   const target = db.prepare(`
-    SELECT id, title, event_date, prefecture, city, distance_list,
+    SELECT id, title, event_date, prefecture, city,
            official_url, sport_type
     FROM events WHERE id = ?
   `).get(eventId);
   if (!target) return [];
 
   const others = db.prepare(`
-    SELECT id, title, event_date, prefecture, city, distance_list,
+    SELECT id, title, event_date, prefecture, city,
            official_url, sport_type
     FROM events
     WHERE is_active = 1 AND id != ?

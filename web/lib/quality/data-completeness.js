@@ -11,7 +11,8 @@ const COMPLETENESS_FIELDS = [
   { key: "entry_end_date", label: "エントリー締切", weight: 10 },
   { key: "prefecture", label: "都道府県", weight: 12 },
   { key: "city", label: "市区町村", weight: 5 },
-  { key: "distance_list", label: "距離情報", weight: 10 },
+  // distance_list is not in events table; skip for now
+  // { key: "distance_list", label: "距離情報", weight: 10 },
   { key: "official_url", label: "公式URL", weight: 10 },
   { key: "description", label: "説明文", weight: 8 },
   { key: "venue_name", label: "会場名", weight: 5 },
@@ -97,7 +98,7 @@ export function getIncompleteEvents({ limit = 50, offset = 0, minMissing = 1, sp
 
   const events = db.prepare(`
     SELECT e.id, e.title, e.event_date, e.prefecture, e.city,
-           e.entry_end_date, e.distance_list, e.official_url,
+           e.entry_end_date, e.official_url,
            e.description, e.sport_type,
            md.venue_name
     FROM events e
@@ -115,7 +116,7 @@ export function getIncompleteEvents({ limit = 50, offset = 0, minMissing = 1, sp
   db.prepare(`SELECT event_id, COUNT(*) as cnt FROM event_photos WHERE status = 'published' OR status IS NULL GROUP BY event_id`).all().forEach((r) => { photoCounts[r.event_id] = r.cnt; });
   db.prepare(`SELECT event_id, COUNT(*) as cnt FROM event_reviews WHERE status = 'published' OR status IS NULL GROUP BY event_id`).all().forEach((r) => { reviewCounts[r.event_id] = r.cnt; });
   db.prepare(`SELECT event_id, COUNT(*) as cnt FROM event_results GROUP BY event_id`).all().forEach((r) => { resultCounts[r.event_id] = r.cnt; });
-  db.prepare(`SELECT event_id FROM marathon_details`).all().forEach((r) => { detailExists[r.event_id] = true; });
+  db.prepare(`SELECT marathon_id FROM marathon_details`).all().forEach((r) => { detailExists[r.marathon_id] = true; });
 
   const results = [];
   for (const event of events) {
@@ -183,7 +184,8 @@ export function getCompletenessStats() {
   const noDate = db.prepare(`SELECT COUNT(*) as cnt FROM events WHERE is_active = 1 AND (event_date IS NULL OR event_date = '')`).get()?.cnt || 0;
   const noDeadline = db.prepare(`SELECT COUNT(*) as cnt FROM events WHERE is_active = 1 AND (entry_end_date IS NULL OR entry_end_date = '')`).get()?.cnt || 0;
   const noPref = db.prepare(`SELECT COUNT(*) as cnt FROM events WHERE is_active = 1 AND (prefecture IS NULL OR prefecture = '')`).get()?.cnt || 0;
-  const noDistance = db.prepare(`SELECT COUNT(*) as cnt FROM events WHERE is_active = 1 AND (distance_list IS NULL OR distance_list = '')`).get()?.cnt || 0;
+  // distance_list column does not exist in events table; skip
+  const noDistance = 0;
   const noUrl = db.prepare(`SELECT COUNT(*) as cnt FROM events WHERE is_active = 1 AND (official_url IS NULL OR official_url = '')`).get()?.cnt || 0;
   const noDesc = db.prepare(`SELECT COUNT(*) as cnt FROM events WHERE is_active = 1 AND (description IS NULL OR description = '')`).get()?.cnt || 0;
 

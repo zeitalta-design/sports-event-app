@@ -12,7 +12,8 @@ const SCORING_RULES = [
   { key: "event_date", label: "開催日", points: 8, check: (e) => !!e.event_date },
   { key: "prefecture", label: "都道府県", points: 5, check: (e) => !!e.prefecture },
   { key: "city", label: "市区町村", points: 2, check: (e) => !!e.city },
-  { key: "distance_list", label: "距離情報", points: 5, check: (e) => !!e.distance_list },
+  // distance_list not in events table; skip for now
+  // { key: "distance_list", label: "距離情報", points: 5, check: (e) => !!e.distance_list },
   { key: "official_url", label: "公式URL", points: 5, check: (e) => !!e.official_url },
   { key: "description", label: "説明文", points: 5, check: (e) => !!e.description && e.description.length > 20 },
   { key: "entry_end_date", label: "締切日", points: 5, check: (e) => !!e.entry_end_date },
