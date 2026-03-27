@@ -49,17 +49,24 @@ OPS_CRON_SECRET=<ランダム文字列>
 
 ### 環境変数の役割
 
-| 変数名 | 必須 | 用途 |
-|---|---|---|
-| `APP_BASE_URL` | ✅ | パスワードリセットURL生成、OGP、サイトマップ |
-| `NODE_ENV` | ✅ | `production` でセキュリティヘッダー・Secure Cookie 有効化 |
-| `SESSION_SECRET` | ✅ | セッショントークン HMAC 署名（**未設定で本番起動不可**） |
-| `SMTP_HOST` / `SMTP_PORT` | 推奨 | パスワードリセット・通知メール送信（未設定時は Ethereal フォールバック） |
-| `SMTP_USER` / `SMTP_PASS` | 推奨 | SMTP 認証情報（SMTP_HOST 設定時のみ必要） |
-| `MAIL_FROM` | 推奨 | 送信元アドレス（未設定時: noreply@spokatsu.com） |
-| `NEXT_PUBLIC_GA_ID` | 任意 | GA4 トラッキング |
-| `OPS_SLACK_WEBHOOK_URL` | 任意 | 運営 Slack 通知 |
-| `OPS_CRON_SECRET` | 任意 | cron API の認証キー |
+`deploy-vps.sh` は環境変数を **必須 / 推奨 / 任意** の3段階で扱います。
+必須が未設定ならデプロイ中止、推奨は warning 表示で続行、任意はサイレント続行です。
+
+| 変数名 | 区分 | 用途 | 未設定時の挙動 |
+|---|---|---|---|
+| `SESSION_SECRET` | **必須** | セッション HMAC 署名（32文字以上） | デプロイ中止 |
+| `APP_BASE_URL` | 推奨 | パスワードリセットURL、OGP、サイトマップ | warning + デフォルト `https://taikainavi.jp` |
+| `NODE_ENV` | 自動 | セキュリティヘッダー・Secure Cookie | スクリプトが `production` を固定設定 |
+| `SMTP_HOST` | 推奨 | メール送信サーバー | warning + Ethereal フォールバック（テスト用） |
+| `SMTP_PORT` | 任意 | SMTP ポート番号 | デフォルト `587` |
+| `SMTP_USER` | 任意 | SMTP 認証ユーザー | SMTP_HOST 設定時のみ必要 |
+| `SMTP_PASS` | 任意 | SMTP 認証パスワード | SMTP_HOST 設定時のみ必要 |
+| `MAIL_FROM` | 任意 | 送信元アドレス | デフォルト `大会ナビ <noreply@taikainavi.jp>` |
+| `ALLOW_SIGNUP` | 任意 | 新規登録の許可/禁止 | デフォルト `false` |
+| `OPS_ADMIN_EMAIL` | 任意 | 運営通知先メール | 未設定時は通知なし |
+| `NEXT_PUBLIC_GA_ID` | 任意 | GA4 トラッキング | 未設定時は GA 無効 |
+| `OPS_SLACK_WEBHOOK_URL` | 任意 | 運営 Slack 通知 | 未設定時は Slack 通知無効 |
+| `OPS_CRON_SECRET` | 任意 | cron API の認証キー | 未設定時は cron API 無認証 |
 
 ---
 
