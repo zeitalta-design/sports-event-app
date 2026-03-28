@@ -13,6 +13,7 @@ import {
   isSportsentryUrl,
   fetchAndParseSportsentry,
 } from "@/lib/sportsentry-fetcher";
+import { inferPrefecture, isOnlineEvent } from "@/lib/prefecture-inference";
 
 /**
  * 失敗理由コード → 日本語メッセージ
@@ -184,6 +185,37 @@ export async function POST(request) {
         }
 
         const { eventInfo, races } = parsed;
+
+        // フォールバック: オンライン大会の自動判定
+        if (!eventInfo.prefecture) {
+          const titleForCheck = eventInfo.title || ev.title || "";
+          const descForCheck = eventInfo.description || ev.description || "";
+          if (isOnlineEvent(titleForCheck, descForCheck)) {
+            // オンライン大会 → prefecture を埋めず、patrol_status を manual_resolved にマーク
+            db.prepare("UPDATE events SET patrol_status = 'manual_resolved', patrol_note = 'オンライン大会のため都道府県なし', updated_at = ? WHERE id = ?")
+              .run(now, ev.id);
+            result.status = "NO_CHANGE";
+            result.failure_reason = "ONLINE_EVENT";
+            result.failure_message = "オンライン大会のため都道府県は不要です";
+            logResult(insertLog, ev, result, startTime, now);
+            results.push(result);
+            continue;
+          }
+        }
+
+        // フォールバック: スクレイパーが都道府県を返せなかった場合、テキストから推定
+        if (!eventInfo.prefecture) {
+          const inferred = inferPrefecture(
+            eventInfo.venue_name || ev.venue_name,
+            eventInfo.city || ev.city,
+            ev.title,
+            eventInfo.description || ev.description
+          );
+          if (inferred.prefecture) {
+            eventInfo.prefecture = inferred.prefecture;
+            console.log(`[Patrol Refetch] event_id=${ev.id} prefecture inferred: ${inferred.prefecture} (${inferred.source}, ${inferred.confidence})`);
+          }
+        }
 
         if (!eventInfo.title && !eventInfo.event_date && !eventInfo.prefecture) {
           result.failure_reason = "PARSE_EMPTY";
