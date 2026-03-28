@@ -104,10 +104,14 @@ export default function HomeHeroSlider({ totalEvents = 0 }) {
               className="mt-2 sm:mt-3 text-sm sm:text-base text-white/90 font-medium"
               style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}
             >
-              マラソン・トレイルラン・自転車
+              マラソン・トレイルラン・自転車など
               {totalEvents > 0 && (
                 <span className="inline-flex items-center ml-2">
-                  — <span className="font-bold text-white ml-1">{totalEvents.toLocaleString()}</span>件掲載中
+                  —{" "}
+                  <span className="font-extrabold text-white ml-1 text-xl sm:text-2xl" style={{ lineHeight: 1 }}>
+                    {totalEvents.toLocaleString()}
+                  </span>
+                  <span className="ml-0.5">件掲載中</span>
                 </span>
               )}
             </p>
