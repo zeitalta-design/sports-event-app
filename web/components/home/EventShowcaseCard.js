@@ -81,7 +81,7 @@ export default function EventShowcaseCard({ event, rank, variant = "popular" }) 
                       shadow-sm hover:shadow-md hover:-translate-y-0.5
                       transition-all duration-200 h-full flex flex-col">
         {/* ── 画像エリア: 16:9 ── */}
-        <div className="relative overflow-hidden bg-gray-50" style={{ aspectRatio: "16/9" }}>
+        <div className="relative overflow-hidden bg-gray-100" style={{ aspectRatio: "16/9" }}>
           {/* 左上バッジ */}
           {v === "popular" && <RankBadge rank={rank} />}
           {v === "closing" && <DeadlineBadge days={deadlineDays} />}
@@ -92,7 +92,7 @@ export default function EventShowcaseCard({ event, rank, variant = "popular" }) 
             <img
               src={imageUrl}
               alt={event.title || "大会画像"}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
               loading="lazy"
               onError={(e) => {
                 e.target.style.display = "none";

@@ -133,14 +133,14 @@ export default memo(function EventCard({ event, isFavorite, onFavoriteToggle }) 
         {/* ── 画像エリア ── */}
         <Link
           href={detailPath}
-          className="relative block flex-shrink-0 w-full sm:w-56 md:w-64 overflow-hidden rounded-t-lg sm:rounded-t-none sm:rounded-l-lg bg-gray-50"
+          className="relative block flex-shrink-0 w-full sm:w-72 md:w-80 overflow-hidden rounded-t-lg sm:rounded-t-none sm:rounded-l-lg bg-gray-100"
           style={{ aspectRatio: "16/9" }}
         >
           {imageUrl ? (
             <img
               src={imageUrl}
               alt={event.title || "大会画像"}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
               loading="lazy"
               onError={(e) => {
                 e.target.style.display = "none";
