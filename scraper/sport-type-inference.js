@@ -130,6 +130,15 @@ const SQUASH_PATTERNS = [
 ];
 
 /**
+ * 練習会・講習会判定パターン
+ * ※ 「マラソン練習会」のように競技名を含む場合は、タイトル全体が練習会中心かで判定
+ */
+const WORKSHOP_PATTERNS = [
+  /(?:ランニング|マラソン)?(?:練習会|講習会|教室|レッスン|クリニック|セミナー)(?:$|\s|[0-9]|[（(]|参加|募集|開催)/i,
+  /(?:^|　|\s)(?:練習会|講習会|教室|レッスン|クリニック|セミナー)/i,
+];
+
+/**
  * ウォーキング判定パターン
  */
 const WALKING_PATTERNS = [
@@ -217,6 +226,13 @@ function inferSportType(title, description) {
       if (pattern.test(titleStr)) {
         return { sportType: "walking", sportSlug: "walking", confidence: "high" };
       }
+    }
+  }
+
+  // Step 6.5: 練習会・講習会（大会名よりイベント性質が練習会中心の場合）
+  for (const pattern of WORKSHOP_PATTERNS) {
+    if (pattern.test(titleStr)) {
+      return { sportType: "workshop", sportSlug: "workshop", confidence: "high" };
     }
   }
 
