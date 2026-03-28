@@ -70,9 +70,10 @@ async function fetchPages(startPage = 1, endPage = 999, options = {}) {
     try {
       const result = await fetchPage(p, { tag });
       if (result.status === 200 && result.html.length > 3000) {
-        // イベントが含まれているか簡易チェック
-        if (!result.html.includes("event_list") && !result.html.includes("eventList") && p > 1) {
-          if (verbose) console.log(`  Page ${p}: no events found, stopping`);
+        // イベントが含まれているか簡易チェック（moshicom.com/NNNNN リンクの有無）
+        const eventLinks = (result.html.match(/moshicom\.com\/\d{4,}/g) || []).length;
+        if (eventLinks === 0 && p > 1) {
+          if (verbose) console.log(`  Page ${p}: no event links found, stopping`);
           stoppedReason = "no_events";
           break;
         }

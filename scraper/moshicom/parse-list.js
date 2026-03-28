@@ -50,33 +50,60 @@ function stripTags(html) {
 /**
  * MOSHICOMの一覧ページHTMLからイベントを抽出
  *
- * MOSHICOMの一覧はカード型レイアウト。
- * 各イベントは /event/XXXXX のリンクを持つ。
+ * MOSHICOMのイベントリンクは https://moshicom.com/NNNNN 形式。
+ * /user/ パスは除外する。
  */
 function parsePage(html) {
   if (!html || html.length < 1000) return [];
 
   const events = [];
-  // イベントリンクパターン: /event/XXXXX
-  const eventPattern = /<a[^>]*href="\/event\/(\d+)"[^>]*>([\s\S]*?)<\/a>/gi;
   const seen = new Set();
+
+  // Step 1: イベントリンクを収集 (moshicom.com/NNNNN 形式、/user/ を除外)
+  const linkPattern = /href="(https?:\/\/moshicom\.com\/(\d{4,})(?:\?[^"]*)?)"/gi;
+  const eventIds = [];
   let match;
+  while ((match = linkPattern.exec(html)) !== null) {
+    const eventId = match[2];
+    if (!seen.has(eventId)) {
+      seen.add(eventId);
+      eventIds.push(eventId);
+    }
+  }
 
-  while ((match = eventPattern.exec(html)) !== null) {
-    const eventId = match[1];
-    if (seen.has(eventId)) continue;
-    seen.add(eventId);
+  // /user/ パスのリンクを除外（user IDを除去）
+  const userPattern = /href="https?:\/\/moshicom\.com\/user\/(\d+)"/gi;
+  const userIds = new Set();
+  while ((match = userPattern.exec(html)) !== null) {
+    userIds.add(match[1]);
+  }
 
-    const block = match[2];
-    // タイトル抽出（最初の意味のあるテキスト）
-    const titleMatch = block.match(/<(?:h[2-4]|div|span)[^>]*class="[^"]*(?:title|name)[^"]*"[^>]*>([^<]+)/i)
-      || block.match(/<(?:h[2-4])[^>]*>([^<]{5,})/i);
-    let title = titleMatch ? stripTags(titleMatch[1]).trim() : null;
+  // Step 2: 各イベントIDに対してブロックを抽出してパース
+  for (const eventId of eventIds) {
+    if (userIds.has(eventId)) continue; // user IDは除外
 
-    // タイトルがなければ画像altから
+    // イベントリンクの周辺ブロックを取得
+    const linkIdx = html.indexOf(`moshicom.com/${eventId}`);
+    if (linkIdx < 0) continue;
+
+    // リンク周辺500文字を取得
+    const blockStart = Math.max(0, linkIdx - 500);
+    const blockEnd = Math.min(html.length, linkIdx + 500);
+    const block = html.substring(blockStart, blockEnd);
+
+    // タイトル: alt属性やテキストノードから
+    const altMatch = block.match(/alt="([^"]{5,100})"/);
+    let title = altMatch ? altMatch[1].trim() : null;
+
+    // altがなければ周辺テキストから
     if (!title) {
-      const altMatch = block.match(/alt="([^"]{5,})"/);
-      title = altMatch ? altMatch[1].trim() : null;
+      const textMatch = block.match(/>([^<]{8,80})</);
+      if (textMatch) {
+        const candidate = stripTags(textMatch[1]).trim();
+        if (candidate.length >= 5 && !/^https?:/.test(candidate) && !/^\d+$/.test(candidate)) {
+          title = candidate;
+        }
+      }
     }
 
     if (!title || title.length < 3) continue;
@@ -118,7 +145,7 @@ function parsePage(html) {
       entry_start_date: null,
       entry_end_date: null,
       entry_status: "unknown",
-      source_url: `https://moshicom.com/event/${eventId}`,
+      source_url: `https://moshicom.com/${eventId}`,
       official_url: null,
       hero_image_url: imageUrl,
       description: "",
