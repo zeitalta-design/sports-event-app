@@ -72,11 +72,72 @@ const MEDIUM_SCORE_THRESHOLD = 5;
 const MARATHON_TITLE_GUARD = /マラソン|marathon|ロードレース|駅伝|リレーマラソン/i;
 
 /**
- * 将来拡張用: ウォーキング判定パターン
+ * 自転車 / サイクリング判定パターン
+ */
+const CYCLING_PATTERNS = [
+  /ヒルクライム/i,
+  /サイクル(?:イベント|フェスタ|ロード|レース|大会)/i,
+  /サイクリング/i,
+  /自転車/i,
+  /ロードバイク/i,
+  /エンデューロ/i,
+  /グランフォンド/i,
+  /ブルベ/i,
+  /cycling/i,
+  /hill\s*climb/i,
+  /BIKE/i,
+];
+
+/**
+ * トライアスロン判定パターン
+ */
+const TRIATHLON_PATTERNS = [
+  /トライアスロン/i,
+  /triathlon/i,
+  /デュアスロン/i,
+  /duathlon/i,
+  /アクアスロン/i,
+  /aquathlon/i,
+];
+
+/**
+ * 水泳判定パターン
+ */
+const SWIMMING_PATTERNS = [
+  /オーシャンスイム/i,
+  /オープンウォーター/i,
+  /遠泳/i,
+  /水泳大会/i,
+  /(?:^|\s)スイム(?:大会|チャレンジ|レース)/i,
+  /open\s*water/i,
+  /swimming/i,
+];
+
+/**
+ * ゴルフ判定パターン
+ */
+const GOLF_PATTERNS = [
+  /ゴルフ/i,
+  /golf/i,
+];
+
+/**
+ * スカッシュ判定パターン
+ */
+const SQUASH_PATTERNS = [
+  /スカッシュ/i,
+  /squash/i,
+];
+
+/**
+ * ウォーキング判定パターン
  */
 const WALKING_PATTERNS = [
-  /ウォーキング大会/i,
-  /ウォーク(?:大会|イベント|ラリー)/i,
+  /ウォーキング(?:大会|イベント)?/i,
+  /ウォーク(?:大会|イベント|ラリー|フェス)/i,
+  /(?:ウルトラ)?ウォーク(?:ing|$|\s)/i,
+  /ウォークラリー/i,
+  /^(?:(?!マラソン|ラン).)*ウォーク/i,
 ];
 
 /**
@@ -89,6 +150,8 @@ const SPORT_TYPE_TO_SLUG = {
   cycling: "cycling",
   walking: "walking",
   swimming: "swimming",
+  golf: "golf",
+  squash: "squash",
   workshop: "workshop",
 };
 
@@ -104,69 +167,101 @@ function inferSportType(title, description) {
   const titleStr = title || "";
   const descStr = description || "";
 
-  // Step 1: タイトルから trail 高信頼パターン判定
+  const text = titleStr + " " + descStr;
+
+  // Step 1: 自転車（ヒルクライム等）— マラソンガードより先に判定
+  for (const pattern of CYCLING_PATTERNS) {
+    if (pattern.test(titleStr)) {
+      return { sportType: "cycling", sportSlug: "cycling", confidence: "high" };
+    }
+  }
+
+  // Step 2: トライアスロン
+  for (const pattern of TRIATHLON_PATTERNS) {
+    if (pattern.test(titleStr)) {
+      return { sportType: "triathlon", sportSlug: "triathlon", confidence: "high" };
+    }
+  }
+
+  // Step 3: 水泳
+  for (const pattern of SWIMMING_PATTERNS) {
+    if (pattern.test(titleStr)) {
+      return { sportType: "swimming", sportSlug: "swimming", confidence: "high" };
+    }
+  }
+
+  // Step 4: ゴルフ
+  for (const pattern of GOLF_PATTERNS) {
+    if (pattern.test(titleStr)) {
+      return { sportType: "golf", sportSlug: "golf", confidence: "high" };
+    }
+  }
+
+  // Step 4.5: スカッシュ
+  for (const pattern of SQUASH_PATTERNS) {
+    if (pattern.test(titleStr)) {
+      return { sportType: "squash", sportSlug: "squash", confidence: "high" };
+    }
+  }
+
+  // Step 5: トレイルラン — 高信頼
   for (const pattern of TRAIL_PATTERNS_HIGH) {
     if (pattern.test(titleStr)) {
-      return {
-        sportType: "trail",
-        sportSlug: "trail",
-        confidence: "high",
-      };
+      return { sportType: "trail", sportSlug: "trail", confidence: "high" };
     }
   }
 
-  // Step 2: タイトルにマラソン/ロード系があれば marathon 確定ガード
-  // （説明文にtrail要素があっても、タイトルがマラソンなら marathon を維持）
-  if (MARATHON_TITLE_GUARD.test(titleStr)) {
-    return {
-      sportType: "marathon",
-      sportSlug: "marathon",
-      confidence: "high",
-    };
+  // Step 6: ウォーキング（タイトルに「マラソン」が含まれない場合のみ）
+  if (!MARATHON_TITLE_GUARD.test(titleStr)) {
+    for (const pattern of WALKING_PATTERNS) {
+      if (pattern.test(titleStr)) {
+        return { sportType: "walking", sportSlug: "walking", confidence: "high" };
+      }
+    }
   }
 
-  // Step 3: 説明文から trail 高信頼パターン判定
+  // Step 7: タイトルにマラソン/ロード系があれば marathon 確定ガード
+  if (MARATHON_TITLE_GUARD.test(titleStr)) {
+    return { sportType: "marathon", sportSlug: "marathon", confidence: "high" };
+  }
+
+  // Step 8: 説明文から他競技判定
+  for (const pattern of CYCLING_PATTERNS) {
+    if (pattern.test(descStr)) return { sportType: "cycling", sportSlug: "cycling", confidence: "medium" };
+  }
+  for (const pattern of TRIATHLON_PATTERNS) {
+    if (pattern.test(descStr)) return { sportType: "triathlon", sportSlug: "triathlon", confidence: "medium" };
+  }
+  for (const pattern of SWIMMING_PATTERNS) {
+    if (pattern.test(descStr)) return { sportType: "swimming", sportSlug: "swimming", confidence: "medium" };
+  }
+  for (const pattern of GOLF_PATTERNS) {
+    if (pattern.test(descStr)) return { sportType: "golf", sportSlug: "golf", confidence: "medium" };
+  }
+  for (const pattern of SQUASH_PATTERNS) {
+    if (pattern.test(descStr)) return { sportType: "squash", sportSlug: "squash", confidence: "medium" };
+  }
+
+  // Step 9: 説明文から trail 高信頼
   for (const pattern of TRAIL_PATTERNS_HIGH) {
     if (pattern.test(descStr)) {
-      return {
-        sportType: "trail",
-        sportSlug: "trail",
-        confidence: "high",
-      };
+      return { sportType: "trail", sportSlug: "trail", confidence: "high" };
     }
   }
 
-  // Step 4: 説明文から trail 中信頼スコア判定
-  // 単独では弱いが複数一致で trail と判定
+  // Step 10: 説明文から trail 中信頼スコア
   if (descStr.length > 0) {
     let mediumScore = 0;
     for (const { pattern, score } of TRAIL_PATTERNS_MEDIUM) {
-      if (pattern.test(descStr)) {
-        mediumScore += score;
-      }
+      if (pattern.test(descStr)) mediumScore += score;
     }
     if (mediumScore >= MEDIUM_SCORE_THRESHOLD) {
-      return {
-        sportType: "trail",
-        sportSlug: "trail",
-        confidence: "medium",
-      };
+      return { sportType: "trail", sportSlug: "trail", confidence: "medium" };
     }
   }
 
-  // Walking 判定（将来拡張用、今回は無効）
-  // for (const pattern of WALKING_PATTERNS) {
-  //   if (pattern.test(text)) {
-  //     return { sportType: "walking", sportSlug: "walking", confidence: "high" };
-  //   }
-  // }
-
   // デフォルト: marathon
-  return {
-    sportType: "marathon",
-    sportSlug: "marathon",
-    confidence: "default",
-  };
+  return { sportType: "marathon", sportSlug: "marathon", confidence: "default" };
 }
 
 /**
