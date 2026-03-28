@@ -27,7 +27,7 @@ export async function GET() {
     const CARD_COLS = `id, title, event_date, entry_end_date, prefecture, entry_status, sport_type,
                        hero_image_url`;
 
-    // 直近締切の大会
+    // 直近締切の大会（カルーセル用に8件）
     let deadlineEvents = db
       .prepare(`
         SELECT ${CARD_COLS}
@@ -37,7 +37,7 @@ export async function GET() {
           AND entry_end_date >= date('now')
           AND entry_status = 'open'
         ORDER BY entry_end_date ASC
-        LIMIT 6
+        LIMIT 8
       `)
       .all();
 
@@ -50,7 +50,7 @@ export async function GET() {
             AND event_date >= date('now')
             AND entry_status = 'open'
           ORDER BY event_date ASC
-          LIMIT 6
+          LIMIT 8
         `)
         .all();
       if (fallback.length > deadlineEvents.length) {
@@ -58,7 +58,7 @@ export async function GET() {
       }
     }
 
-    // 新着・注目大会
+    // 新着・注目大会（カルーセル用に8件）
     let newEvents = db
       .prepare(`
         SELECT ${CARD_COLS}
@@ -66,7 +66,7 @@ export async function GET() {
         WHERE is_active = 1 ${NOT_MERGED}
           AND event_date >= date('now')
         ORDER BY updated_at DESC
-        LIMIT 6
+        LIMIT 8
       `)
       .all();
 
@@ -77,7 +77,7 @@ export async function GET() {
           FROM events
           WHERE is_active = 1 ${NOT_MERGED}
           ORDER BY updated_at DESC
-          LIMIT 6
+          LIMIT 8
         `)
         .all();
       if (fallback.length > newEvents.length) {
@@ -85,8 +85,8 @@ export async function GET() {
       }
     }
 
-    // 人気大会
-    let popularEvents = getPopularEvents({ limit: 5, days: 30 });
+    // 人気大会（カルーセル用に8件）
+    let popularEvents = getPopularEvents({ limit: 8, days: 30 });
 
     if (!popularEvents || popularEvents.length < 3) {
       const fallback = db
@@ -98,7 +98,7 @@ export async function GET() {
             AND entry_status = 'open'
             AND event_date >= date('now')
           ORDER BY popularity_score DESC, event_date ASC
-          LIMIT 5
+          LIMIT 8
         `)
         .all();
       if (fallback.length > (popularEvents?.length || 0)) {
