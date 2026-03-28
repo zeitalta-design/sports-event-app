@@ -18,6 +18,7 @@ export async function GET() {
     const SOURCES = [
       { name: "RUNNET", slug: "runnet", description: "マラソン大会情報（一覧＋詳細）" },
       { name: "MOSHICOM", slug: "moshicom", description: "モシコム大会情報" },
+      { name: "SPORTS ENTRY", slug: "sportsentry", description: "スポーツエントリー大会情報" },
     ];
 
     // ソース別の最新ログと集計

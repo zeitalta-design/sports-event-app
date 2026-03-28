@@ -166,7 +166,7 @@ function SeoEventCard({ event, themeSlug }) {
       </Link>
       <div className="px-4 pb-2 -mt-1 flex items-center gap-2">
         <span className="text-[10px] text-gray-400">
-          出典: {event.source === "moshicom" ? "MOSHICOM" : "RUNNET"}
+          出典: {event.source_site === "moshicom" ? "MOSHICOM" : event.source_site === "sportsentry" ? "SPORTS ENTRY" : "RUNNET"}
         </span>
         <FreshnessBadge event={event} />
         <ConflictBadge level={event.verification_conflict_level} />

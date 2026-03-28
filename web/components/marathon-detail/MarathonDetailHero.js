@@ -70,6 +70,7 @@ function formatSourceType(sourceType) {
     case "official": return "公式サイト";
     case "runnet": return "RUNNET";
     case "moshicom": return "MOSHICOM";
+    case "sportsentry": return "SPORTS ENTRY";
     default: return "その他";
   }
 }

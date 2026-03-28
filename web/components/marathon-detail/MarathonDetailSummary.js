@@ -78,7 +78,7 @@ export default function MarathonDetailSummary({ data }) {
     rows.push({ label: "種目数", value: `${data.races.length}種目` });
   }
 
-  const sourceLabel = data.source_site === "runnet" ? "RUNNET" : data.source_site;
+  const sourceLabel = data.source_site === "runnet" ? "RUNNET" : data.source_site === "sportsentry" ? "SPORTS ENTRY" : data.source_site === "moshicom" ? "MOSHICOM" : data.source_site;
   const hasMoshicom = data.official_url?.includes("moshicom");
   rows.push({
     label: "データ出典",

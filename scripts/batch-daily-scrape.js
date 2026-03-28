@@ -4,7 +4,8 @@
  * 1. RUNNET一覧スクレイプ（20ページ）
  * 2. RUNNET詳細補完（未取得50件）
  * 3. MOSHICOM詳細補完（race未取得50件）
- * 4. 暫定popularity_score再計算
+ * 4. SPORTS ENTRY一覧スクレイプ（10ページ）
+ * 5. 暫定popularity_score再計算
  *
  * Usage:
  *   node scripts/batch-daily-scrape.js
@@ -72,7 +73,7 @@ const results = [];
 // Step 1: RUNNET一覧
 if (!opts.skipList) {
   results.push(run(
-    "Step 1/4: RUNNET一覧取り込み",
+    "Step 1/5: RUNNET一覧取り込み",
     `node scripts/scrape-runnet-list.js --pages ${opts.pages}`,
     opts
   ));
@@ -82,21 +83,28 @@ if (!opts.skipList) {
 
 // Step 2: RUNNET詳細
 results.push(run(
-  "Step 2/4: RUNNET詳細補完",
+  "Step 2/5: RUNNET詳細補完",
   `node scripts/scrape-runnet-detail.js --only-missing --limit ${opts.limit}`,
   opts
 ));
 
 // Step 3: MOSHICOM詳細
 results.push(run(
-  "Step 3/4: MOSHICOM詳細補完",
+  "Step 3/5: MOSHICOM詳細補完",
   `node scripts/scrape-moshicom-detail.js --only-missing-races --limit ${opts.limit}`,
   opts
 ));
 
-// Step 4: popularity再計算
+// Step 4: SPORTS ENTRY一覧
 results.push(run(
-  "Step 4/4: 暫定popularity_score再計算",
+  "Step 4/5: SPORTS ENTRY一覧取り込み",
+  `node scripts/scrape-sportsentry-list.js --pages 10`,
+  opts
+));
+
+// Step 5: popularity再計算
+results.push(run(
+  "Step 5/5: 暫定popularity_score再計算",
   `node scripts/calc-initial-popularity.js`,
   opts
 ));
