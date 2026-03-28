@@ -149,7 +149,7 @@ function buildEventJsonLd(data, sport) {
 export async function generateMetadata({ params }) {
   const { sportSlug, id } = await params;
   const sport = getSportBySlug(sportSlug);
-  if (!sport || !sport.enabled) return {};
+  if (!sport) return {};
 
   try {
     const data = getMarathonDetailPageData(id);
@@ -182,7 +182,7 @@ export async function generateMetadata({ params }) {
 export default async function SportDetailPage({ params }) {
   const { sportSlug, id } = await params;
   const sport = getSportBySlug(sportSlug);
-  if (!sport || !sport.enabled) notFound();
+  if (!sport) notFound();
 
   let data;
   try {
