@@ -12,9 +12,11 @@ const QUICK_CHIPS = [
   { key: "marathon", label: "マラソン", icon: "🏃" },
   { key: "trail", label: "トレイルラン", icon: "⛰️" },
   { key: "cycling", label: "サイクリング", icon: "🚴" },
-  { key: "triathlon", label: "トライアスロン", icon: "🏊" },
+  { key: "triathlon", label: "トライアスロン", icon: "🏅" },
   { key: "walking", label: "ウォーキング", icon: "🚶" },
-  { key: "practice", label: "練習会・講習会", icon: "📋" },
+  { key: "golf", label: "ゴルフ", icon: "⛳" },
+  { key: "swimming", label: "水泳", icon: "🏊" },
+  { key: "squash", label: "スカッシュ", icon: "🎾" },
 ];
 
 
@@ -193,10 +195,7 @@ export default function HomeHeroSlider({ totalEvents = 0 }) {
                 key={chip.key}
                 type="button"
                 onClick={() => {
-                  const dest = chip.key === "marathon" ? "/marathon"
-                    : chip.key === "practice" ? "/marathon?keyword=練習会"
-                    : `/${chip.key}`;
-                  window.location.href = dest;
+                  window.location.href = chip.key === "marathon" ? "/marathon" : `/${chip.key}`;
                 }}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-full
                            bg-white/20 text-white border border-white/30

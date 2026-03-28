@@ -15,10 +15,13 @@ const MONTHS = Array.from({ length: 12 }, (_, i) => ({
  */
 const QUICK_CHIPS = [
   { key: "marathon",    label: "マラソン" },
-  { key: "trail",       label: "トレイル" },
-  { key: "cycling",     label: "自転車" },
+  { key: "trail",       label: "トレイルラン" },
+  { key: "cycling",     label: "サイクリング" },
   { key: "triathlon",   label: "トライアスロン" },
   { key: "walking",     label: "ウォーキング" },
+  { key: "golf",        label: "ゴルフ" },
+  { key: "swimming",    label: "水泳" },
+  { key: "squash",      label: "スカッシュ" },
 ];
 
 const FILTER_SECTIONS = [
