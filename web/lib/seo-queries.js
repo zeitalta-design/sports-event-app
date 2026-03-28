@@ -19,6 +19,15 @@ const EVENT_SELECT = `
   FROM events e
 `;
 
+// スコアリング付きクエリ用: SELECT部分（FROM無し）
+const EVENT_COLUMNS = `
+  e.*,
+  (SELECT GROUP_CONCAT(d, ',') FROM (
+     SELECT DISTINCT CAST(er.distance_km AS TEXT) as d
+     FROM event_races er WHERE er.event_id = e.id AND er.distance_km IS NOT NULL
+   )) as distance_list
+`;
+
 /** 都道府県別の大会取得 */
 export function getEventsByPrefecture(prefectureName, sportType = "marathon") {
   const db = getDb();
@@ -163,28 +172,41 @@ export function getEventsByTheme(themeKey, sportType = "marathon") {
 
     case "beginner":
       return db.prepare(`
-        ${EVENT_SELECT}
+        SELECT ${EVENT_COLUMNS},
+          (
+            (CASE WHEN e.title LIKE '%初心者%' OR e.title LIKE '%ビギナー%' OR e.title LIKE '%ファンラン%' OR e.title LIKE '%fun run%' THEN 3 ELSE 0 END)
+            + (CASE WHEN e.description LIKE '%初心者%' THEN 2 ELSE 0 END)
+            + (CASE WHEN e.description LIKE '%ビギナー%' OR e.description LIKE '%初めて%' OR e.description LIKE '%入門%' THEN 1 ELSE 0 END)
+            + (CASE WHEN e.description LIKE '%完走%' OR e.description LIKE '%ゆっくり%' THEN 1 ELSE 0 END)
+            + (CASE WHEN md.features_json LIKE '%初心者%' OR md.features_json LIKE '%ビギナー%' THEN 2 ELSE 0 END)
+            + (CASE WHEN md.level_labels_json LIKE '%初心者%' OR md.level_labels_json LIKE '%ビギナー%' THEN 2 ELSE 0 END)
+          ) as theme_score
+        FROM events e
+        LEFT JOIN marathon_details md ON md.marathon_id = e.id
         WHERE e.is_active = 1 AND e.sport_type = ?
           AND (e.description LIKE '%初心者%' OR e.description LIKE '%ビギナー%' OR e.description LIKE '%初めて%'
-               OR e.title LIKE '%初心者%' OR e.title LIKE '%ファンラン%' OR e.title LIKE '%fun run%')
-        ORDER BY e.event_date ASC
+               OR e.description LIKE '%入門%' OR e.description LIKE '%完走%' OR e.description LIKE '%ゆっくり%'
+               OR e.title LIKE '%初心者%' OR e.title LIKE '%ビギナー%' OR e.title LIKE '%ファンラン%' OR e.title LIKE '%fun run%'
+               OR md.features_json LIKE '%初心者%' OR md.features_json LIKE '%ビギナー%'
+               OR md.level_labels_json LIKE '%初心者%' OR md.level_labels_json LIKE '%ビギナー%')
+        ORDER BY theme_score DESC, e.event_date ASC
       `).all(sportType);
 
     case "flat-course":
       return db.prepare(`
         ${EVENT_SELECT}
-        LEFT JOIN marathon_details md ON md.event_id = e.id
+        LEFT JOIN marathon_details md ON md.marathon_id = e.id
         WHERE e.is_active = 1 AND e.sport_type = ?
           AND (e.description LIKE '%フラット%' OR e.description LIKE '%平坦%'
                OR md.features_json LIKE '%フラット%' OR md.features_json LIKE '%平坦%'
-               OR md.course_description LIKE '%フラット%' OR md.course_description LIKE '%平坦%')
+               OR md.course_info LIKE '%フラット%' OR md.course_info LIKE '%平坦%')
         ORDER BY e.event_date ASC
       `).all(sportType);
 
     case "record":
       return db.prepare(`
         ${EVENT_SELECT}
-        LEFT JOIN marathon_details md ON md.event_id = e.id
+        LEFT JOIN marathon_details md ON md.marathon_id = e.id
         WHERE e.is_active = 1 AND e.sport_type = ?
           AND (e.description LIKE '%記録%' OR e.description LIKE '%タイム%' OR e.description LIKE '%自己ベスト%' OR e.description LIKE '%PB%'
                OR md.features_json LIKE '%記録%' OR md.features_json LIKE '%高速%')
@@ -193,25 +215,45 @@ export function getEventsByTheme(themeKey, sportType = "marathon") {
 
     case "sightseeing":
       return db.prepare(`
-        ${EVENT_SELECT}
-        LEFT JOIN marathon_details md ON md.event_id = e.id
+        SELECT ${EVENT_COLUMNS},
+          (
+            (CASE WHEN e.title LIKE '%観光%' OR e.title LIKE '%旅ラン%' OR e.title LIKE '%温泉%' THEN 3 ELSE 0 END)
+            + (CASE WHEN e.description LIKE '%観光%' THEN 2 ELSE 0 END)
+            + (CASE WHEN e.description LIKE '%絶景%' OR e.description LIKE '%景色%' THEN 2 ELSE 0 END)
+            + (CASE WHEN e.description LIKE '%温泉%' OR e.description LIKE '%ご当地%' OR e.description LIKE '%グルメ%' THEN 2 ELSE 0 END)
+            + (CASE WHEN e.description LIKE '%旅%' THEN 1 ELSE 0 END)
+            + (CASE WHEN e.description LIKE '%リゾート%' OR e.description LIKE '%ツアー%' OR e.description LIKE '%海辺%' OR e.description LIKE '%高原%' THEN 1 ELSE 0 END)
+            + (CASE WHEN md.features_json LIKE '%観光%' OR md.features_json LIKE '%絶景%' OR md.features_json LIKE '%温泉%' THEN 2 ELSE 0 END)
+          ) as theme_score
+        FROM events e
+        LEFT JOIN marathon_details md ON md.marathon_id = e.id
         WHERE e.is_active = 1 AND e.sport_type = ?
           AND (
             e.description LIKE '%観光%' OR e.description LIKE '%景色%' OR e.description LIKE '%絶景%'
             OR e.description LIKE '%旅%' OR e.description LIKE '%温泉%'
             OR e.description LIKE '%ご当地%' OR e.description LIKE '%グルメ%' OR e.description LIKE '%ツアー%'
+            OR e.description LIKE '%リゾート%' OR e.description LIKE '%海辺%' OR e.description LIKE '%高原%'
             OR e.title LIKE '%観光%' OR e.title LIKE '%旅%' OR e.title LIKE '%温泉%' OR e.title LIKE '%ご当地%'
             OR md.features_json LIKE '%観光%' OR md.features_json LIKE '%景色%' OR md.features_json LIKE '%絶景%'
             OR md.features_json LIKE '%旅%' OR md.features_json LIKE '%温泉%'
             OR md.features_json LIKE '%ご当地%' OR md.features_json LIKE '%グルメ%'
           )
-        ORDER BY e.event_date ASC
+        ORDER BY theme_score DESC, e.event_date ASC
       `).all(sportType);
 
     case "family":
       return db.prepare(`
-        ${EVENT_SELECT}
-        LEFT JOIN marathon_details md ON md.event_id = e.id
+        SELECT ${EVENT_COLUMNS},
+          (
+            (CASE WHEN e.title LIKE '%親子%' OR e.title LIKE '%ファミリー%' OR e.title LIKE '%キッズ%' THEN 3 ELSE 0 END)
+            + (CASE WHEN er_fam.race_name LIKE '%親子%' OR er_fam.race_name LIKE '%ファミリー%' OR er_fam.race_name LIKE '%キッズ%' THEN 3 ELSE 0 END)
+            + (CASE WHEN e.description LIKE '%親子%' OR e.description LIKE '%ファミリー%' THEN 2 ELSE 0 END)
+            + (CASE WHEN e.description LIKE '%キッズ%' OR e.description LIKE '%こども%' OR e.description LIKE '%子供%' THEN 1 ELSE 0 END)
+            + (CASE WHEN e.description LIKE '%家族%' THEN 1 ELSE 0 END)
+            + (CASE WHEN md.features_json LIKE '%親子%' OR md.features_json LIKE '%ファミリー%' OR md.features_json LIKE '%キッズ%' THEN 2 ELSE 0 END)
+          ) as theme_score
+        FROM events e
+        LEFT JOIN marathon_details md ON md.marathon_id = e.id
         LEFT JOIN event_races er_fam ON er_fam.event_id = e.id
         WHERE e.is_active = 1 AND e.sport_type = ?
           AND (
@@ -228,7 +270,7 @@ export function getEventsByTheme(themeKey, sportType = "marathon") {
             OR er_fam.race_name LIKE '%子供%'
           )
         GROUP BY e.id
-        ORDER BY e.event_date ASC
+        ORDER BY theme_score DESC, e.event_date ASC
       `).all(sportType);
 
     default:
