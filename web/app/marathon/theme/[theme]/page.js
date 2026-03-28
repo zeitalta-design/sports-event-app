@@ -45,6 +45,7 @@ export default async function ThemePage({ params }) {
       relatedLinks={relatedLinks}
       trackingPageType="theme"
       trackingSlug={theme}
+      themeSlug={theme}
     >
       <SeoCirculationSection categoryLinks={circulationLinks} />
       {["open", "deadline", "popular", "beginner", "family"].includes(theme) && (

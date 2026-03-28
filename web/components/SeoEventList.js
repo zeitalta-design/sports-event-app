@@ -73,13 +73,56 @@ const SPORT_BADGE_CLASS = {
   marathon: "bg-blue-50 text-blue-600",
 };
 
-function SeoEventCard({ event }) {
+/** テーマ別の補助ラベル判定 */
+const THEME_LABEL_RULES = {
+  beginner: [
+    { keywords: ["初心者", "ビギナー"], label: "初心者歓迎", color: "bg-green-50 text-green-700 border-green-200" },
+    { keywords: ["ファンラン", "fun run"], label: "ファンランあり", color: "bg-green-50 text-green-700 border-green-200" },
+    { keywords: ["完走", "はじめて", "初めて", "入門"], label: "はじめてでも安心", color: "bg-green-50 text-green-700 border-green-200" },
+  ],
+  sightseeing: [
+    { keywords: ["温泉"], label: "温泉地", color: "bg-orange-50 text-orange-700 border-orange-200" },
+    { keywords: ["絶景", "景色"], label: "絶景", color: "bg-orange-50 text-orange-700 border-orange-200" },
+    { keywords: ["観光"], label: "観光向き", color: "bg-orange-50 text-orange-700 border-orange-200" },
+    { keywords: ["ご当地"], label: "ご当地", color: "bg-orange-50 text-orange-700 border-orange-200" },
+    { keywords: ["グルメ"], label: "グルメ", color: "bg-orange-50 text-orange-700 border-orange-200" },
+    { keywords: ["ツアー", "遠征"], label: "遠征向き", color: "bg-orange-50 text-orange-700 border-orange-200" },
+  ],
+  family: [
+    { keywords: ["親子"], label: "親子種目あり", color: "bg-pink-50 text-pink-700 border-pink-200" },
+    { keywords: ["キッズ", "こども", "子供", "子ども"], label: "キッズ種目あり", color: "bg-pink-50 text-pink-700 border-pink-200" },
+    { keywords: ["ファミリー"], label: "ファミリー向け", color: "bg-pink-50 text-pink-700 border-pink-200" },
+    { keywords: ["家族"], label: "家族で参加しやすい", color: "bg-pink-50 text-pink-700 border-pink-200" },
+  ],
+};
+
+function getThemeLabels(event, themeSlug, maxLabels = 3) {
+  const rules = THEME_LABEL_RULES[themeSlug];
+  if (!rules) return [];
+
+  const text = [event.title || "", event.description || ""].join(" ");
+  const labels = [];
+  const seen = new Set();
+
+  for (const rule of rules) {
+    if (labels.length >= maxLabels) break;
+    const matched = rule.keywords.some((kw) => text.includes(kw));
+    if (matched && !seen.has(rule.label)) {
+      seen.add(rule.label);
+      labels.push({ label: rule.label, color: rule.color });
+    }
+  }
+  return labels;
+}
+
+function SeoEventCard({ event, themeSlug }) {
   const distances = formatDistances(event.distance_list);
   const badgeClass = SPORT_BADGE_CLASS[event.sport_type] || SPORT_BADGE_CLASS.marathon;
+  const themeLabels = getThemeLabels(event, themeSlug);
   return (
     <div className="card hover:shadow-md transition-shadow">
       <Link href={getEventDetailPath(event)} className="block p-4">
-        {/* Phase116: 募集状況を上部に目立つ位置で表示 */}
+        {/* 募集状況を上部に目立つ位置で表示 */}
         <div className="flex items-center gap-2 mb-2">
           <EntryBadge status={event.entry_status} />
           <DeadlineCountdown event={event} />
@@ -89,6 +132,17 @@ function SeoEventCard({ event }) {
         <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">
           {event.title}
         </h3>
+
+        {/* テーマ補助ラベル */}
+        {themeLabels.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {themeLabels.map((tl) => (
+              <span key={tl.label} className={`inline-block px-2 py-0.5 text-[11px] font-medium rounded-full border ${tl.color}`}>
+                {tl.label}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
           <span>{formatDate(event.event_date)}</span>
@@ -142,6 +196,7 @@ export default function SeoEventList({
   trackingPageType,
   trackingSlug,
   trackingSportType,
+  themeSlug,
 }) {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -183,7 +238,7 @@ export default function SeoEventList({
       ) : (
         <div className="space-y-3">
           {events.map((event) => (
-            <SeoEventCard key={event.id} event={event} />
+            <SeoEventCard key={event.id} event={event} themeSlug={themeSlug} />
           ))}
         </div>
       )}
