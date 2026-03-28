@@ -42,6 +42,9 @@ NEW_CRON="${CURRENT_CRON}
 # MOSHICOM: 週1回 (日曜 午前7時)                ${CRON_MARKER}
 0 7 * * 0 docker exec ${CONTAINER} node /app/scripts/scrape-moshicom-list.js --pages all >> ${LOG_DIR}/moshicom.log 2>&1 ${CRON_MARKER}
 #                                               ${CRON_MARKER}
+# 失敗再試行: 毎日 午前4時                      ${CRON_MARKER}
+0 4 * * * docker exec ${CONTAINER} node /app/scripts/retry-failed-scrapes.js >> ${LOG_DIR}/retry.log 2>&1 ${CRON_MARKER}
+#                                               ${CRON_MARKER}
 # popularity再計算: 毎日 午前8時                ${CRON_MARKER}
 0 8 * * * docker exec ${CONTAINER} node /app/scripts/calc-initial-popularity.js >> ${LOG_DIR}/popularity.log 2>&1 ${CRON_MARKER}
 "
@@ -50,6 +53,7 @@ echo "${NEW_CRON}" | crontab -
 
 echo "✅ cron 設定完了:"
 echo ""
+echo "  失敗再試行:   毎日 (午前4時) ← 失敗ソースのみ"
 echo "  RUNNET:       3日に1回 (午前5時)"
 echo "  SPORTS ENTRY: 3日に1回 (午前6時)"
 echo "  MOSHICOM:     週1回 (日曜 午前7時)"

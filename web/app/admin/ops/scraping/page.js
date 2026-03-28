@@ -11,8 +11,10 @@ import { useState, useEffect } from "react";
 
 const HEALTH_CONFIG = {
   healthy: { label: "正常", dot: "bg-green-500", bg: "bg-green-50 border-green-200", text: "text-green-800" },
-  warning: { label: "注意", dot: "bg-yellow-500", bg: "bg-yellow-50 border-yellow-200", text: "text-yellow-800" },
-  critical: { label: "異常", dot: "bg-red-500", bg: "bg-red-50 border-red-200", text: "text-red-800" },
+  retry_success: { label: "再試行成功", dot: "bg-green-400", bg: "bg-green-50 border-green-200", text: "text-green-700" },
+  warning: { label: "失敗（再試行待ち）", dot: "bg-yellow-500", bg: "bg-yellow-50 border-yellow-200", text: "text-yellow-800" },
+  retry_failed: { label: "再試行失敗", dot: "bg-orange-500", bg: "bg-orange-50 border-orange-200", text: "text-orange-800" },
+  critical: { label: "要確認", dot: "bg-red-500", bg: "bg-red-50 border-red-200", text: "text-red-800" },
   running: { label: "実行中", dot: "bg-blue-500 animate-pulse", bg: "bg-blue-50 border-blue-200", text: "text-blue-800" },
   unknown: { label: "未実行", dot: "bg-gray-400", bg: "bg-gray-50 border-gray-200", text: "text-gray-600" },
 };
@@ -64,7 +66,7 @@ export default function ScrapingPage() {
   if (!data) return <div className="p-8 text-center text-gray-500">データを取得できませんでした</div>;
 
   const { sources, summary } = data;
-  const criticalSources = sources.filter((s) => s.health === "critical" || s.health === "warning");
+  const criticalSources = sources.filter((s) => ["critical", "warning", "retry_failed"].includes(s.health));
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl">
@@ -113,8 +115,10 @@ export default function ScrapingPage() {
                   <span className={`w-3 h-3 rounded-full ${hc.dot}`} />
                   <span className={`font-extrabold ${hc.text}`}>
                     {src.name}: {src.health === "critical"
-                      ? `${src.consecutiveFails}回連続で巡回に失敗しています`
-                      : "直近の巡回で失敗が発生しました"}
+                      ? `${src.consecutiveFails}回連続で巡回に失敗しています — 手動確認が必要です`
+                      : src.health === "retry_failed"
+                      ? "自動再試行も失敗しました — 手動確認が必要です"
+                      : "直近の巡回で失敗が発生しました — 自動再試行を待つか手動再実行してください"}
                   </span>
                 </div>
                 {src.lastRun?.error_summary && (
@@ -157,11 +161,16 @@ export default function ScrapingPage() {
                   <StatBox label="更新" value={src.weekStats.totalUpdate} />
                 </div>
 
-                {/* 最終実行 */}
+                {/* 状態詳細 */}
                 <div className="text-xs text-gray-500 space-y-1">
                   <p>
                     <span className="font-bold text-gray-600">最終巡回:</span>{" "}
                     {src.lastRun ? formatDateTime(src.lastRun.finished_at || src.lastRun.started_at) : "未実行"}
+                    {src.lastRun && <span className="ml-1 text-gray-400">({src.lastRun.job_type})</span>}
+                  </p>
+                  <p>
+                    <span className="font-bold text-gray-600">最終成功:</span>{" "}
+                    {src.lastSuccessAt ? formatDateTime(src.lastSuccessAt) : "—"}
                   </p>
                   <p>
                     <span className="font-bold text-gray-600">掲載大会数:</span> {src.eventCount} 件
@@ -169,6 +178,11 @@ export default function ScrapingPage() {
                   {src.consecutiveFails > 0 && (
                     <p className="text-red-600 font-bold">
                       連続失敗: {src.consecutiveFails} 回
+                    </p>
+                  )}
+                  {src.lastRun?.error_summary && (
+                    <p className="text-red-500 truncate" title={src.lastRun.error_summary}>
+                      <span className="font-bold">エラー:</span> {src.lastRun.error_summary.substring(0, 80)}
                     </p>
                   )}
                 </div>

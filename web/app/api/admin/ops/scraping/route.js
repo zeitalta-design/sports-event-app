@@ -49,12 +49,29 @@ export async function GET() {
          ) WHERE status = 'failed' AND rn <= 10`
       ).get(source.slug)?.count || 0;
 
-      // ヘルス判定
+      // 最終成功日時
+      const lastSuccess = db.prepare(
+        `SELECT finished_at FROM scraping_logs WHERE source_name = ? AND status = 'success' ORDER BY created_at DESC LIMIT 1`
+      ).get(source.slug);
+
+      // retry 状態
+      const pendingRetry = latestLog?.status === "failed" && latestLog?.job_type !== "retry";
+      const lastRetry = db.prepare(
+        `SELECT * FROM scraping_logs WHERE source_name = ? AND job_type = 'retry' ORDER BY created_at DESC LIMIT 1`
+      ).get(source.slug);
+
+      // ヘルス判定（retry 考慮）
       let health = "unknown";
       if (latestLog) {
-        if (latestLog.status === "success") health = "healthy";
-        else if (latestLog.status === "failed") health = consecutiveFails >= 3 ? "critical" : "warning";
-        else health = "running";
+        if (latestLog.status === "success") {
+          health = latestLog.job_type === "retry" ? "retry_success" : "healthy";
+        } else if (latestLog.status === "failed") {
+          if (consecutiveFails >= 3) health = "critical";
+          else if (latestLog.job_type === "retry") health = "retry_failed";
+          else health = "warning";
+        } else {
+          health = "running";
+        }
       }
 
       // 週間統計
@@ -78,6 +95,9 @@ export async function GET() {
         health,
         consecutiveFails,
         lastRun: latestLog,
+        lastSuccessAt: lastSuccess?.finished_at || null,
+        lastRetry: lastRetry || null,
+        pendingRetry,
         weekStats,
         recentLogs,
         eventCount,
