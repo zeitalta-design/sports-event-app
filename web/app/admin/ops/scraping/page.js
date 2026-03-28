@@ -27,14 +27,38 @@ export default function ScrapingPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [expandedSource, setExpandedSource] = useState(null);
+  const [runningSource, setRunningSource] = useState(null);
+  const [runResult, setRunResult] = useState(null);
 
-  useEffect(() => {
+  function fetchData() {
     fetch("/api/admin/ops/scraping")
       .then((r) => r.json())
       .then(setData)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(() => { fetchData(); }, []);
+
+  async function handleManualRun(sourceSlug) {
+    setRunningSource(sourceSlug);
+    setRunResult(null);
+    try {
+      const res = await fetch("/api/admin/ops/scraping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: sourceSlug }),
+      });
+      const result = await res.json();
+      setRunResult({ source: sourceSlug, ...result });
+      // データ再取得
+      fetchData();
+    } catch (err) {
+      setRunResult({ source: sourceSlug, success: false, error: err.message });
+    } finally {
+      setRunningSource(null);
+    }
+  }
 
   if (loading) return <LoadingSkeleton />;
   if (!data) return <div className="p-8 text-center text-gray-500">データを取得できませんでした</div>;
@@ -51,6 +75,32 @@ export default function ScrapingPage() {
           {summary.totalSources} ソース · 直近7日間 {summary.totalLogs} 回実行
         </p>
       </div>
+
+      {/* 実行結果通知 */}
+      {runResult && (
+        <div className={`mb-6 border rounded-xl px-5 py-4 flex items-center justify-between ${
+          runResult.success ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+        }`}>
+          <div>
+            <p className={`font-bold text-sm ${runResult.success ? "text-green-800" : "text-red-800"}`}>
+              {runResult.success ? "✅ 再実行が完了しました" : "❌ 再実行に失敗しました"}
+              {runResult.source && ` (${runResult.source})`}
+            </p>
+            {runResult.output && (
+              <pre className="text-xs mt-1 text-gray-600 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                {runResult.output.split("\n").slice(-5).join("\n")}
+              </pre>
+            )}
+            {runResult.error && !runResult.success && (
+              <p className="text-xs mt-1 text-red-600">{runResult.error}</p>
+            )}
+          </div>
+          <button
+            onClick={() => setRunResult(null)}
+            className="text-gray-400 hover:text-gray-600 shrink-0 ml-4"
+          >✕</button>
+        </div>
+      )}
 
       {/* 異常ソース上部固定 */}
       {criticalSources.length > 0 && (
@@ -132,11 +182,17 @@ export default function ScrapingPage() {
                     {expanded ? "ログを閉じる" : "巡回ログを見る"}
                   </button>
                   <button
-                    className="text-xs px-3 py-1.5 rounded-lg border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 font-bold transition-colors opacity-60 cursor-not-allowed"
-                    title="手動再実行（次期フェーズで実装予定）"
-                    disabled
+                    onClick={() => handleManualRun(src.slug)}
+                    disabled={runningSource !== null}
+                    className={`text-xs px-3 py-1.5 rounded-lg border font-bold transition-colors ${
+                      runningSource === src.slug
+                        ? "border-blue-400 text-blue-700 bg-blue-100 animate-pulse"
+                        : runningSource !== null
+                        ? "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
+                        : "border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100"
+                    }`}
                   >
-                    手動再実行
+                    {runningSource === src.slug ? "実行中…" : "手動再実行"}
                   </button>
                 </div>
               </div>

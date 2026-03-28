@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api-guard";
+import { execFile } from "child_process";
+import path from "path";
 
 /**
- * Phase228: スクレイピング監視API
+ * スクレイピング監視API
  * GET: ソース別ヘルス + 巡回ログ一覧
+ * POST: 手動再実行
  */
 export async function GET() {
   const guard = await requireAdminApi();
@@ -65,10 +68,10 @@ export async function GET() {
         weekStats.totalUpdate += row.total_update || 0;
       });
 
-      // DB上の大会数
+      // DB上の大会数（ソース別）
       const eventCount = db.prepare(
-        `SELECT COUNT(*) as count FROM events WHERE is_active = 1`
-      ).get()?.count || 0;
+        `SELECT COUNT(*) as count FROM events WHERE is_active = 1 AND source_site = ?`
+      ).get(source.slug)?.count || 0;
 
       return {
         ...source,
@@ -96,5 +99,110 @@ export async function GET() {
   } catch (err) {
     console.error("Scraping API error:", err);
     return NextResponse.json({ error: "取得に失敗しました" }, { status: 500 });
+  }
+}
+
+/**
+ * POST: 手動再実行
+ * body: { source: "runnet" | "sportsentry" | "moshicom" }
+ */
+const SCRAPE_COMMANDS = {
+  runnet: { script: "scripts/scrape-runnet-list.js", args: ["--pages", "5"] },
+  sportsentry: { script: "scripts/scrape-sportsentry-list.js", args: ["--pages", "10"] },
+  moshicom: { script: "scripts/scrape-moshicom-detail.js", args: ["--only-missing-races", "--limit", "30"] },
+};
+
+export async function POST(request) {
+  const guard = await requireAdminApi();
+  if (guard.error) return guard.error;
+
+  try {
+    const { source } = await request.json();
+
+    if (!source || !SCRAPE_COMMANDS[source]) {
+      return NextResponse.json(
+        { error: `無効なソース: ${source}。有効値: ${Object.keys(SCRAPE_COMMANDS).join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    const cmd = SCRAPE_COMMANDS[source];
+
+    // スクリプトパスの解決（コンテナ内では /app/scripts/、ローカルでは ../scripts/）
+    const scriptPaths = [
+      path.join(process.cwd(), "..", cmd.script),  // ローカル: web/../scripts/
+      path.join("/app", cmd.script),                // Docker: /app/scripts/
+    ];
+    const fs = await import("fs");
+    const scriptPath = scriptPaths.find((p) => fs.existsSync(p));
+
+    if (!scriptPath) {
+      return NextResponse.json(
+        { error: `スクリプトが見つかりません: ${cmd.script}` },
+        { status: 500 }
+      );
+    }
+
+    // 非同期でスクレイパーを実行
+    const result = await new Promise((resolve, reject) => {
+      const proc = execFile("node", [scriptPath, ...cmd.args], {
+        timeout: 300_000, // 5分
+        maxBuffer: 10 * 1024 * 1024,
+        env: { ...process.env },
+      }, (error, stdout, stderr) => {
+        if (error) {
+          resolve({
+            success: false,
+            error: error.message,
+            output: (stdout || "").slice(-2000),
+            stderr: (stderr || "").slice(-1000),
+          });
+        } else {
+          resolve({
+            success: true,
+            output: (stdout || "").slice(-2000),
+          });
+        }
+      });
+    });
+
+    // ログ記録
+    try {
+      const db = getDb();
+      const now = new Date().toISOString();
+
+      // 出力からカウントを抽出
+      const insertedMatch = result.output.match(/Inserted:\s*(\d+)/);
+      const updatedMatch = result.output.match(/Updated:\s*(\d+)/);
+      const totalMatch = result.output.match(/Total.*?:\s*(\d+)/);
+
+      db.prepare(`
+        INSERT INTO scraping_logs (source_name, job_type, status, success_count, fail_count, new_count, update_count, error_summary, started_at, finished_at, created_at)
+        VALUES (?, 'manual', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        source,
+        result.success ? "success" : "failed",
+        result.success ? 1 : 0,
+        result.success ? 0 : 1,
+        insertedMatch ? parseInt(insertedMatch[1]) : 0,
+        updatedMatch ? parseInt(updatedMatch[1]) : 0,
+        result.success ? null : (result.error || "").slice(0, 500),
+        now,
+        now,
+        now,
+      );
+    } catch (logErr) {
+      console.warn("[scraping] Failed to write log:", logErr.message);
+    }
+
+    return NextResponse.json({
+      success: result.success,
+      source,
+      output: result.output,
+      error: result.error || null,
+    });
+  } catch (err) {
+    console.error("Scraping manual run error:", err);
+    return NextResponse.json({ error: "実行に失敗しました: " + err.message }, { status: 500 });
   }
 }
