@@ -296,6 +296,34 @@ export async function loginUser({ email, password, ipAddress, userAgent }) {
     .get(email);
 
   if (!user) {
+    // .env 管理者認証: DB にユーザーが見つからない場合、ADMIN_EMAIL/PASSWORD と照合
+    const envResult = tryEnvAdminLogin(email, password);
+    if (envResult) {
+      // .env 一致 → DB にユーザーを自動作成し、そのレコードで通常ログインを続行
+      const newUser = db
+        .prepare("SELECT id, email, name, role, password_hash, is_active FROM users WHERE email = ?")
+        .get(email);
+      if (newUser && newUser.is_active) {
+        resetLoginAttempts(email);
+        const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+        db.prepare("UPDATE users SET last_login_at = ? WHERE id = ?").run(now, newUser.id);
+        const session = createSession(newUser.id);
+        await setSessionCookie(session.token);
+        writeAuditLog({
+          userId: newUser.id,
+          action: AUDIT_ACTIONS.LOGIN_SUCCESS,
+          targetType: "user",
+          targetId: String(newUser.id),
+          details: { method: "env_admin" },
+          ipAddress,
+          userAgent,
+        });
+        return {
+          user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role },
+        };
+      }
+    }
+
     recordLoginFailure(email);
     writeAuditLog({
       userId: null,
@@ -653,6 +681,43 @@ export async function resetPasswordWithToken({
   });
 
   return { success: true };
+}
+
+// --- .env 管理者ログイン ---
+
+/**
+ * .env の ADMIN_EMAIL / ADMIN_PASSWORD と照合し、一致すればDBにユーザーを作成/更新する。
+ * DB操作には admin-seed.js を再利用する。
+ * @returns {boolean} 一致してDB作成/更新に成功した場合 true
+ */
+function tryEnvAdminLogin(email, password) {
+  const envEmail = process.env.ADMIN_EMAIL;
+  const envPassword = process.env.ADMIN_PASSWORD;
+
+  // .env 未設定 or 不一致 → false
+  if (!envEmail || !envPassword) return false;
+  if (email !== envEmail || password !== envPassword) return false;
+
+  // 一致 → seedAdmin で DB にユーザーを作成/昇格
+  try {
+    // Dynamic import を避けるため、直接 DB 操作する
+    const db = getDb();
+    const hash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
+
+    const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+    if (existing) {
+      db.prepare("UPDATE users SET password_hash = ?, role = 'admin', is_active = 1 WHERE id = ?")
+        .run(hash, existing.id);
+    } else {
+      db.prepare("INSERT INTO users (email, password_hash, name, role, is_active) VALUES (?, ?, ?, 'admin', 1)")
+        .run(email, hash, "管理者");
+    }
+    console.log("[auth] .env 管理者としてログイン: DB ユーザーを作成/更新しました");
+    return true;
+  } catch (err) {
+    console.error("[auth] .env 管理者の DB 作成に失敗:", err.message);
+    return false;
+  }
 }
 
 // --- エクスポート定数 ---

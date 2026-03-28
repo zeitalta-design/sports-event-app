@@ -9,6 +9,16 @@ export async function register() {
   if (process.env.NODE_ENV === "production") {
     validateProductionEnv();
   }
+
+  // 管理者アカウントの自動シード（admin が 0 人の場合のみ、Node.js ランタイムでのみ実行）
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    try {
+      const { seedAdmin } = await import("./lib/admin-seed.js");
+      seedAdmin();
+    } catch (err) {
+      console.warn("[startup] admin-seed skipped:", err.message);
+    }
+  }
 }
 
 /**

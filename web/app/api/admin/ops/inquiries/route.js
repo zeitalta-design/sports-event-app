@@ -3,9 +3,10 @@ import { getDb } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 
 /**
- * Phase228: 問い合わせ管理API
+ * 問い合わせ管理API
  * GET: 一覧取得（絞り込み・検索対応）
  * PATCH: ステータス・担当者・メモ更新
+ * DELETE: 問い合わせ削除（物理削除）
  */
 export async function GET(request) {
   const guard = await requireAdminApi();
@@ -131,5 +132,33 @@ export async function PATCH(request) {
   } catch (err) {
     console.error("Inquiry update error:", err);
     return NextResponse.json({ error: "更新に失敗しました" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request) {
+  const guard = await requireAdminApi();
+  if (guard.error) return guard.error;
+
+  try {
+    const db = getDb();
+    const { id } = await request.json();
+
+    if (!id) {
+      return NextResponse.json({ error: "IDが必要です" }, { status: 400 });
+    }
+
+    const existing = db.prepare("SELECT id, subject, name FROM inquiries WHERE id = ?").get(id);
+    if (!existing) {
+      return NextResponse.json({ error: "該当する問い合わせが見つかりません" }, { status: 404 });
+    }
+
+    // 関連する inquiry_notes も削除
+    db.prepare("DELETE FROM inquiry_notes WHERE inquiry_id = ?").run(id);
+    db.prepare("DELETE FROM inquiries WHERE id = ?").run(id);
+
+    return NextResponse.json({ success: true, deleted: { id: existing.id, subject: existing.subject } });
+  } catch (err) {
+    console.error("Inquiry delete error:", err);
+    return NextResponse.json({ error: "削除に失敗しました" }, { status: 500 });
   }
 }

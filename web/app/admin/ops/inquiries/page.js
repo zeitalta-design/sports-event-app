@@ -81,6 +81,28 @@ export default function InquiriesPage() {
     } catch {}
   }
 
+  async function deleteInquiry(id) {
+    try {
+      const res = await fetch("/api/admin/ops/inquiries", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        setInquiries((prev) => prev.filter((inq) => inq.id !== id));
+        setTotal((prev) => prev - 1);
+        if (selected?.id === id) setSelected(null);
+        // サマリーを再取得
+        fetchInquiries();
+      } else {
+        const data = await res.json();
+        alert(data.error || "削除に失敗しました");
+      }
+    } catch {
+      alert("削除に失敗しました");
+    }
+  }
+
   return (
     <div className="p-6 lg:p-8 max-w-7xl">
       {/* ヘッダー */}
@@ -210,6 +232,7 @@ export default function InquiriesPage() {
             inquiry={selected}
             onClose={() => setSelected(null)}
             onUpdate={updateInquiry}
+            onDelete={deleteInquiry}
           />
         )}
       </div>
@@ -217,14 +240,23 @@ export default function InquiriesPage() {
   );
 }
 
-function DetailPanel({ inquiry, onClose, onUpdate }) {
+function DetailPanel({ inquiry, onClose, onUpdate, onDelete }) {
   const [memo, setMemo] = useState(inquiry.admin_memo || "");
   const [saving, setSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function saveMemo() {
     setSaving(true);
     await onUpdate(inquiry.id, { admin_memo: memo });
     setSaving(false);
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    await onDelete(inquiry.id);
+    setDeleting(false);
+    setShowDeleteConfirm(false);
   }
 
   return (
@@ -334,6 +366,43 @@ function DetailPanel({ inquiry, onClose, onUpdate }) {
           <div className="text-center py-4">
             <p className="text-xs text-gray-400">返信機能は次期フェーズで実装予定です</p>
           </div>
+        </div>
+
+        {/* 削除 */}
+        <div className="border-t border-gray-100 pt-4">
+          {!showDeleteConfirm ? (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full text-xs text-red-400 hover:text-red-600 py-2 transition-colors"
+            >
+              この問い合わせを削除
+            </button>
+          ) : (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm font-bold text-red-800 mb-2">この問い合わせを削除しますか？</p>
+              <p className="text-xs text-red-600 mb-1">この操作は元に戻せません。</p>
+              <div className="text-xs text-gray-600 mb-3 space-y-0.5">
+                <p>件名: {inquiry.subject}</p>
+                <p>氏名: {inquiry.name}</p>
+                <p>受信: {formatDateTime(inquiry.created_at)}</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 bg-red-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {deleting ? "削除中…" : "削除する"}
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 bg-white text-gray-600 text-xs font-bold py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
