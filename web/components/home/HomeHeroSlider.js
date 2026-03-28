@@ -17,6 +17,7 @@ const QUICK_CHIPS = [
   { key: "golf", label: "ゴルフ", icon: "⛳" },
   { key: "swimming", label: "水泳", icon: "🏊" },
   { key: "squash", label: "スカッシュ", icon: "🎾" },
+  { key: "workshop", label: "練習会・講習会", icon: "📋" },
 ];
 
 

@@ -22,6 +22,7 @@ const QUICK_CHIPS = [
   { key: "golf",        label: "ゴルフ" },
   { key: "swimming",    label: "水泳" },
   { key: "squash",      label: "スカッシュ" },
+  { key: "workshop",   label: "練習会・講習会" },
 ];
 
 const FILTER_SECTIONS = [
