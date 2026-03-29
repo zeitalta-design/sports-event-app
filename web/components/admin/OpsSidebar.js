@@ -24,10 +24,23 @@ const NAV_SECTIONS = [
     ],
   },
   {
+    label: "ドメイン管理",
+    items: [
+      { href: "/admin/sanpai", label: "産廃処分", icon: DataIcon },
+      { href: "/admin/kyoninka", label: "許認可", icon: DataIcon },
+      { href: "/admin/shitei", label: "指定管理", icon: DataIcon },
+      { href: "/admin/hojokin", label: "補助金", icon: DataIcon },
+      { href: "/admin/nyusatsu", label: "入札", icon: DataIcon },
+      { href: "/admin/gyosei-shobun", label: "行政処分", icon: DataIcon },
+      { href: "/admin/food-recall", label: "食品リコール", icon: DataIcon },
+      { href: "/admin/yutai", label: "株主優待", icon: DataIcon },
+      { href: "/admin/minpaku", label: "民泊", icon: DataIcon },
+    ],
+  },
+  {
     label: "データ管理",
     items: [
       { href: "/admin/events", label: "大会管理", icon: EventIcon },
-      { href: "/admin/marathon-details", label: "詳細データ", icon: DetailIcon },
       { href: "/admin/quality", label: "品質管理", icon: QualityIcon },
     ],
   },
@@ -225,6 +238,14 @@ function PlacementIcon({ className }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
+    </svg>
+  );
+}
+
+function DataIcon({ className }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
     </svg>
   );
 }
