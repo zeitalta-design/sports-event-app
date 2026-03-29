@@ -27,6 +27,7 @@ const DRY_RUN = args.includes("--dry-run");
 const ONLY_THIN = args.includes("--only-thin");
 const LIMIT = getArgInt("--limit");
 const IDS = getArgStr("--ids");
+const INDUSTRY = getArgStr("--industry"); // 例: real_estate, construction
 
 function getArgInt(prefix) {
   const m = args.find((a) => a.startsWith(prefix + "="));
@@ -73,11 +74,13 @@ function parseDetailPage(html) {
     const value = stripTags(match[2]).replace(/\s+/g, " ").trim();
     if (!value) continue;
 
-    if (label.includes("処分の原因となった事実")) {
+    if (label.includes("処分の原因となった事実") || label.includes("違反行為の概要")) {
       result.cause = value;
     } else if (label.includes("根拠法令")) {
       result.legalBasis = value;
     } else if (label.includes("処分の内容") && (label.includes("詳細") || !result.penaltyDetail)) {
+      result.penaltyDetail = value;
+    } else if (label.includes("処分等の期間") && !result.penaltyDetail) {
       result.penaltyDetail = value;
     }
   }
@@ -128,7 +131,7 @@ async function main() {
   const db = new Database(join(__dirname, "..", "data", "sports-event.db"));
 
   console.log("=== 行政処分DB — summary/detail 品質強化 ===");
-  console.log(`Mode: ${DRY_RUN ? "DRY-RUN" : "LIVE"}`);
+  console.log(`Mode: ${DRY_RUN ? "DRY-RUN" : "LIVE"}${INDUSTRY ? ` | Industry: ${INDUSTRY}` : ""}`);
 
   // 対象レコード取得
   let whereClause = "WHERE source_url LIKE '%no=%'"; // 詳細URLがあるもの
@@ -137,6 +140,9 @@ async function main() {
   if (IDS) {
     const idList = IDS.split(",").map(Number).filter(Boolean);
     whereClause += ` AND id IN (${idList.join(",")})`;
+  }
+  if (INDUSTRY) {
+    whereClause += ` AND industry = '${INDUSTRY.replace(/'/g, "")}'`;
   }
   if (ONLY_THIN) {
     whereClause += " AND (detail IS NULL OR detail = '')";
