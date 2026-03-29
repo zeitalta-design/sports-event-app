@@ -10,8 +10,10 @@
  *   node scripts/fetch-gyosei-shobun-mlit.js --dry-run --max-pages=3 # 3ページだけ試験取得
  *   node scripts/fetch-gyosei-shobun-mlit.js --limit=30             # 最大30件取得・投入
  *   node scripts/fetch-gyosei-shobun-mlit.js --max-pages=5          # 5ページ分投入
- *   node scripts/fetch-gyosei-shobun-mlit.js                        # 全件取得・投入
+ *   node scripts/fetch-gyosei-shobun-mlit.js                        # 全件取得・投入（建設業）
  *   node scripts/fetch-gyosei-shobun-mlit.js --since=2026-01-01     # 指定日以降のみ
+ *   node scripts/fetch-gyosei-shobun-mlit.js --sector=takuti        # 宅建業を取得
+ *   node scripts/fetch-gyosei-shobun-mlit.js --sector=ikkyuu        # 一級建築士を取得
  */
 
 const https = require("https");
@@ -31,6 +33,56 @@ const NO_DETAIL = args.includes("--no-detail");
 const LIMIT = getArgInt("--limit");
 const MAX_PAGES = getArgInt("--max-pages");
 const SINCE = getArgStr("--since");
+const SECTOR = getArgStr("--sector") || "kensetugyousya";
+
+// ─── 業種別定義 ───
+const SECTOR_DEFS = {
+  kensetugyousya: {
+    label: "建設業者",
+    industry: "construction",
+    // カラム順: 商号, 所在地, 処分日, 処分者, 処分内容, 詳細
+    colMap: (cols) => ({
+      nameRaw: cols[0], address: cols[1], dateRaw: cols[2],
+      authority: cols[3], actionTypeRaw: cols[4], detailHtml: cols[5],
+    }),
+    headerSkip: (c) => c.includes("商号") || c.includes("名称"),
+  },
+  takuti: {
+    label: "宅建業者",
+    industry: "real_estate",
+    // カラム順: 処分日, 処分者, 事業者名, 本社住所, 処分種類, 処分内容
+    colMap: (cols) => ({
+      dateRaw: cols[0], authority: cols[1], nameRaw: cols[2],
+      address: cols[3], actionTypeRaw: cols[4], detailHtml: cols[5],
+    }),
+    headerSkip: (c) => c.includes("処分等年月日") || c.includes("処分年月日"),
+  },
+  ikkyuu: {
+    label: "一級建築士",
+    industry: "architecture",
+    // 一級建築士も宅建業と同じカラム順
+    colMap: (cols) => ({
+      dateRaw: cols[0], authority: cols[1], nameRaw: cols[2],
+      address: cols[3], actionTypeRaw: cols[4], detailHtml: cols[5],
+    }),
+    headerSkip: (c) => c.includes("処分等年月日") || c.includes("処分年月日"),
+  },
+  shimeiteishi: {
+    label: "指名停止",
+    industry: "construction",
+    colMap: (cols) => ({
+      dateRaw: cols[0], authority: cols[1], nameRaw: cols[2],
+      address: cols[3], actionTypeRaw: cols[4], detailHtml: cols[5],
+    }),
+    headerSkip: (c) => c.includes("処分等年月日") || c.includes("処分年月日") || c.includes("指名停止"),
+  },
+};
+
+const sectorDef = SECTOR_DEFS[SECTOR];
+if (!sectorDef) {
+  console.error("Unknown sector:", SECTOR, "Available:", Object.keys(SECTOR_DEFS).join(", "));
+  process.exit(1);
+}
 
 function getArgInt(prefix) {
   const m = args.find((a) => a.startsWith(prefix + "="));
@@ -99,14 +151,21 @@ function parseResultsPage(html) {
 
   let match;
   while ((match = rowRegex.exec(html)) !== null) {
-    const nameRaw = stripTags(match[1]).trim();
-    const address = stripTags(match[2]).trim();
-    const dateRaw = stripTags(match[3]).trim();
-    const authority = stripTags(match[4]).trim();
-    const actionTypeRaw = stripTags(match[5]).trim();
-    const detailHtml = match[6];
+    const rawCols = [1, 2, 3, 4, 5, 6].map((i) => match[i]);
+    const strippedCols = rawCols.map((c) => stripTags(c).trim());
 
-    if (nameRaw.includes("商号") || nameRaw.includes("名称")) continue;
+    // ヘッダー行スキップ（業種別判定）
+    if (sectorDef.headerSkip(strippedCols[0])) continue;
+
+    // 業種別カラムマッピング
+    const mapped = sectorDef.colMap(strippedCols);
+    const nameRaw = mapped.nameRaw;
+    const address = mapped.address;
+    const dateRaw = mapped.dateRaw;
+    const authority = mapped.authority;
+    const actionTypeRaw = mapped.actionTypeRaw;
+    // detailHtmlは生HTMLが必要（リンク抽出用）
+    const detailHtml = sectorDef.colMap(rawCols).detailHtml;
 
     const corpNumMatch = nameRaw.match(/[（\(](\d{13})[）\)]/);
     const corporateNumber = corpNumMatch ? corpNumMatch[1] : null;
@@ -232,7 +291,7 @@ async function upsertItems(items) {
         authority_name: item.authority,
         authority_level: "national",
         prefecture: item.prefecture,
-        industry: "construction",
+        industry: sectorDef.industry,
         summary: item.summary || `${item.action_type_raw}。${item.authority}による処分。`,
         detail: item.detail || null,
         legal_basis: null,
@@ -255,8 +314,8 @@ async function upsertItems(items) {
 
 // ─── メイン処理 ───
 async function main() {
-  console.log("=== 行政処分DB — MLIT自動取得（ページネーション対応） ===");
-  console.log(`Mode: ${DRY_RUN ? "DRY-RUN" : "LIVE"}`);
+  console.log(`=== 行政処分DB — MLIT自動取得（${sectorDef.label}） ===`);
+  console.log(`Mode: ${DRY_RUN ? "DRY-RUN" : "LIVE"} | Sector: ${SECTOR} (${sectorDef.label})`);
   if (MAX_PAGES) console.log(`Max pages: ${MAX_PAGES}`);
   if (LIMIT) console.log(`Limit: ${LIMIT}`);
   if (SINCE) console.log(`Since: ${SINCE}`);
@@ -272,7 +331,7 @@ async function main() {
   console.log(`\n[1] 検索実行: ${startYear}/${startMonth} ～ ${endYear}/${endMonth}`);
 
   const formData = {
-    jigyoubunya: "kensetugyousya", EID: "search", agency: "",
+    jigyoubunya: SECTOR, EID: "search", agency: "",
     start_year: startYear, start_month: startMonth,
     end_year: endYear, end_month: endMonth,
     disposal_name1: "", disposal_name2: "", address: "",
