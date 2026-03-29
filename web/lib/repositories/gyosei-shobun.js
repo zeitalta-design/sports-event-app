@@ -165,6 +165,27 @@ export function upsertAdministrativeAction(item) {
   return { action: "created", id: result.lastInsertRowid };
 }
 
+// ─── admin 用 ─────────────────────
+
+export function listGyoseiShobunAdminItems({ keyword = "", page = 1, pageSize = 50 } = {}) {
+  const db = getDb();
+  const where = [];
+  const params = {};
+  if (keyword) {
+    where.push("(organization_name_raw LIKE @kw OR summary LIKE @kw OR authority_name LIKE @kw)");
+    params.kw = `%${keyword}%`;
+  }
+  const whereClause = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
+  const total = db.prepare(`SELECT COUNT(*) as c FROM administrative_actions ${whereClause}`).get(params).c;
+  const items = db.prepare(`SELECT * FROM administrative_actions ${whereClause} ORDER BY action_date DESC NULLS LAST, id DESC LIMIT @limit OFFSET @offset`).all({ ...params, limit: pageSize, offset: (page - 1) * pageSize });
+  return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+}
+
+export function getGyoseiShobunAdminById(id) {
+  const db = getDb();
+  return db.prepare("SELECT * FROM administrative_actions WHERE id = ?").get(id);
+}
+
 // ─── sitemap 用 ─────────────────────
 
 export function listGyoseiShobunSlugsForSitemap() {
