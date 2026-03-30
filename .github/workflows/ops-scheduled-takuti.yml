@@ -7,6 +7,8 @@ name: "Ops: Scheduled Takuti"
 # - workflow_dispatch で手動テストも可能
 # - TAKUTI_SCHEDULE_ENABLED=true で自動実行を有効化
 # - fetch 失敗時は enrich に進まない
+# - 実行結果を GITHUB_STEP_SUMMARY に出力
+# - 失敗時は GitHub Issue を自動作成
 # - 既存 ops-manual.yml / 建設業 cron には影響しない
 # ============================================================
 
@@ -18,6 +20,10 @@ on:
     - cron: "17 3 2 * *"
       timezone: "Asia/Tokyo"
   workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
 
 # 同時実行防止（ops-manual とは別グループ）
 # VPS 側 flock と合わせて二重保護
@@ -45,16 +51,30 @@ jobs:
         env:
           TAKUTI_FETCH_ARGS: ${{ vars.TAKUTI_FETCH_ARGS }}
         run: |
+          FETCH_ARGS="${TAKUTI_FETCH_ARGS:---since=2021-01}"
           echo "============================================================"
           echo "  Ops: Scheduled Takuti — fetch → enrich"
           echo "============================================================"
           echo "Trigger:             ${{ github.event_name }}"
           echo "SCHEDULE_ENABLED:    ${{ vars.TAKUTI_SCHEDULE_ENABLED }}"
-          echo "FETCH_ARGS:          ${TAKUTI_FETCH_ARGS:---since=2021-01}"
+          echo "FETCH_ARGS:          ${FETCH_ARGS}"
           echo "Triggered by:        ${{ github.actor }}"
           echo "Run ID:              ${{ github.run_id }}"
           echo "Time:                $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo "============================================================"
+
+          # Summary ヘッダー
+          {
+            echo "## Ops: Scheduled Takuti"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "|------|----|"
+            echo "| Trigger | \`${{ github.event_name }}\` |"
+            echo "| Fetch args | \`${FETCH_ARGS}\` |"
+            echo "| Run ID | [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |"
+            echo "| Time (UTC) | $(date -u '+%Y-%m-%d %H:%M:%S') |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # -------------------------------------------------------
       # 2. SSH 接続設定
@@ -78,9 +98,39 @@ jobs:
           chmod 644 ~/.ssh/known_hosts
 
       # -------------------------------------------------------
-      # 3. fetch_takuti_prod
+      # 3. 実行前の件数取得
+      # -------------------------------------------------------
+      - name: "Pre-check: DB件数取得"
+        id: pre_counts
+        env:
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_USER: ${{ secrets.VPS_USER }}
+          SSH_PORT: ${{ vars.VPS_PORT }}
+        run: |
+          COUNTS=$(ssh -o ConnectTimeout=10 \
+              -i ~/.ssh/id_ed25519 \
+              -p "${SSH_PORT:-22}" \
+              "${SSH_USER}@${SSH_HOST}" \
+              "docker exec navi-app node -e \"
+                const D = require('better-sqlite3');
+                const db = new D('/app/web/data/sports-event.db', { readonly: true });
+                const rows = db.prepare('SELECT industry, COUNT(*) as c FROM administrative_actions GROUP BY industry').all();
+                const total = db.prepare('SELECT COUNT(*) as c FROM administrative_actions').get();
+                const enriched = db.prepare(\\\"SELECT COUNT(*) as c FROM administrative_actions WHERE detail IS NOT NULL AND detail != ''\\\").get();
+                const result = { industries: {}, total: total.c, enriched: enriched.c };
+                rows.forEach(r => result.industries[r.industry || 'unknown'] = r.c);
+                console.log(JSON.stringify(result));
+                db.close();
+              \"" 2>/dev/null) || COUNTS='{"industries":{},"total":0,"enriched":0}'
+
+          echo "pre_counts=${COUNTS}" >> "$GITHUB_OUTPUT"
+          echo "Pre-check counts: ${COUNTS}"
+
+      # -------------------------------------------------------
+      # 4. fetch_takuti_prod
       # -------------------------------------------------------
       - name: "Execute: fetch_takuti_prod"
+        id: fetch
         timeout-minutes: 15
         env:
           SSH_HOST: ${{ secrets.VPS_HOST }}
@@ -90,18 +140,35 @@ jobs:
         run: |
           FETCH_ARGS="${TAKUTI_FETCH_ARGS:---since=2021-01}"
           echo ">>> fetch_takuti_prod ${FETCH_ARGS} <<<"
-          ssh -o ConnectTimeout=10 \
+
+          FETCH_LOG=$(ssh -o ConnectTimeout=10 \
               -o ServerAliveInterval=30 \
               -o ServerAliveCountMax=3 \
               -i ~/.ssh/id_ed25519 \
               -p "${SSH_PORT:-22}" \
               "${SSH_USER}@${SSH_HOST}" \
-              "cd /opt/app && bash scripts/ops/run-task.sh fetch_takuti_prod ${FETCH_ARGS}"
+              "cd /opt/app && bash scripts/ops/run-task.sh fetch_takuti_prod ${FETCH_ARGS}" 2>&1) || {
+            echo "$FETCH_LOG"
+            echo "fetch_status=failed" >> "$GITHUB_OUTPUT"
+            exit 1
+          }
+
+          echo "$FETCH_LOG"
+          echo "fetch_status=success" >> "$GITHUB_OUTPUT"
+
+          # fetch ログから created/updated/skipped を抽出
+          CREATED=$(echo "$FETCH_LOG" | grep -oP 'created:\s*\K\d+' | tail -1 || echo "?")
+          UPDATED=$(echo "$FETCH_LOG" | grep -oP 'updated:\s*\K\d+' | tail -1 || echo "?")
+          SKIPPED=$(echo "$FETCH_LOG" | grep -oP 'skipped:\s*\K\d+' | tail -1 || echo "?")
+          echo "fetch_created=${CREATED}" >> "$GITHUB_OUTPUT"
+          echo "fetch_updated=${UPDATED}" >> "$GITHUB_OUTPUT"
+          echo "fetch_skipped=${SKIPPED}" >> "$GITHUB_OUTPUT"
 
       # -------------------------------------------------------
-      # 4. enrich_takuti_prod（fetch 成功時のみ実行）
+      # 5. enrich_takuti_prod（fetch 成功時のみ実行）
       # -------------------------------------------------------
       - name: "Execute: enrich_takuti_prod"
+        id: enrich
         timeout-minutes: 15
         env:
           SSH_HOST: ${{ secrets.VPS_HOST }}
@@ -109,16 +176,176 @@ jobs:
           SSH_PORT: ${{ vars.VPS_PORT }}
         run: |
           echo ">>> enrich_takuti_prod <<<"
-          ssh -o ConnectTimeout=10 \
+
+          ENRICH_LOG=$(ssh -o ConnectTimeout=10 \
               -o ServerAliveInterval=30 \
               -o ServerAliveCountMax=3 \
               -i ~/.ssh/id_ed25519 \
               -p "${SSH_PORT:-22}" \
               "${SSH_USER}@${SSH_HOST}" \
-              "cd /opt/app && bash scripts/ops/run-task.sh enrich_takuti_prod"
+              "cd /opt/app && bash scripts/ops/run-task.sh enrich_takuti_prod" 2>&1) || {
+            echo "$ENRICH_LOG"
+            echo "enrich_status=failed" >> "$GITHUB_OUTPUT"
+            exit 1
+          }
+
+          echo "$ENRICH_LOG"
+          echo "enrich_status=success" >> "$GITHUB_OUTPUT"
+
+          # enrich ログから enriched/errors を抽出
+          ENRICHED=$(echo "$ENRICH_LOG" | grep -oP 'enriched:\s*\K\d+' | tail -1 || echo "?")
+          ERRORS=$(echo "$ENRICH_LOG" | grep -oP 'errors:\s*\K\d+' | tail -1 || echo "?")
+          echo "enrich_enriched=${ENRICHED}" >> "$GITHUB_OUTPUT"
+          echo "enrich_errors=${ERRORS}" >> "$GITHUB_OUTPUT"
 
       # -------------------------------------------------------
-      # 5. SSH 鍵のクリーンアップ
+      # 6. 実行後の件数取得と異常チェック
+      # -------------------------------------------------------
+      - name: "Post-check: DB件数確認"
+        id: post_counts
+        if: always() && steps.fetch.outcome != 'skipped'
+        env:
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_USER: ${{ secrets.VPS_USER }}
+          SSH_PORT: ${{ vars.VPS_PORT }}
+        run: |
+          COUNTS=$(ssh -o ConnectTimeout=10 \
+              -i ~/.ssh/id_ed25519 \
+              -p "${SSH_PORT:-22}" \
+              "${SSH_USER}@${SSH_HOST}" \
+              "docker exec navi-app node -e \"
+                const D = require('better-sqlite3');
+                const db = new D('/app/web/data/sports-event.db', { readonly: true });
+                const rows = db.prepare('SELECT industry, COUNT(*) as c FROM administrative_actions GROUP BY industry').all();
+                const total = db.prepare('SELECT COUNT(*) as c FROM administrative_actions').get();
+                const enriched = db.prepare(\\\"SELECT COUNT(*) as c FROM administrative_actions WHERE detail IS NOT NULL AND detail != ''\\\").get();
+                const result = { industries: {}, total: total.c, enriched: enriched.c };
+                rows.forEach(r => result.industries[r.industry || 'unknown'] = r.c);
+                console.log(JSON.stringify(result));
+                db.close();
+              \"" 2>/dev/null) || COUNTS='{"industries":{},"total":0,"enriched":0}'
+
+          echo "post_counts=${COUNTS}" >> "$GITHUB_OUTPUT"
+          echo "Post-check counts: ${COUNTS}"
+
+          # 件数減少チェック（warning のみ、fail にはしない）
+          PRE='${{ steps.pre_counts.outputs.pre_counts }}'
+          PRE_TOTAL=$(echo "$PRE" | jq -r '.total // 0' 2>/dev/null || echo "0")
+          POST_TOTAL=$(echo "$COUNTS" | jq -r '.total // 0' 2>/dev/null || echo "0")
+
+          if [ "$POST_TOTAL" -lt "$PRE_TOTAL" ] 2>/dev/null; then
+            echo "::warning::件数が減少しています: ${PRE_TOTAL} → ${POST_TOTAL}"
+            echo "count_warning=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "count_warning=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # -------------------------------------------------------
+      # 7. 結果サマリ出力
+      # -------------------------------------------------------
+      - name: "Summary: 実行結果"
+        if: always() && steps.fetch.outcome != 'skipped'
+        env:
+          FETCH_STATUS: ${{ steps.fetch.outcome }}
+          ENRICH_STATUS: ${{ steps.enrich.outcome }}
+          FETCH_CREATED: ${{ steps.fetch.outputs.fetch_created }}
+          FETCH_UPDATED: ${{ steps.fetch.outputs.fetch_updated }}
+          FETCH_SKIPPED: ${{ steps.fetch.outputs.fetch_skipped }}
+          ENRICH_ENRICHED: ${{ steps.enrich.outputs.enrich_enriched }}
+          ENRICH_ERRORS: ${{ steps.enrich.outputs.enrich_errors }}
+          PRE_COUNTS: ${{ steps.pre_counts.outputs.pre_counts }}
+          POST_COUNTS: ${{ steps.post_counts.outputs.post_counts }}
+          COUNT_WARNING: ${{ steps.post_counts.outputs.count_warning }}
+        run: |
+          # ステータスアイコン
+          if [ "$FETCH_STATUS" = "success" ] && [ "$ENRICH_STATUS" = "success" ]; then
+            OVERALL="success"
+          else
+            OVERALL="failure"
+          fi
+
+          PRE_TOTAL=$(echo "$PRE_COUNTS" | jq -r '.total // "?"' 2>/dev/null || echo "?")
+          POST_TOTAL=$(echo "$POST_COUNTS" | jq -r '.total // "?"' 2>/dev/null || echo "?")
+          PRE_RE=$(echo "$PRE_COUNTS" | jq -r '.industries.real_estate // "?"' 2>/dev/null || echo "?")
+          POST_RE=$(echo "$POST_COUNTS" | jq -r '.industries.real_estate // "?"' 2>/dev/null || echo "?")
+          PRE_ENRICHED=$(echo "$PRE_COUNTS" | jq -r '.enriched // "?"' 2>/dev/null || echo "?")
+          POST_ENRICHED=$(echo "$POST_COUNTS" | jq -r '.enriched // "?"' 2>/dev/null || echo "?")
+
+          {
+            echo "### fetch_takuti_prod"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "|------|----|"
+            echo "| Status | \`${FETCH_STATUS}\` |"
+            echo "| created | ${FETCH_CREATED:-?} |"
+            echo "| updated | ${FETCH_UPDATED:-?} |"
+            echo "| skipped | ${FETCH_SKIPPED:-?} |"
+            echo ""
+            echo "### enrich_takuti_prod"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "|------|----|"
+            echo "| Status | \`${ENRICH_STATUS}\` |"
+            echo "| enriched | ${ENRICH_ENRICHED:-?} |"
+            echo "| errors | ${ENRICH_ERRORS:-?} |"
+            echo ""
+            echo "### DB 件数比較"
+            echo ""
+            echo "| 指標 | 実行前 | 実行後 |"
+            echo "|------|--------|--------|"
+            echo "| real_estate | ${PRE_RE} | ${POST_RE} |"
+            echo "| TOTAL | ${PRE_TOTAL} | ${POST_TOTAL} |"
+            echo "| detail入力済み | ${PRE_ENRICHED} | ${POST_ENRICHED} |"
+
+            if [ "$COUNT_WARNING" = "true" ]; then
+              echo ""
+              echo "> **Warning**: 件数が減少しています（${PRE_TOTAL} → ${POST_TOTAL}）"
+            fi
+
+            echo ""
+            echo "---"
+            echo "*Overall: \`${OVERALL}\`*"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # -------------------------------------------------------
+      # 8. 失敗時に GitHub Issue を作成
+      # -------------------------------------------------------
+      - name: "Alert: 失敗時 Issue 作成"
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FETCH_STATUS: ${{ steps.fetch.outcome }}
+          ENRICH_STATUS: ${{ steps.enrich.outcome }}
+        run: |
+          TITLE="[Scheduled Takuti] 月次実行失敗 $(date -u '+%Y-%m-%d')"
+          BODY="## Scheduled Takuti 月次実行失敗
+
+| 項目 | 値 |
+|------|----|
+| Run | [#${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |
+| fetch | \`${FETCH_STATUS}\` |
+| enrich | \`${ENRICH_STATUS}\` |
+| Time (UTC) | $(date -u '+%Y-%m-%d %H:%M:%S') |
+
+### 対応手順
+1. 上記 Run リンクからログを確認
+2. SSH 接続 / Docker / DB の状態を \`ops-manual.yml\` の \`status\` で確認
+3. 必要に応じて手動で \`fetch_takuti_prod\` / \`enrich_takuti_prod\` を再実行
+4. 詳細は \`docs/ops-github-actions-setup.md\` の障害対応セクションを参照"
+
+          # 同タイトルの open issue があれば作成しない
+          EXISTING=$(gh issue list --state open --search "in:title [Scheduled Takuti]" --limit 1 --json number --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then
+            echo "既存 Issue #${EXISTING} にコメントを追加"
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            # --label ops はラベル未作成だと失敗するため、まず試行してフォールバック
+            gh issue create --title "$TITLE" --body "$BODY" --label "ops" 2>/dev/null \
+              || gh issue create --title "$TITLE" --body "$BODY"
+          fi
+
+      # -------------------------------------------------------
+      # 9. SSH 鍵のクリーンアップ
       # -------------------------------------------------------
       - name: "Cleanup: SSH 鍵の削除"
         if: always()

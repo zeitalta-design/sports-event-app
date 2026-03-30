@@ -405,28 +405,136 @@ ERROR: Container 'navi-app' is not running
 - workflow ファイルを削除または `schedule:` セクションをコメントアウト
 - 通常は Variable による一時停止で十分
 
-### 月次運用チェック
+### 月次運用チェックリスト
 
-毎月の schedule 実行後に以下を確認する。推奨は翌営業日の朝。
+毎月2日の schedule 実行後に以下を確認する。推奨は **翌営業日の朝**。
+
+#### 自動結果の確認（5分）
 
 ```
 [ ] Actions → "Ops: Scheduled Takuti" の最新 run が成功（緑）
-[ ] ログで fetch の created / updated / skipped を確認
-[ ] ログで enrich の enriched / errors を確認
-[ ] 必要に応じて ops-manual.yml から db_counts を実行して件数確認
+[ ] run の Summary タブで以下を確認:
+    [ ] fetch: created / updated / skipped が表示されている
+    [ ] enrich: enriched / errors が表示されている
+    [ ] DB件数比較: real_estate と TOTAL の実行前後
+    [ ] detail入力済み件数の実行前後
+    [ ] 件数減少 warning が出ていないこと
+[ ] 失敗していた場合:
+    → GitHub Issue が自動作成されている（ラベル: ops）
+    → Issue 内の Run リンクからログを確認
 ```
+
+#### 追加確認（必要に応じて、10分）
+
+```
+[ ] ops-manual.yml → action: db_counts で最新件数を確認
+[ ] ops-manual.yml → action: logs でエラーがないか確認
+```
+
+#### 公開画面の目視確認（月1回推奨、5分）
+
+```
+[ ] /gyosei-shobun にアクセスして 500 エラーがないこと
+[ ] 一覧画面が表示されること
+[ ] 業種フィルタで「宅建業」を選択 → 宅建業レコードが表示されること
+[ ] 任意の宅建業レコードを開いて:
+    [ ] summary が自然な日本語であること
+    [ ] detail が存在すること（空でないこと）
+    [ ] legal_basis が表示されていること（取得できた場合）
+    [ ] レイアウト崩れがないこと
+[ ] 建設業レコードも念のため1件開いて壊れていないこと
+```
+
+#### admin 画面の目視確認（月1回推奨、5分）
+
+```
+[ ] /admin/gyosei-shobun にアクセスして 500 エラーがないこと
+[ ] 一覧で宅建業レコードが見えること
+[ ] review_status / is_published が想定通りであること
+[ ] summary / detail / legal_basis の品質を1-2件スポットチェック
+```
+
+### 実行結果の確認方法
+
+scheduled workflow は `GITHUB_STEP_SUMMARY` に結果サマリを自動出力する。
+
+**確認手順:**
+1. Actions → "Ops: Scheduled Takuti" → 最新の run をクリック
+2. **Summary** タブを開く（ログではなく Summary）
+3. 以下が表形式で表示される:
+   - fetch の created / updated / skipped
+   - enrich の enriched / errors
+   - DB 件数の実行前後比較（real_estate / TOTAL / detail入力済み）
+   - 件数減少時の Warning
+
+### 失敗時の対応手順
+
+#### 自動通知
+
+失敗すると以下が自動で行われる:
+- workflow が赤（failure）になる
+- GitHub Issue が自動作成される（ラベル: `ops`、タイトル: `[Scheduled Takuti] 月次実行失敗 YYYY-MM-DD`）
+- 同タイトルの open issue が既にあれば、コメントが追記される
+
+#### 切り分け手順
+
+1. **Actions ログを確認**: どのステップで失敗したか特定
+2. **`ops-manual.yml` で `status` を実行**: SSH / Docker / DB の状態を確認
+3. 失敗箇所に応じた対処:
+
+| 失敗ステップ | 原因候補 | 対処 |
+|--------------|----------|------|
+| SSH 鍵配置 | Secret 設定ミス | VPS_SSH_KEY を再確認 |
+| Pre-check | SSH接続 or コンテナ停止 | `status` で確認 → コンテナ再起動 |
+| fetch_takuti_prod | MLIT サイト障害 / ネットワーク | 翌日に手動再実行 |
+| fetch_takuti_prod | DB ロック / flock 競合 | VPS で lock ファイル確認 |
+| enrich_takuti_prod | 詳細ページ取得失敗 | `--limit=10` で部分再実行 |
+| Post-check | DB 接続の一時的問題 | 件数は手動で `db_counts` 確認 |
+
+4. **手動再実行**: `ops-manual.yml` から `fetch_takuti_prod` / `enrich_takuti_prod` を個別に実行
+5. **Issue をクローズ**: 対処完了後、自動作成された Issue をクローズ
+
+### 件数異常の判断基準
+
+| 状態 | 判断 | 対応 |
+|------|------|------|
+| real_estate 件数が増加 | **正常** — 新規処分データが追加された | 対応不要 |
+| real_estate 件数が変化なし | **正常** — 新規データなし（updated のみ） | 対応不要 |
+| TOTAL 件数が減少 | **Warning** — Summary に警告表示 | ログ確認、必要ならバックアップからリストア |
+| enrich errors > 0 | **要確認** — MLIT サイト側の一時障害の可能性 | 翌月の enrich で自動リカバリされるか確認 |
+| construction 件数が変化 | **異常** — 宅建業処理で建設業に影響するはずがない | 即座に調査 |
+
+> **設計方針**: 件数減少は warning 表示のみで fail にはしない。理由は、MLIT 側でデータが削除される正当なケースもあり得るため。運営者が Summary を見て判断する。
 
 ### ロールバック
 
 fetch / enrich は本番実行前に自動バックアップを取得する（`backup-db.sh`）。
-万一データを戻す場合:
 
+**バックアップ確認:**
+```bash
+ls -lt /opt/app/backups/sports-event_*_fetch_takuti.db
+ls -lt /opt/app/backups/sports-event_*_enrich_takuti.db
+```
+
+**リストア手順（万一の場合のみ）:**
 ```bash
 # VPS に SSH して実行
 docker stop navi-app
 cp /opt/app/backups/sports-event_YYYYMMDD_HHMMSS_fetch_takuti.db /opt/app/web/data/sports-event.db
 docker start navi-app
+# リストア後に db_counts で件数確認
 ```
+
+### 一時停止方法
+
+**schedule の一時停止:**
+- Settings → Variables → `TAKUTI_SCHEDULE_ENABLED` を `false` に変更
+- schedule トリガーは発火するが、job の `if` 条件で skip される
+- workflow_dispatch による手動実行は引き続き可能
+
+**完全停止:**
+- workflow ファイルを削除または `schedule:` セクションをコメントアウト
+- 通常は Variable による一時停止で十分
 
 ### 注意事項
 
@@ -435,6 +543,7 @@ docker start navi-app
 - **時刻の保証なし**: GitHub Actions の schedule は目安であり、混雑時は数分〜数十分遅延する可能性がある
 - **concurrency**: `ops-scheduled-takuti` グループで重複防止。手動 workflow（`ops-manual`）とは別グループなので、同時実行は VPS 側 flock で保護される
 - **月初1日回避**: 建設業 cron が毎月1日 05:20/06:00 JST に動くため、宅建業 schedule は2日に設定。手動でもこの時間帯は避ける
+- **Issue 自動作成**: 失敗時に GitHub Issue が自動作成される（`ops` ラベルがあれば付与）。`GITHUB_TOKEN` の `issues: write` 権限で動作し、追加 Secret は不要
 
 ---
 
