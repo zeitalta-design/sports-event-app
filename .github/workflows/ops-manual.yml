@@ -1,0 +1,148 @@
+name: "Ops: Manual Task Runner"
+
+# ============================================================
+# VPS 運用タスクの手動実行ワークフロー
+# - workflow_dispatch のみ（push 自動実行なし）
+# - 本番実行は confirm_production=YES 必須
+# - fork/PR からは実行不可
+# ============================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "実行するタスク"
+        required: true
+        type: choice
+        options:
+          - status
+          - db_counts
+          - logs
+          - fetch_construction_dry_run
+          - fetch_construction_prod
+          - enrich_construction_dry_run
+          - enrich_construction_prod
+          - fetch_takuti_dry_run
+          - fetch_takuti_prod
+          - enrich_takuti_dry_run
+          - enrich_takuti_prod
+      confirm_production:
+        description: "本番実行時は YES と入力（dry-run/読み取り系は不要）"
+        required: false
+        default: ""
+        type: string
+      extra_args:
+        description: "追加引数（例: --since=2021-01 --limit=10）"
+        required: false
+        default: ""
+        type: string
+
+# 同時実行防止 — 同じワークフローが複数走らないようにする
+concurrency:
+  group: ops-manual
+  cancel-in-progress: false
+
+jobs:
+  run-task:
+    name: "${{ inputs.action }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # fork や PR から走らないようにする
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      # -------------------------------------------------------
+      # 1. 本番実行のガード
+      # -------------------------------------------------------
+      - name: "Guard: 本番実行の確認"
+        if: |
+          contains(inputs.action, '_prod') &&
+          inputs.confirm_production != 'YES'
+        run: |
+          echo "::error::本番実行には confirm_production=YES が必要です"
+          echo ""
+          echo "選択されたアクション: ${{ inputs.action }}"
+          echo "confirm_production の値: '${{ inputs.confirm_production }}'"
+          echo ""
+          echo "GitHub Actions の画面で confirm_production に YES と入力してから再実行してください。"
+          exit 1
+
+      # -------------------------------------------------------
+      # 2. extra_args のバリデーション（インジェクション防止）
+      # -------------------------------------------------------
+      - name: "Guard: extra_args のバリデーション"
+        if: inputs.extra_args != ''
+        run: |
+          ARGS='${{ inputs.extra_args }}'
+          # 許可: --key=value, --flag, 英数字, ハイフン, アンダースコア, ドット, イコール, スペース
+          if echo "$ARGS" | grep -qP '[;|&$`\\(){}\[\]<>!#\x27\x22]'; then
+            echo "::error::extra_args に使用できない文字が含まれています: $ARGS"
+            echo "許可される形式: --key=value --flag （英数字, -, _, ., = のみ）"
+            exit 1
+          fi
+          echo "extra_args validated: $ARGS"
+
+      # -------------------------------------------------------
+      # 3. 実行パラメータの表示
+      # -------------------------------------------------------
+      - name: "Info: 実行パラメータ"
+        run: |
+          echo "============================================================"
+          echo "  Ops Manual Task Runner"
+          echo "============================================================"
+          echo "Action:              ${{ inputs.action }}"
+          echo "Confirm production:  ${{ inputs.confirm_production }}"
+          echo "Extra args:          ${{ inputs.extra_args }}"
+          echo "Triggered by:        ${{ github.actor }}"
+          echo "Run ID:              ${{ github.run_id }}"
+          echo "Time:                $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "============================================================"
+
+      # -------------------------------------------------------
+      # 4. SSH 接続設定
+      # -------------------------------------------------------
+      - name: "Setup: SSH 鍵の配置"
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_PORT: ${{ vars.VPS_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          # known_hosts の設定
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "${SSH_PORT:-22}" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 644 ~/.ssh/known_hosts
+
+      # -------------------------------------------------------
+      # 5. VPS で run-task.sh を実行
+      # -------------------------------------------------------
+      - name: "Execute: ${{ inputs.action }}"
+        timeout-minutes: 20
+        env:
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_USER: ${{ secrets.VPS_USER }}
+          SSH_PORT: ${{ vars.VPS_PORT }}
+        run: |
+          ssh -o ConnectTimeout=10 \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=3 \
+              -i ~/.ssh/id_ed25519 \
+              -p "${SSH_PORT:-22}" \
+              "${SSH_USER}@${SSH_HOST}" \
+              "cd /opt/app && bash scripts/ops/run-task.sh '${{ inputs.action }}' ${{ inputs.extra_args }}"
+
+      # -------------------------------------------------------
+      # 6. SSH 鍵のクリーンアップ
+      # -------------------------------------------------------
+      - name: "Cleanup: SSH 鍵の削除"
+        if: always()
+        run: |
+          rm -rf ~/.ssh/id_ed25519
