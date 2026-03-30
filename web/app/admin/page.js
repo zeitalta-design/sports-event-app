@@ -23,7 +23,10 @@ export default function AdminTopPage() {
         ))}
       </div>
 
-      <div className="mt-8 pt-6 border-t">
+      <div className="mt-8 pt-6 border-t flex flex-col gap-2">
+        <Link href="/admin/watchlist" className="text-sm text-gray-500 hover:text-blue-600 hover:underline">
+          👁 ウォッチリスト →
+        </Link>
         <Link href="/admin/audit-logs" className="text-sm text-gray-500 hover:text-blue-600 hover:underline">
           📜 監査ログを見る →
         </Link>

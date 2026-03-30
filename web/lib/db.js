@@ -1259,6 +1259,23 @@ export function getDb() {
     `);
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_aa_favorites_user ON administrative_action_favorites(user_key)`);
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_aa_favorites_action ON administrative_action_favorites(action_id)`);
+
+    // watched_organizations: 企業ウォッチ
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS watched_organizations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        organization_name TEXT NOT NULL,
+        industry TEXT NOT NULL DEFAULT '',
+        note TEXT,
+        last_seen_action_date TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(user_id, organization_name, industry)
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_watched_orgs_user ON watched_organizations(user_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_watched_orgs_name ON watched_organizations(organization_name)`);
   }
   return _db;
 }
