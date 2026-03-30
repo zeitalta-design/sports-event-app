@@ -1,0 +1,126 @@
+name: "Ops: Scheduled Takuti"
+
+# ============================================================
+# 宅建業（takuti / real_estate）の月次自動 fetch → enrich
+#
+# - 毎月2日 03:17 JST に自動実行（既存建設業 cron の月初1日と競合回避）
+# - workflow_dispatch で手動テストも可能
+# - TAKUTI_SCHEDULE_ENABLED=true で自動実行を有効化
+# - fetch 失敗時は enrich に進まない
+# - 既存 ops-manual.yml / 建設業 cron には影響しない
+# ============================================================
+
+on:
+  schedule:
+    # 毎月2日 03:17 JST に実行
+    # - 月初1日の建設業 cron（05:20/06:00 JST）を避けて2日に設定
+    # - 毎時00分/30分を避けて17分に設定
+    - cron: "17 3 2 * *"
+      timezone: "Asia/Tokyo"
+  workflow_dispatch:
+
+# 同時実行防止（ops-manual とは別グループ）
+# VPS 側 flock と合わせて二重保護
+concurrency:
+  group: ops-scheduled-takuti
+  cancel-in-progress: false
+
+jobs:
+  fetch-and-enrich:
+    name: "Takuti fetch → enrich"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # schedule 実行: TAKUTI_SCHEDULE_ENABLED=true のときだけ許可
+    # workflow_dispatch: 常に許可（手動テスト用）
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' && vars.TAKUTI_SCHEDULE_ENABLED == 'true')
+
+    steps:
+      # -------------------------------------------------------
+      # 1. 実行情報の表示
+      # -------------------------------------------------------
+      - name: "Info: 実行パラメータ"
+        env:
+          TAKUTI_FETCH_ARGS: ${{ vars.TAKUTI_FETCH_ARGS }}
+        run: |
+          echo "============================================================"
+          echo "  Ops: Scheduled Takuti — fetch → enrich"
+          echo "============================================================"
+          echo "Trigger:             ${{ github.event_name }}"
+          echo "SCHEDULE_ENABLED:    ${{ vars.TAKUTI_SCHEDULE_ENABLED }}"
+          echo "FETCH_ARGS:          ${TAKUTI_FETCH_ARGS:---since=2021-01}"
+          echo "Triggered by:        ${{ github.actor }}"
+          echo "Run ID:              ${{ github.run_id }}"
+          echo "Time:                $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "============================================================"
+
+      # -------------------------------------------------------
+      # 2. SSH 接続設定
+      # -------------------------------------------------------
+      - name: "Setup: SSH 鍵の配置"
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_PORT: ${{ vars.VPS_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "${SSH_PORT:-22}" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 644 ~/.ssh/known_hosts
+
+      # -------------------------------------------------------
+      # 3. fetch_takuti_prod
+      # -------------------------------------------------------
+      - name: "Execute: fetch_takuti_prod"
+        timeout-minutes: 15
+        env:
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_USER: ${{ secrets.VPS_USER }}
+          SSH_PORT: ${{ vars.VPS_PORT }}
+          TAKUTI_FETCH_ARGS: ${{ vars.TAKUTI_FETCH_ARGS }}
+        run: |
+          FETCH_ARGS="${TAKUTI_FETCH_ARGS:---since=2021-01}"
+          echo ">>> fetch_takuti_prod ${FETCH_ARGS} <<<"
+          ssh -o ConnectTimeout=10 \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=3 \
+              -i ~/.ssh/id_ed25519 \
+              -p "${SSH_PORT:-22}" \
+              "${SSH_USER}@${SSH_HOST}" \
+              "cd /opt/app && bash scripts/ops/run-task.sh fetch_takuti_prod ${FETCH_ARGS}"
+
+      # -------------------------------------------------------
+      # 4. enrich_takuti_prod（fetch 成功時のみ実行）
+      # -------------------------------------------------------
+      - name: "Execute: enrich_takuti_prod"
+        timeout-minutes: 15
+        env:
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_USER: ${{ secrets.VPS_USER }}
+          SSH_PORT: ${{ vars.VPS_PORT }}
+        run: |
+          echo ">>> enrich_takuti_prod <<<"
+          ssh -o ConnectTimeout=10 \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=3 \
+              -i ~/.ssh/id_ed25519 \
+              -p "${SSH_PORT:-22}" \
+              "${SSH_USER}@${SSH_HOST}" \
+              "cd /opt/app && bash scripts/ops/run-task.sh enrich_takuti_prod"
+
+      # -------------------------------------------------------
+      # 5. SSH 鍵のクリーンアップ
+      # -------------------------------------------------------
+      - name: "Cleanup: SSH 鍵の削除"
+        if: always()
+        run: |
+          rm -rf ~/.ssh/id_ed25519

@@ -340,9 +340,107 @@ ERROR: Container 'navi-app' is not running
 
 ---
 
-## 7. 今後の拡張
+## 7. 宅建業 月次スケジュール実行
 
-### Phase 3: タスク追加
+### 概要
+
+`ops-scheduled-takuti.yml` により、宅建業の fetch → enrich を毎月自動実行する。
+
+- **workflow**: `Ops: Scheduled Takuti`
+- **スケジュール**: 毎月2日 03:17 JST（`timezone: Asia/Tokyo` 指定）
+- **処理内容**: `fetch_takuti_prod` → `enrich_takuti_prod` を順次実行
+- **安全設計**: fetch 失敗時は enrich に進まない
+- **有効化制御**: `TAKUTI_SCHEDULE_ENABLED` Variable で ON/OFF
+
+### 追加で必要な Variables
+
+| Name | 必須 | 初期値 | 説明 |
+|------|------|--------|------|
+| `TAKUTI_SCHEDULE_ENABLED` | **必須** | `false` | `true` で schedule 自動実行を有効化 |
+| `TAKUTI_FETCH_ARGS` | 任意 | (未設定時 `--since=2021-01`) | fetch 時の追加引数 |
+
+既存 Secrets（`VPS_HOST` / `VPS_USER` / `VPS_SSH_KEY` / `SSH_KNOWN_HOSTS`）と Variables（`VPS_PORT`）はそのまま再利用する。
+
+### スケジュール設計
+
+| 項目 | 設定 |
+|------|------|
+| cron 式 | `17 3 2 * *` |
+| timezone | `Asia/Tokyo` |
+| 実行時刻 | 毎月2日 03:17 JST |
+| 建設業 cron | 毎月1日 05:20 / 06:00 JST |
+| 競合回避 | 日付レベルで1日ずらし（1日 vs 2日） |
+| 混雑回避 | 毎時00分/30分を避けて17分に設定 |
+| UTC 代替（参考） | `17 18 1 * *`（timezone 未指定の場合のみ） |
+
+### 初回導入手順
+
+```
+1. workflow ファイルを main に push（または merge）
+   → main ブランチ上にないと schedule は動作しない
+
+2. GitHub Variables を追加:
+   Settings → Secrets and variables → Actions → Variables タブ
+   [ ] TAKUTI_SCHEDULE_ENABLED = false
+   [ ] TAKUTI_FETCH_ARGS = --since=2021-01（任意、未設定でも同じ動作）
+
+3. 手動テスト:
+   Actions → "Ops: Scheduled Takuti" → Run workflow
+   → TAKUTI_SCHEDULE_ENABLED=false でも workflow_dispatch は動作する
+   → fetch → enrich が成功して Exit code: 0 を確認
+
+4. schedule 有効化:
+   Variables → TAKUTI_SCHEDULE_ENABLED を true に変更
+   → 翌月2日 03:17 JST に自動実行される
+```
+
+### 停止手順
+
+**一時停止（推奨）:**
+- Variables → `TAKUTI_SCHEDULE_ENABLED` を `false` に変更
+- schedule トリガーは発火するが、job の `if` 条件で skip される
+- workflow_dispatch による手動実行は引き続き可能
+
+**完全停止:**
+- workflow ファイルを削除または `schedule:` セクションをコメントアウト
+- 通常は Variable による一時停止で十分
+
+### 月次運用チェック
+
+毎月の schedule 実行後に以下を確認する。推奨は翌営業日の朝。
+
+```
+[ ] Actions → "Ops: Scheduled Takuti" の最新 run が成功（緑）
+[ ] ログで fetch の created / updated / skipped を確認
+[ ] ログで enrich の enriched / errors を確認
+[ ] 必要に応じて ops-manual.yml から db_counts を実行して件数確認
+```
+
+### ロールバック
+
+fetch / enrich は本番実行前に自動バックアップを取得する（`backup-db.sh`）。
+万一データを戻す場合:
+
+```bash
+# VPS に SSH して実行
+docker stop navi-app
+cp /opt/app/backups/sports-event_YYYYMMDD_HHMMSS_fetch_takuti.db /opt/app/web/data/sports-event.db
+docker start navi-app
+```
+
+### 注意事項
+
+- **default branch 必須**: GitHub Actions の schedule は main（default branch）上の workflow だけが動作する。feature branch に workflow があっても schedule は発火しない
+- **非活動による自動停止**: public リポジトリでは 60日間コミットがないと scheduled workflows が自動停止される。private リポジトリでは発生しない
+- **時刻の保証なし**: GitHub Actions の schedule は目安であり、混雑時は数分〜数十分遅延する可能性がある
+- **concurrency**: `ops-scheduled-takuti` グループで重複防止。手動 workflow（`ops-manual`）とは別グループなので、同時実行は VPS 側 flock で保護される
+- **月初1日回避**: 建設業 cron が毎月1日 05:20/06:00 JST に動くため、宅建業 schedule は2日に設定。手動でもこの時間帯は避ける
+
+---
+
+## 8. 今後の拡張
+
+### タスク追加
 - `run-task.sh` に case を追加するだけで新タスクを増やせる
 - workflow の `options` にも追加
 
