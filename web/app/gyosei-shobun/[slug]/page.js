@@ -214,40 +214,58 @@ export default async function GyoseiShobunDetailPage({ params }) {
                 const riIndustry = gyoseiShobunConfig.industries.find((i) => i.slug === ri.industry);
                 const riColor = ACTION_TYPE_COLORS[ri.action_type] || ACTION_TYPE_COLORS.other;
                 const reasons = getMatchReasons(item, ri);
+                const listLinks = getListLinks(ri);
                 return (
-                  <Link
+                  <div
                     key={ri.id}
-                    href={`/gyosei-shobun/${ri.slug}`}
-                    className="flex items-start gap-2.5 p-3 rounded-xl border border-gray-100 hover:border-gray-300 hover:shadow-sm transition-all"
+                    className="p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition-all"
                   >
-                    <span className="text-lg shrink-0 mt-0.5">{riAction?.icon || "📄"}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                        <span className="text-sm font-bold text-gray-900 truncate">{ri.organization_name_raw}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${riColor.bg} ${riColor.text} ${riColor.border}`}>
-                          {riAction?.label || ri.action_type}
-                        </span>
-                        {riIndustry && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
-                            {riIndustry.label}
+                    <Link
+                      href={`/gyosei-shobun/${ri.slug}`}
+                      className="flex items-start gap-2.5 hover:opacity-80 transition-opacity"
+                    >
+                      <span className="text-lg shrink-0 mt-0.5">{riAction?.icon || "📄"}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                          <span className="text-sm font-bold text-gray-900 truncate">{ri.organization_name_raw}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded border ${riColor.bg} ${riColor.text} ${riColor.border}`}>
+                            {riAction?.label || ri.action_type}
                           </span>
-                        )}
+                          {riIndustry && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                              {riIndustry.label}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] text-gray-400">
+                          {ri.action_date && <span>{ri.action_date}</span>}
+                          {ri.prefecture && <span>{ri.prefecture}</span>}
+                          {reasons.length > 0 && (
+                            <span className="flex items-center gap-1 ml-auto">
+                              {reasons.map((r) => (
+                                <span key={r} className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 border border-blue-100 text-[10px]">
+                                  {r}
+                                </span>
+                              ))}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-gray-400">
-                        {ri.action_date && <span>{ri.action_date}</span>}
-                        {ri.prefecture && <span>{ri.prefecture}</span>}
-                        {reasons.length > 0 && (
-                          <span className="flex items-center gap-1 ml-auto">
-                            {reasons.map((r) => (
-                              <span key={r} className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 border border-blue-100 text-[10px]">
-                                {r}
-                              </span>
-                            ))}
-                          </span>
-                        )}
+                    </Link>
+                    {listLinks.length > 0 && (
+                      <div className="flex items-center gap-3 mt-1.5 ml-8 text-[11px]">
+                        {listLinks.map((ll) => (
+                          <Link
+                            key={ll.href}
+                            href={ll.href}
+                            className="text-gray-400 hover:text-blue-600 hover:underline underline-offset-2 transition-colors"
+                          >
+                            {ll.label} →
+                          </Link>
+                        ))}
                       </div>
-                    </div>
-                  </Link>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -269,6 +287,19 @@ export default async function GyoseiShobunDetailPage({ params }) {
       </div>
     </div>
   );
+}
+
+// ─── 関連事案の一覧探索リンク生成 ─────────────────────
+
+function getListLinks(ri) {
+  const links = [];
+  if (ri.industry)
+    links.push({ label: "同業種一覧を見る", href: `/gyosei-shobun?industry=${encodeURIComponent(ri.industry)}` });
+  if (ri.prefecture)
+    links.push({ label: "同都道府県一覧を見る", href: `/gyosei-shobun?prefecture=${encodeURIComponent(ri.prefecture)}` });
+  if (ri.action_type)
+    links.push({ label: "同処分種別一覧を見る", href: `/gyosei-shobun?action_type=${encodeURIComponent(ri.action_type)}` });
+  return links;
 }
 
 // ─── 関連理由判定 ─────────────────────
