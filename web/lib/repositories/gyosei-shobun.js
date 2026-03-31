@@ -68,6 +68,74 @@ export function listAdministrativeActions({
   };
 }
 
+/**
+ * 統計ダッシュボード用の集計データを取得
+ * 検索・絞り込み条件に対して集計する（page は含まない）
+ */
+export function getAdministrativeActionStats({
+  keyword = "",
+  action_type = "",
+  prefecture = "",
+  industry = "",
+} = {}) {
+  const db = getDb();
+  const where = ["is_published = 1"];
+  const params = {};
+
+  if (keyword) {
+    where.push("(organization_name_raw LIKE @kw OR summary LIKE @kw OR detail LIKE @kw OR authority_name LIKE @kw)");
+    params.kw = `%${keyword}%`;
+  }
+  if (action_type) {
+    where.push("action_type = @action_type");
+    params.action_type = action_type;
+  }
+  if (prefecture) {
+    where.push("prefecture = @prefecture");
+    params.prefecture = prefecture;
+  }
+  if (industry) {
+    where.push("industry = @industry");
+    params.industry = industry;
+  }
+
+  const whereClause = `WHERE ${where.join(" AND ")}`;
+
+  // 総件数
+  const totalCount = db
+    .prepare(`SELECT COUNT(*) as c FROM administrative_actions ${whereClause}`)
+    .get(params).c;
+
+  // 年別件数（action_date の先頭4文字で集計）
+  const countsByYear = db
+    .prepare(`
+      SELECT
+        COALESCE(NULLIF(SUBSTR(action_date, 1, 4), ''), '不明') AS year,
+        COUNT(*) AS count
+      FROM administrative_actions
+      ${whereClause}
+      GROUP BY year
+      ORDER BY year DESC
+    `)
+    .all(params);
+
+  // 事業者別件数 TOP 10
+  const countsByOrganization = db
+    .prepare(`
+      SELECT
+        COALESCE(NULLIF(organization_name_raw, ''), '名称不明') AS organizationName,
+        COUNT(*) AS count
+      FROM administrative_actions
+      ${whereClause}
+      GROUP BY organizationName
+      ORDER BY count DESC, organizationName ASC
+      LIMIT 10
+    `)
+    .all(params);
+
+  return { totalCount, countsByYear, countsByOrganization };
+}
+
 export function getAdministrativeActionBySlug(slug) {
   const db = getDb();
   return db.prepare("SELECT * FROM administrative_actions WHERE slug = ? AND is_published = 1").get(slug);

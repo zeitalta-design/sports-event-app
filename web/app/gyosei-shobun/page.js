@@ -20,10 +20,10 @@ export default function GyoseiShobunListPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // URL searchParams から初期値を復元
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     keyword: searchParams.get("keyword") || "",
@@ -34,7 +34,6 @@ export default function GyoseiShobunListPage() {
     page: Math.max(1, parseInt(searchParams.get("page") || "1", 10)),
   });
 
-  // フィルタ変更時に URL を同期
   const syncUrl = useCallback((f) => {
     const params = new URLSearchParams();
     if (f.keyword) params.set("keyword", f.keyword);
@@ -50,22 +49,38 @@ export default function GyoseiShobunListPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (filters.keyword) params.set("keyword", filters.keyword);
-      if (filters.action_type) params.set("action_type", filters.action_type);
-      if (filters.prefecture) params.set("prefecture", filters.prefecture);
-      if (filters.industry) params.set("industry", filters.industry);
-      params.set("sort", filters.sort);
-      params.set("page", String(filters.page));
-      params.set("pageSize", String(PAGE_SIZE));
+      // 一覧用パラメータ
+      const listParams = new URLSearchParams();
+      if (filters.keyword) listParams.set("keyword", filters.keyword);
+      if (filters.action_type) listParams.set("action_type", filters.action_type);
+      if (filters.prefecture) listParams.set("prefecture", filters.prefecture);
+      if (filters.industry) listParams.set("industry", filters.industry);
+      listParams.set("sort", filters.sort);
+      listParams.set("page", String(filters.page));
+      listParams.set("pageSize", String(PAGE_SIZE));
 
-      const res = await fetch(`/api/gyosei-shobun?${params}`);
-      const data = await res.json();
-      setItems(data.items || []);
-      setTotal(data.total || 0);
-      setTotalPages(data.totalPages || 1);
+      // 統計用パラメータ（page / sort を除外）
+      const statsParams = new URLSearchParams();
+      if (filters.keyword) statsParams.set("keyword", filters.keyword);
+      if (filters.action_type) statsParams.set("action_type", filters.action_type);
+      if (filters.prefecture) statsParams.set("prefecture", filters.prefecture);
+      if (filters.industry) statsParams.set("industry", filters.industry);
+
+      const [listRes, statsRes] = await Promise.all([
+        fetch(`/api/gyosei-shobun?${listParams}`),
+        fetch(`/api/gyosei-shobun/stats?${statsParams}`),
+      ]);
+
+      const listData = await listRes.json();
+      const statsData = await statsRes.json();
+
+      setItems(listData.items || []);
+      setTotal(listData.total || 0);
+      setTotalPages(listData.totalPages || 1);
+      setStats(statsData.error ? null : statsData);
     } catch {
       setItems([]);
+      setStats(null);
     } finally {
       setLoading(false);
     }
@@ -86,9 +101,9 @@ export default function GyoseiShobunListPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // 件数表示用
   const startItem = total === 0 ? 0 : (filters.page - 1) * PAGE_SIZE + 1;
   const endItem = Math.min(filters.page * PAGE_SIZE, total);
+  const hasFilters = !!(filters.keyword || filters.action_type || filters.prefecture || filters.industry);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -150,6 +165,11 @@ export default function GyoseiShobunListPage() {
             </select>
           </div>
         </div>
+
+        {/* 統計ダッシュボード */}
+        {!loading && stats && (
+          <StatsDashboard stats={stats} hasFilters={hasFilters} />
+        )}
 
         {/* 件数表示 */}
         {!loading && (
@@ -214,7 +234,6 @@ export default function GyoseiShobunListPage() {
           </div>
         )}
 
-        {/* ページネーション */}
         {!loading && totalPages > 1 && (
           <Pagination
             currentPage={filters.page}
@@ -227,34 +246,127 @@ export default function GyoseiShobunListPage() {
   );
 }
 
+// ─── 統計ダッシュボード ─────────────────────
+
+function StatsDashboard({ stats, hasFilters }) {
+  const { totalCount, countsByYear, countsByOrganization } = stats;
+  const maxYearCount = Math.max(...(countsByYear || []).map((r) => r.count), 1);
+  const maxOrgCount = Math.max(...(countsByOrganization || []).map((r) => r.count), 1);
+
+  if (totalCount === 0) return null;
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-1 h-5 bg-[#1F6FB2] rounded-full" />
+        <h2 className="text-sm font-bold text-gray-700">データ概要</h2>
+        {hasFilters && (
+          <span className="text-[11px] text-gray-400">（現在の条件で集計）</span>
+        )}
+      </div>
+
+      {/* 総件数 + 2カラム */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* 年別件数 */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-bold text-gray-600">年別件数</h3>
+            <span className="text-xs text-gray-400">
+              総計 <span className="font-bold text-gray-700 text-sm">{totalCount.toLocaleString()}</span> 件
+            </span>
+          </div>
+          {countsByYear && countsByYear.length > 0 ? (
+            <div className="space-y-1.5">
+              {countsByYear.map((row) => (
+                <div key={row.year} className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 w-10 text-right font-medium shrink-0">
+                    {row.year}
+                  </span>
+                  <div className="flex-1 h-5 bg-gray-50 rounded overflow-hidden">
+                    <div
+                      className="h-full rounded transition-all"
+                      style={{
+                        width: `${Math.max((row.count / maxYearCount) * 100, 2)}%`,
+                        backgroundColor: "#1F6FB2",
+                        opacity: 0.75,
+                      }}
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-gray-700 w-10 text-right shrink-0">
+                    {row.count}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">データなし</p>
+          )}
+        </div>
+
+        {/* 事業者別件数 TOP 10 */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="text-xs font-bold text-gray-600 mb-3">事業者別件数 TOP 10</h3>
+          {countsByOrganization && countsByOrganization.length > 0 ? (
+            <div className="space-y-1.5">
+              {countsByOrganization.map((row, i) => (
+                <div key={`${row.organizationName}-${i}`} className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 w-5 text-right shrink-0 font-medium">
+                    {i + 1}
+                  </span>
+                  <div className="flex-1 min-w-0 flex items-center gap-2">
+                    <div className="flex-1 min-w-0 relative h-5 bg-gray-50 rounded overflow-hidden">
+                      <div
+                        className="absolute inset-y-0 left-0 rounded transition-all"
+                        style={{
+                          width: `${Math.max((row.count / maxOrgCount) * 100, 3)}%`,
+                          backgroundColor: "#1F6FB2",
+                          opacity: 0.15,
+                        }}
+                      />
+                      <span
+                        className="relative z-10 text-[11px] text-gray-700 font-medium truncate block leading-5 px-1.5"
+                        title={row.organizationName}
+                      >
+                        {row.organizationName}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-gray-700 w-8 text-right shrink-0">
+                    {row.count}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">データなし</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ページネーション ─────────────────────
 
 function Pagination({ currentPage, totalPages, onPageChange }) {
-  // 表示するページ番号を計算
   const getPageNumbers = () => {
     const pages = [];
     const maxVisible = 5;
 
     if (totalPages <= maxVisible + 2) {
-      // 全ページ表示
       for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
       pages.push(1);
-
       let start = Math.max(2, currentPage - 1);
       let end = Math.min(totalPages - 1, currentPage + 1);
-
-      // 端に近い場合は拡張
       if (currentPage <= 3) {
         end = Math.min(maxVisible, totalPages - 1);
       } else if (currentPage >= totalPages - 2) {
         start = Math.max(2, totalPages - maxVisible + 1);
       }
-
       if (start > 2) pages.push("...");
       for (let i = start; i <= end; i++) pages.push(i);
       if (end < totalPages - 1) pages.push("...");
-
       pages.push(totalPages);
     }
     return pages;
@@ -264,36 +376,22 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
 
   return (
     <nav className="mt-8 flex flex-col items-center gap-3" aria-label="ページネーション">
-      {/* PC表示 */}
       <div className="hidden sm:flex items-center gap-1">
-        <PaginationButton
-          onClick={() => onPageChange(1)}
-          disabled={currentPage === 1}
-          aria-label="最初のページへ"
-        >
+        <PaginationButton onClick={() => onPageChange(1)} disabled={currentPage === 1} aria-label="最初のページへ">
           &laquo;
         </PaginationButton>
-        <PaginationButton
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          aria-label="前のページへ"
-        >
+        <PaginationButton onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} aria-label="前のページへ">
           &lsaquo; 前へ
         </PaginationButton>
-
         {pageNumbers.map((p, i) =>
           p === "..." ? (
-            <span key={`ellipsis-${i}`} className="px-2 text-gray-400 text-sm select-none">
-              ...
-            </span>
+            <span key={`ellipsis-${i}`} className="px-2 text-gray-400 text-sm select-none">...</span>
           ) : (
             <button
               key={p}
               onClick={() => onPageChange(p)}
               className={`min-w-[36px] h-9 px-2 text-sm rounded-lg font-medium transition-colors ${
-                p === currentPage
-                  ? "bg-gray-900 text-white"
-                  : "text-gray-600 hover:bg-gray-100"
+                p === currentPage ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
               }`}
               aria-current={p === currentPage ? "page" : undefined}
             >
@@ -301,38 +399,19 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
             </button>
           )
         )}
-
-        <PaginationButton
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          aria-label="次のページへ"
-        >
+        <PaginationButton onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} aria-label="次のページへ">
           次へ &rsaquo;
         </PaginationButton>
-        <PaginationButton
-          onClick={() => onPageChange(totalPages)}
-          disabled={currentPage === totalPages}
-          aria-label="最後のページへ"
-        >
+        <PaginationButton onClick={() => onPageChange(totalPages)} disabled={currentPage === totalPages} aria-label="最後のページへ">
           &raquo;
         </PaginationButton>
       </div>
-
-      {/* SP表示 */}
       <div className="flex sm:hidden items-center gap-3">
-        <PaginationButton
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-        >
+        <PaginationButton onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}>
           &lsaquo; 前へ
         </PaginationButton>
-        <span className="text-sm text-gray-600 font-medium">
-          {currentPage} / {totalPages}
-        </span>
-        <PaginationButton
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-        >
+        <span className="text-sm text-gray-600 font-medium">{currentPage} / {totalPages}</span>
+        <PaginationButton onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages}>
           次へ &rsaquo;
         </PaginationButton>
       </div>
@@ -346,9 +425,7 @@ function PaginationButton({ onClick, disabled, children, ...props }) {
       onClick={onClick}
       disabled={disabled}
       className={`h-9 px-3 text-sm rounded-lg font-medium transition-colors ${
-        disabled
-          ? "text-gray-300 cursor-not-allowed"
-          : "text-gray-600 hover:bg-gray-100"
+        disabled ? "text-gray-300 cursor-not-allowed" : "text-gray-600 hover:bg-gray-100"
       }`}
       {...props}
     >
