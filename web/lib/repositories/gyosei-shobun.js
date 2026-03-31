@@ -50,15 +50,22 @@ export function listAdministrativeActions({
 
   let orderBy;
   switch (sort) {
-    case "action_date":
-      orderBy = "action_date DESC NULLS LAST, updated_at DESC";
+    case "oldest":
+      orderBy = "action_date ASC NULLS LAST, id ASC";
       break;
     case "severity":
-      orderBy = "CASE action_type WHEN 'license_revocation' THEN 1 WHEN 'business_suspension' THEN 2 WHEN 'improvement_order' THEN 3 WHEN 'warning' THEN 4 WHEN 'guidance' THEN 5 ELSE 6 END, action_date DESC";
+      orderBy = "CASE action_type WHEN 'license_revocation' THEN 1 WHEN 'business_suspension' THEN 2 WHEN 'improvement_order' THEN 3 WHEN 'warning' THEN 4 WHEN 'guidance' THEN 5 ELSE 6 END, action_date DESC, id DESC";
+      break;
+    case "agency":
+      orderBy = "CASE WHEN authority_name IS NULL OR authority_name = '' THEN 1 ELSE 0 END, authority_name ASC, action_date DESC, id DESC";
+      break;
+    case "organization":
+      orderBy = "CASE WHEN organization_name_raw IS NULL OR organization_name_raw = '' THEN 1 ELSE 0 END, organization_name_raw ASC, action_date DESC, id DESC";
       break;
     case "newest":
     default:
-      orderBy = "created_at DESC";
+      orderBy = "action_date DESC NULLS LAST, id DESC";
+      break;
   }
 
   const total = db

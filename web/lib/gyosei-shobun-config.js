@@ -42,9 +42,11 @@ export const gyoseiShobunConfig = {
 
   // ソート
   sorts: [
-    { key: "newest", label: "新着順" },
-    { key: "action_date", label: "処分日順" },
+    { key: "newest", label: "処分日が新しい順" },
+    { key: "oldest", label: "処分日が古い順" },
     { key: "severity", label: "重大度順" },
+    { key: "agency", label: "行政庁順" },
+    { key: "organization", label: "事業者名順" },
   ],
 
   // 比較項目（最小）
