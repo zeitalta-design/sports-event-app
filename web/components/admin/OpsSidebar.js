@@ -19,6 +19,7 @@ const NAV_SECTIONS = [
       { href: "/admin/ops/inquiries", label: "問い合わせ", icon: InquiryIcon },
       { href: "/admin/ops/scraping", label: "スクレイピング", icon: ScrapingIcon },
       { href: "/admin/ops/patrol", label: "巡回パトロール", icon: PatrolIcon },
+      { href: "/admin/ops/gyosei-shobun-sources", label: "情報源監査", icon: PatrolIcon },
       { href: "/admin/ops/analytics", label: "分析", icon: AnalyticsIcon },
       { href: "/admin/ops/placement", label: "掲載効果", icon: PlacementIcon },
     ],
