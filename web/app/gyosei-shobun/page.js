@@ -211,30 +211,41 @@ export default function GyoseiShobunListPage() {
                 <Link
                   key={item.id}
                   href={`/gyosei-shobun/${item.slug}`}
-                  className="bg-white rounded-xl border border-gray-200 p-4 block hover:shadow-md hover:border-gray-300 transition-all"
+                  className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 block hover:shadow-md hover:border-gray-300 transition-all"
                 >
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl flex-shrink-0 mt-0.5">{actionIcon}</span>
+                  {/* 上段: 事業者名 + 処分種別バッジ */}
+                  <div className="flex items-start gap-2.5 mb-2">
+                    <span className="text-xl flex-shrink-0 mt-0.5">{actionIcon}</span>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="text-sm font-bold text-gray-900">{item.organization_name_raw}</h3>
-                        <span className={`text-xs px-2 py-0.5 rounded border ${tc.bg} ${tc.text} ${tc.border}`}>
+                      <h3 className="text-base font-bold text-gray-900 leading-snug break-words">{item.organization_name_raw}</h3>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <span className={`text-[11px] px-2 py-0.5 rounded border font-medium ${tc.bg} ${tc.text} ${tc.border}`}>
                           {actionLabel}
                         </span>
                         {industryLabel && (
-                          <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-500">
+                          <span className="text-[11px] px-2 py-0.5 rounded bg-gray-100 text-gray-500">
                             {industryLabel}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-600 line-clamp-2 mb-2">{item.summary}</p>
-                      <div className="flex items-center gap-3 text-xs text-gray-400">
-                        {item.action_date && <span>{item.action_date}</span>}
-                        {item.authority_name && <span>{item.authority_name}</span>}
-                        {item.prefecture && <span>{item.prefecture}</span>}
-                      </div>
                     </div>
                   </div>
+                  {/* 中段: 処分日・行政庁・都道府県 */}
+                  <div className="flex items-center gap-x-4 gap-y-1 flex-wrap text-xs mb-2 ml-8">
+                    {item.action_date && (
+                      <span className="text-gray-700 font-medium">{item.action_date}</span>
+                    )}
+                    {item.authority_name && (
+                      <span className="text-gray-500">{item.authority_name}</span>
+                    )}
+                    {item.prefecture && (
+                      <span className="text-gray-400">{item.prefecture}{item.city ? ` ${item.city}` : ""}</span>
+                    )}
+                  </div>
+                  {/* 下段: 概要 */}
+                  {item.summary && (
+                    <p className="text-[13px] text-gray-500 leading-relaxed line-clamp-2 ml-8">{item.summary}</p>
+                  )}
                 </Link>
               );
             })}
