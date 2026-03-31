@@ -6,9 +6,12 @@ import {
   SECTORS,
   SOURCE_TYPE_LABELS,
   COVERAGE_LABELS,
+  DISCOVERY_STATUS_LABELS,
+  EXPECTED_COVERAGE_LABELS,
   ALL_PREFECTURES,
   getSourcesBySector,
   getMissingPrefectures,
+  getDiscoveryStatusCounts,
   getCoverageMatrix,
 } from "@/lib/gyosei-shobun-source-registry";
 
@@ -34,22 +37,39 @@ function StatusBadge({ status }) {
 // ─── カバレッジセル ─────────────────────
 
 const COVERAGE_CELL = {
-  registered: { bg: "bg-green-100", text: "text-green-700", label: "登録" },
-  complemented: { bg: "bg-blue-50", text: "text-blue-600", label: "補完" },
+  confirmed: { bg: "bg-green-100", text: "text-green-700", label: "確認済" },
+  candidate: { bg: "bg-blue-100", text: "text-blue-700", label: "候補" },
+  complemented: { bg: "bg-sky-50", text: "text-sky-600", label: "MLIT補完" },
+  manual_review: { bg: "bg-amber-50", text: "text-amber-600", label: "要確認" },
   missing: { bg: "bg-red-50", text: "text-red-600", label: "未登録" },
 };
+
+function DiscoveryBadge({ status }) {
+  const d = DISCOVERY_STATUS_LABELS[status];
+  if (!d) return null;
+  const colors = {
+    green: "bg-green-50 text-green-700 border-green-200",
+    blue: "bg-blue-50 text-blue-700 border-blue-200",
+    amber: "bg-amber-50 text-amber-700 border-amber-200",
+  };
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${colors[d.color] || ""}`}>
+      {d.label}
+    </span>
+  );
+}
 
 // ─── メインページ ─────────────────────
 
 export default function GyoseiShobunSourcesPage() {
   const [sectorFilter, setSectorFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [discoveryFilter, setDiscoveryFilter] = useState("");
   const [auditResults, setAuditResults] = useState(null);
   const [auditing, setAuditing] = useState(false);
 
   const activeSources = SOURCE_REGISTRY.filter((s) => s.active);
-  const missingTakken = getMissingPrefectures("takken");
-  const missingKensetsu = getMissingPrefectures("kensetsu");
+  const discoveryCounts = useMemo(() => getDiscoveryStatusCounts(), []);
   const coverageMatrix = useMemo(() => getCoverageMatrix(), []);
 
   // 監査結果をマージした情報源リスト
@@ -64,6 +84,7 @@ export default function GyoseiShobunSourcesPage() {
   const filteredSources = useMemo(() => {
     let list = sourcesWithStatus;
     if (sectorFilter) list = list.filter((s) => s.sector === sectorFilter);
+    if (discoveryFilter) list = list.filter((s) => s.discoveryStatus === discoveryFilter);
     if (statusFilter) {
       list = list.filter((s) => {
         const st = s.audit?.status || "unknown";
@@ -71,7 +92,7 @@ export default function GyoseiShobunSourcesPage() {
       });
     }
     return list;
-  }, [sourcesWithStatus, sectorFilter, statusFilter]);
+  }, [sourcesWithStatus, sectorFilter, discoveryFilter, statusFilter]);
 
   // 監査実行
   const runAudit = async () => {
@@ -103,19 +124,12 @@ export default function GyoseiShobunSourcesPage() {
       </div>
 
       {/* ──── サマリーカード ──── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         <SummaryCard label="総情報源数" value={SOURCE_REGISTRY.length} />
-        <SummaryCard label="有効ソース" value={activeSources.length} accent="blue" />
-        <SummaryCard
-          label="未登録県（宅建）"
-          value={missingTakken.length}
-          accent={missingTakken.length > 0 ? "orange" : "green"}
-        />
-        <SummaryCard
-          label="未登録県（建設）"
-          value={missingKensetsu.length}
-          accent={missingKensetsu.length > 0 ? "orange" : "green"}
-        />
+        <SummaryCard label="確認済" value={discoveryCounts.confirmed} accent="green" />
+        <SummaryCard label="候補" value={discoveryCounts.candidate} accent="blue" />
+        <SummaryCard label="要確認" value={discoveryCounts.manual_review} accent="amber" />
+        <SummaryCard label="有効" value={activeSources.length} accent="gray" />
       </div>
 
       {/* 監査サマリー */}
@@ -141,11 +155,21 @@ export default function GyoseiShobunSourcesPage() {
           ))}
         </select>
         <select
+          value={discoveryFilter}
+          onChange={(e) => setDiscoveryFilter(e.target.value)}
+          className="text-xs border rounded-lg px-3 py-2"
+        >
+          <option value="">全登録状態</option>
+          <option value="confirmed">確認済</option>
+          <option value="candidate">候補</option>
+          <option value="manual_review">要確認</option>
+        </select>
+        <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="text-xs border rounded-lg px-3 py-2"
         >
-          <option value="">全状態</option>
+          <option value="">全監査状態</option>
           <option value="ok">正常</option>
           <option value="warn">警告</option>
           <option value="error">エラー</option>
@@ -184,7 +208,8 @@ export default function GyoseiShobunSourcesPage() {
                 <th className="px-3 py-2 font-medium">情報源名</th>
                 <th className="px-3 py-2 font-medium">種別</th>
                 <th className="px-3 py-2 font-medium">カバレッジ</th>
-                <th className="px-3 py-2 font-medium">状態</th>
+                <th className="px-3 py-2 font-medium">登録</th>
+                <th className="px-3 py-2 font-medium">監査</th>
                 <th className="px-3 py-2 font-medium">メモ</th>
               </tr>
             </thead>
@@ -220,6 +245,9 @@ export default function GyoseiShobunSourcesPage() {
                     {COVERAGE_LABELS[s.coverageScope] || s.coverageScope}
                   </td>
                   <td className="px-3 py-2.5">
+                    <DiscoveryBadge status={s.discoveryStatus} />
+                  </td>
+                  <td className="px-3 py-2.5">
                     <StatusBadge status={s.audit?.status || "unknown"} />
                     {s.audit?.httpStatus && (
                       <span className="text-[10px] text-gray-400 ml-1">{s.audit.httpStatus}</span>
@@ -234,7 +262,7 @@ export default function GyoseiShobunSourcesPage() {
               ))}
               {filteredSources.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-3 py-8 text-center text-gray-400">
+                  <td colSpan={9} className="px-3 py-8 text-center text-gray-400">
                     条件に一致する情報源はありません
                   </td>
                 </tr>
