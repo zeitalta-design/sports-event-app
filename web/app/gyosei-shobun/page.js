@@ -30,6 +30,8 @@ export default function GyoseiShobunListPage() {
     action_type: searchParams.get("action_type") || "",
     prefecture: searchParams.get("prefecture") || "",
     industry: searchParams.get("industry") || "",
+    year: searchParams.get("year") || "",
+    organization: searchParams.get("organization") || "",
     sort: searchParams.get("sort") || "newest",
     page: Math.max(1, parseInt(searchParams.get("page") || "1", 10)),
   });
@@ -40,6 +42,8 @@ export default function GyoseiShobunListPage() {
     if (f.action_type) params.set("action_type", f.action_type);
     if (f.prefecture) params.set("prefecture", f.prefecture);
     if (f.industry) params.set("industry", f.industry);
+    if (f.year) params.set("year", f.year);
+    if (f.organization) params.set("organization", f.organization);
     if (f.sort && f.sort !== "newest") params.set("sort", f.sort);
     if (f.page > 1) params.set("page", String(f.page));
     const qs = params.toString();
@@ -55,6 +59,8 @@ export default function GyoseiShobunListPage() {
       if (filters.action_type) listParams.set("action_type", filters.action_type);
       if (filters.prefecture) listParams.set("prefecture", filters.prefecture);
       if (filters.industry) listParams.set("industry", filters.industry);
+      if (filters.year) listParams.set("year", filters.year);
+      if (filters.organization) listParams.set("organization", filters.organization);
       listParams.set("sort", filters.sort);
       listParams.set("page", String(filters.page));
       listParams.set("pageSize", String(PAGE_SIZE));
@@ -65,6 +71,8 @@ export default function GyoseiShobunListPage() {
       if (filters.action_type) statsParams.set("action_type", filters.action_type);
       if (filters.prefecture) statsParams.set("prefecture", filters.prefecture);
       if (filters.industry) statsParams.set("industry", filters.industry);
+      if (filters.year) statsParams.set("year", filters.year);
+      if (filters.organization) statsParams.set("organization", filters.organization);
 
       const [listRes, statsRes] = await Promise.all([
         fetch(`/api/gyosei-shobun?${listParams}`),
@@ -103,7 +111,7 @@ export default function GyoseiShobunListPage() {
 
   const startItem = total === 0 ? 0 : (filters.page - 1) * PAGE_SIZE + 1;
   const endItem = Math.min(filters.page * PAGE_SIZE, total);
-  const hasFilters = !!(filters.keyword || filters.action_type || filters.prefecture || filters.industry);
+  const hasFilters = !!(filters.keyword || filters.action_type || filters.prefecture || filters.industry || filters.year || filters.organization);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -168,7 +176,7 @@ export default function GyoseiShobunListPage() {
 
         {/* 統計ダッシュボード */}
         {!loading && stats && (
-          <StatsDashboard stats={stats} hasFilters={hasFilters} />
+          <StatsDashboard stats={stats} hasFilters={hasFilters} filters={filters} onFilterChange={updateFilter} />
         )}
 
         {/* 件数表示 */}
@@ -248,10 +256,15 @@ export default function GyoseiShobunListPage() {
 
 // ─── 統計ダッシュボード ─────────────────────
 
-function StatsDashboard({ stats, hasFilters }) {
+function StatsDashboard({ stats, hasFilters, filters, onFilterChange }) {
   const { totalCount, countsByYear, countsByOrganization, countsByIndustry, countsByActionType, countsByPrefecture } = stats;
   const maxYearCount = Math.max(...(countsByYear || []).map((r) => r.count), 1);
   const maxOrgCount = Math.max(...(countsByOrganization || []).map((r) => r.count), 1);
+
+  // トグル: 同値ならクリア、異なればセット
+  const toggle = (key, value) => {
+    onFilterChange(key, filters[key] === value ? "" : value);
+  };
 
   if (totalCount === 0) return null;
 
@@ -277,26 +290,37 @@ function StatsDashboard({ stats, hasFilters }) {
           </div>
           {countsByYear && countsByYear.length > 0 ? (
             <div className="space-y-1.5">
-              {countsByYear.map((row) => (
-                <div key={row.year} className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 w-10 text-right font-medium shrink-0">
-                    {row.year}
-                  </span>
-                  <div className="flex-1 h-5 bg-gray-50 rounded overflow-hidden">
-                    <div
-                      className="h-full rounded transition-all"
-                      style={{
-                        width: `${Math.max((row.count / maxYearCount) * 100, 2)}%`,
-                        backgroundColor: "#1F6FB2",
-                        opacity: 0.75,
-                      }}
-                    />
-                  </div>
-                  <span className="text-xs font-bold text-gray-700 w-10 text-right shrink-0">
-                    {row.count}
-                  </span>
-                </div>
-              ))}
+              {countsByYear.map((row) => {
+                const isUnknown = row.year === "不明";
+                const isActive = !isUnknown && filters.year === row.year;
+                return (
+                  <button
+                    key={row.year}
+                    onClick={() => !isUnknown && toggle("year", row.year)}
+                    disabled={isUnknown}
+                    className={`w-full flex items-center gap-2 rounded transition-colors ${
+                      isUnknown ? "opacity-60 cursor-default" : "cursor-pointer hover:bg-blue-50/50"
+                    } ${isActive ? "ring-1 ring-[#1F6FB2] bg-blue-50/30 rounded-lg" : ""}`}
+                  >
+                    <span className={`text-xs w-10 text-right font-medium shrink-0 ${isActive ? "text-[#1F6FB2] font-bold" : "text-gray-500"}`}>
+                      {row.year}
+                    </span>
+                    <div className="flex-1 h-5 bg-gray-50 rounded overflow-hidden">
+                      <div
+                        className="h-full rounded transition-all"
+                        style={{
+                          width: `${Math.max((row.count / maxYearCount) * 100, 2)}%`,
+                          backgroundColor: "#1F6FB2",
+                          opacity: isActive ? 0.9 : 0.75,
+                        }}
+                      />
+                    </div>
+                    <span className={`text-xs font-bold w-10 text-right shrink-0 ${isActive ? "text-[#1F6FB2]" : "text-gray-700"}`}>
+                      {row.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <p className="text-xs text-gray-400">データなし</p>
@@ -308,34 +332,43 @@ function StatsDashboard({ stats, hasFilters }) {
           <h3 className="text-xs font-bold text-gray-600 mb-3">事業者別件数 TOP 10</h3>
           {countsByOrganization && countsByOrganization.length > 0 ? (
             <div className="space-y-1.5">
-              {countsByOrganization.map((row, i) => (
-                <div key={`${row.organizationName}-${i}`} className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400 w-5 text-right shrink-0 font-medium">
-                    {i + 1}
-                  </span>
-                  <div className="flex-1 min-w-0 flex items-center gap-2">
+              {countsByOrganization.map((row, i) => {
+                const isUnknown = row.organizationName === "名称不明";
+                const isActive = !isUnknown && filters.organization === row.organizationName;
+                return (
+                  <button
+                    key={`${row.organizationName}-${i}`}
+                    onClick={() => !isUnknown && toggle("organization", row.organizationName)}
+                    disabled={isUnknown}
+                    className={`w-full flex items-center gap-2 rounded transition-colors ${
+                      isUnknown ? "opacity-60 cursor-default" : "cursor-pointer hover:bg-blue-50/50"
+                    } ${isActive ? "ring-1 ring-[#1F6FB2] bg-blue-50/30 rounded-lg" : ""}`}
+                  >
+                    <span className={`text-xs w-5 text-right shrink-0 font-medium ${isActive ? "text-[#1F6FB2]" : "text-gray-400"}`}>
+                      {i + 1}
+                    </span>
                     <div className="flex-1 min-w-0 relative h-5 bg-gray-50 rounded overflow-hidden">
                       <div
                         className="absolute inset-y-0 left-0 rounded transition-all"
                         style={{
                           width: `${Math.max((row.count / maxOrgCount) * 100, 3)}%`,
                           backgroundColor: "#1F6FB2",
-                          opacity: 0.15,
+                          opacity: isActive ? 0.3 : 0.15,
                         }}
                       />
                       <span
-                        className="relative z-10 text-[11px] text-gray-700 font-medium truncate block leading-5 px-1.5"
+                        className={`relative z-10 text-[11px] font-medium truncate block leading-5 px-1.5 text-left ${isActive ? "text-[#1F6FB2] font-bold" : "text-gray-700"}`}
                         title={row.organizationName}
                       >
                         {row.organizationName}
                       </span>
                     </div>
-                  </div>
-                  <span className="text-xs font-bold text-gray-700 w-8 text-right shrink-0">
-                    {row.count}
-                  </span>
-                </div>
-              ))}
+                    <span className={`text-xs font-bold w-8 text-right shrink-0 ${isActive ? "text-[#1F6FB2]" : "text-gray-700"}`}>
+                      {row.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <p className="text-xs text-gray-400">データなし</p>
@@ -347,23 +380,38 @@ function StatsDashboard({ stats, hasFilters }) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
         <StatsRankingCard
           title="業種別件数"
+          filterKey="industry"
+          activeValue={filters.industry}
+          onToggle={toggle}
           data={(countsByIndustry || []).map((r) => ({
+            value: r.industry,
             label: gyoseiShobunConfig.industries.find((i) => i.slug === r.industry)?.label || r.industry,
             count: r.count,
+            isUnknown: r.industry === "業種不明",
           }))}
         />
         <StatsRankingCard
           title="処分種別件数"
+          filterKey="action_type"
+          activeValue={filters.action_type}
+          onToggle={toggle}
           data={(countsByActionType || []).map((r) => ({
+            value: r.actionType,
             label: gyoseiShobunConfig.actionTypes.find((t) => t.slug === r.actionType)?.label || r.actionType,
             count: r.count,
+            isUnknown: r.actionType === "種別不明",
           }))}
         />
         <StatsRankingCard
           title="都道府県別件数"
+          filterKey="prefecture"
+          activeValue={filters.prefecture}
+          onToggle={toggle}
           data={(countsByPrefecture || []).map((r) => ({
+            value: r.prefecture,
             label: r.prefecture,
             count: r.count,
+            isUnknown: r.prefecture === "都道府県不明",
           }))}
         />
       </div>
@@ -373,7 +421,7 @@ function StatsDashboard({ stats, hasFilters }) {
 
 // ─── 汎用ランキングカード ─────────────────────
 
-function StatsRankingCard({ title, data }) {
+function StatsRankingCard({ title, filterKey, activeValue, onToggle, data }) {
   const maxCount = Math.max(...(data || []).map((r) => r.count), 1);
 
   return (
@@ -381,32 +429,42 @@ function StatsRankingCard({ title, data }) {
       <h3 className="text-xs font-bold text-gray-600 mb-3">{title}</h3>
       {data && data.length > 0 ? (
         <div className="space-y-1.5">
-          {data.map((row, i) => (
-            <div key={`${row.label}-${i}`} className="flex items-center gap-2">
-              <span className="text-xs text-gray-400 w-5 text-right shrink-0 font-medium">
-                {i + 1}
-              </span>
-              <div className="flex-1 min-w-0 relative h-5 bg-gray-50 rounded overflow-hidden">
-                <div
-                  className="absolute inset-y-0 left-0 rounded transition-all"
-                  style={{
-                    width: `${Math.max((row.count / maxCount) * 100, 3)}%`,
-                    backgroundColor: "#1F6FB2",
-                    opacity: 0.15,
-                  }}
-                />
-                <span
-                  className="relative z-10 text-[11px] text-gray-700 font-medium truncate block leading-5 px-1.5"
-                  title={row.label}
-                >
-                  {row.label}
+          {data.map((row, i) => {
+            const isActive = !row.isUnknown && activeValue === row.value;
+            return (
+              <button
+                key={`${row.value}-${i}`}
+                onClick={() => !row.isUnknown && onToggle(filterKey, row.value)}
+                disabled={row.isUnknown}
+                className={`w-full flex items-center gap-2 rounded transition-colors ${
+                  row.isUnknown ? "opacity-60 cursor-default" : "cursor-pointer hover:bg-blue-50/50"
+                } ${isActive ? "ring-1 ring-[#1F6FB2] bg-blue-50/30 rounded-lg" : ""}`}
+              >
+                <span className={`text-xs w-5 text-right shrink-0 font-medium ${isActive ? "text-[#1F6FB2]" : "text-gray-400"}`}>
+                  {i + 1}
                 </span>
-              </div>
-              <span className="text-xs font-bold text-gray-700 w-8 text-right shrink-0">
-                {row.count}
-              </span>
-            </div>
-          ))}
+                <div className="flex-1 min-w-0 relative h-5 bg-gray-50 rounded overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 rounded transition-all"
+                    style={{
+                      width: `${Math.max((row.count / maxCount) * 100, 3)}%`,
+                      backgroundColor: "#1F6FB2",
+                      opacity: isActive ? 0.3 : 0.15,
+                    }}
+                  />
+                  <span
+                    className={`relative z-10 text-[11px] font-medium truncate block leading-5 px-1.5 text-left ${isActive ? "text-[#1F6FB2] font-bold" : "text-gray-700"}`}
+                    title={row.label}
+                  >
+                    {row.label}
+                  </span>
+                </div>
+                <span className={`text-xs font-bold w-8 text-right shrink-0 ${isActive ? "text-[#1F6FB2]" : "text-gray-700"}`}>
+                  {row.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       ) : (
         <p className="text-xs text-gray-400">データなし</p>

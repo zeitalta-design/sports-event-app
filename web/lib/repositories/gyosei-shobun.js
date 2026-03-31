@@ -11,6 +11,8 @@ export function listAdministrativeActions({
   action_type = "",
   prefecture = "",
   industry = "",
+  year = "",
+  organization = "",
   sort = "newest",
   page = 1,
   pageSize = 20,
@@ -34,6 +36,14 @@ export function listAdministrativeActions({
   if (industry) {
     where.push("industry = @industry");
     params.industry = industry;
+  }
+  if (year) {
+    where.push("SUBSTR(action_date, 1, 4) = @year");
+    params.year = year;
+  }
+  if (organization) {
+    where.push("organization_name_raw = @organization");
+    params.organization = organization;
   }
 
   const whereClause = `WHERE ${where.join(" AND ")}`;
@@ -77,6 +87,8 @@ export function getAdministrativeActionStats({
   action_type = "",
   prefecture = "",
   industry = "",
+  year = "",
+  organization = "",
 } = {}) {
   const db = getDb();
   const where = ["is_published = 1"];
@@ -97,6 +109,14 @@ export function getAdministrativeActionStats({
   if (industry) {
     where.push("industry = @industry");
     params.industry = industry;
+  }
+  if (year) {
+    where.push("SUBSTR(action_date, 1, 4) = @year");
+    params.year = year;
+  }
+  if (organization) {
+    where.push("organization_name_raw = @organization");
+    params.organization = organization;
   }
 
   const whereClause = `WHERE ${where.join(" AND ")}`;
