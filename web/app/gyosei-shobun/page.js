@@ -249,7 +249,7 @@ export default function GyoseiShobunListPage() {
 // ─── 統計ダッシュボード ─────────────────────
 
 function StatsDashboard({ stats, hasFilters }) {
-  const { totalCount, countsByYear, countsByOrganization } = stats;
+  const { totalCount, countsByYear, countsByOrganization, countsByIndustry, countsByActionType, countsByPrefecture } = stats;
   const maxYearCount = Math.max(...(countsByYear || []).map((r) => r.count), 1);
   const maxOrgCount = Math.max(...(countsByOrganization || []).map((r) => r.count), 1);
 
@@ -342,6 +342,75 @@ function StatsDashboard({ stats, hasFilters }) {
           )}
         </div>
       </div>
+
+      {/* 追加統計: 業種別 / 処分種別 / 都道府県別 */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+        <StatsRankingCard
+          title="業種別件数"
+          data={(countsByIndustry || []).map((r) => ({
+            label: gyoseiShobunConfig.industries.find((i) => i.slug === r.industry)?.label || r.industry,
+            count: r.count,
+          }))}
+        />
+        <StatsRankingCard
+          title="処分種別件数"
+          data={(countsByActionType || []).map((r) => ({
+            label: gyoseiShobunConfig.actionTypes.find((t) => t.slug === r.actionType)?.label || r.actionType,
+            count: r.count,
+          }))}
+        />
+        <StatsRankingCard
+          title="都道府県別件数"
+          data={(countsByPrefecture || []).map((r) => ({
+            label: r.prefecture,
+            count: r.count,
+          }))}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── 汎用ランキングカード ─────────────────────
+
+function StatsRankingCard({ title, data }) {
+  const maxCount = Math.max(...(data || []).map((r) => r.count), 1);
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <h3 className="text-xs font-bold text-gray-600 mb-3">{title}</h3>
+      {data && data.length > 0 ? (
+        <div className="space-y-1.5">
+          {data.map((row, i) => (
+            <div key={`${row.label}-${i}`} className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 w-5 text-right shrink-0 font-medium">
+                {i + 1}
+              </span>
+              <div className="flex-1 min-w-0 relative h-5 bg-gray-50 rounded overflow-hidden">
+                <div
+                  className="absolute inset-y-0 left-0 rounded transition-all"
+                  style={{
+                    width: `${Math.max((row.count / maxCount) * 100, 3)}%`,
+                    backgroundColor: "#1F6FB2",
+                    opacity: 0.15,
+                  }}
+                />
+                <span
+                  className="relative z-10 text-[11px] text-gray-700 font-medium truncate block leading-5 px-1.5"
+                  title={row.label}
+                >
+                  {row.label}
+                </span>
+              </div>
+              <span className="text-xs font-bold text-gray-700 w-8 text-right shrink-0">
+                {row.count}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-gray-400">データなし</p>
+      )}
     </div>
   );
 }

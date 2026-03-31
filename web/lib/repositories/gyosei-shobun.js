@@ -133,7 +133,48 @@ export function getAdministrativeActionStats({
     `)
     .all(params);
 
-  return { totalCount, countsByYear, countsByOrganization };
+  // 業種別件数 TOP 10
+  const countsByIndustry = db
+    .prepare(`
+      SELECT
+        COALESCE(NULLIF(TRIM(industry), ''), '業種不明') AS industry,
+        COUNT(*) AS count
+      FROM administrative_actions
+      ${whereClause}
+      GROUP BY industry
+      ORDER BY count DESC, industry ASC
+      LIMIT 10
+    `)
+    .all(params);
+
+  // 処分種別件数
+  const countsByActionType = db
+    .prepare(`
+      SELECT
+        COALESCE(NULLIF(TRIM(action_type), ''), '種別不明') AS actionType,
+        COUNT(*) AS count
+      FROM administrative_actions
+      ${whereClause}
+      GROUP BY actionType
+      ORDER BY count DESC, actionType ASC
+    `)
+    .all(params);
+
+  // 都道府県別件数 TOP 10
+  const countsByPrefecture = db
+    .prepare(`
+      SELECT
+        COALESCE(NULLIF(TRIM(prefecture), ''), '都道府県不明') AS prefecture,
+        COUNT(*) AS count
+      FROM administrative_actions
+      ${whereClause}
+      GROUP BY prefecture
+      ORDER BY count DESC, prefecture ASC
+      LIMIT 10
+    `)
+    .all(params);
+
+  return { totalCount, countsByYear, countsByOrganization, countsByIndustry, countsByActionType, countsByPrefecture };
 }
 
 export function getAdministrativeActionBySlug(slug) {
