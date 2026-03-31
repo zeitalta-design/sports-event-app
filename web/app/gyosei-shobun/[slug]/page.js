@@ -213,6 +213,7 @@ export default async function GyoseiShobunDetailPage({ params }) {
                 const riAction = gyoseiShobunConfig.actionTypes.find((t) => t.slug === ri.action_type);
                 const riIndustry = gyoseiShobunConfig.industries.find((i) => i.slug === ri.industry);
                 const riColor = ACTION_TYPE_COLORS[ri.action_type] || ACTION_TYPE_COLORS.other;
+                const reasons = getMatchReasons(item, ri);
                 return (
                   <Link
                     key={ri.id}
@@ -235,6 +236,15 @@ export default async function GyoseiShobunDetailPage({ params }) {
                       <div className="flex items-center gap-2 text-[11px] text-gray-400">
                         {ri.action_date && <span>{ri.action_date}</span>}
                         {ri.prefecture && <span>{ri.prefecture}</span>}
+                        {reasons.length > 0 && (
+                          <span className="flex items-center gap-1 ml-auto">
+                            {reasons.map((r) => (
+                              <span key={r} className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 border border-blue-100 text-[10px]">
+                                {r}
+                              </span>
+                            ))}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </Link>
@@ -259,6 +269,21 @@ export default async function GyoseiShobunDetailPage({ params }) {
       </div>
     </div>
   );
+}
+
+// ─── 関連理由判定 ─────────────────────
+
+function getMatchReasons(current, related) {
+  const reasons = [];
+  if (current.organization_name_raw && current.organization_name_raw === related.organization_name_raw)
+    reasons.push("同一事業者");
+  if (current.industry && current.industry === related.industry)
+    reasons.push("同業種");
+  if (current.action_type && current.action_type === related.action_type)
+    reasons.push("同一処分種別");
+  if (current.prefecture && current.prefecture === related.prefecture)
+    reasons.push("同都道府県");
+  return reasons.slice(0, 3);
 }
 
 // ─── key-value 表示コンポーネント ─────────────────────
