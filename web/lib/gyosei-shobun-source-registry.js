@@ -207,7 +207,7 @@ const PREFECTURE_TAKKEN_SOURCES = [
   prefSource({ pref: "熊本県", sector: "takken", id: "kumamoto_takken", name: "熊本県 宅建業者監督処分", url: null, discoveryStatus: "manual_review", notes: "県ページ未確認。" }),
   prefSource({ pref: "大分県", sector: "takken", id: "oita_takken", name: "大分県 宅建業者監督処分", url: null, discoveryStatus: "manual_review", notes: "県ページ未確認。" }),
   prefSource({ pref: "宮崎県", sector: "takken", id: "miyazaki_takken", name: "宮崎県 宅建業者監督処分", url: null, discoveryStatus: "manual_review", notes: "県ページ未確認。" }),
-  prefSource({ pref: "鹿児島県", sector: "takken", id: "kagoshima_takken", name: "鹿児島県 宅建業者監督処分", url: "http://www.pref.kagoshima.jp/ah12/infra/kentiku/shidou/torihiki/sonota/takkengyoushashobunjouhou.html", discoveryStatus: "candidate", notes: "案内ポータル。H21以降の処分を5年間公表とするが、一覧はMLIT検索サイト誘導。県独自Web一覧なし。", expectedCoverage: "mlit_primary" }),
+  prefSource({ pref: "鹿児島県", sector: "takken", id: "kagoshima_takken", name: "鹿児島県 宅建業者監督処分（案内）", url: "http://www.pref.kagoshima.jp/ah12/infra/kentiku/shidou/torihiki/sonota/takkengyoushashobunjouhou.html", discoveryStatus: "candidate", notes: "最終確認済。案内ページのみ。具体的処分事例の掲載なし。全リンクがMLIT検索サイト誘導。県独自Web一覧なし。confirmed不可。", expectedCoverage: "mlit_primary" }),
   prefSource({ pref: "沖縄県", sector: "takken", id: "okinawa_takken", name: "沖縄県 宅建業者監督処分", url: null, discoveryStatus: "manual_review", notes: "県ページ未確認。" }),
 ];
 
@@ -222,8 +222,8 @@ const PREFECTURE_KENSETSU_SOURCES = [
   prefSource({ pref: "山形県", sector: "kensetsu", id: "yamagata_kensetsu", name: "山形県 建設業者監督処分", url: null, discoveryStatus: "manual_review", notes: "県ページ未確認。" }),
   prefSource({ pref: "福島県", sector: "kensetsu", id: "fukushima_kensetsu", name: "福島県 建設業者監督処分", url: "https://www.pref.fukushima.lg.jp/sec/41025c/kyokasyobun.html", discoveryStatus: "confirmed", notes: "許可取消・営業停止・指示の一覧。5年間公表。" }),
   prefSource({ pref: "茨城県", sector: "kensetsu", id: "ibaraki_kensetsu", name: "茨城県 建設業者監督処分", url: null, discoveryStatus: "manual_review", notes: "建設業処分の県独自公表ページ未確認。宅建は confirmed 済み。" }),
-  prefSource({ pref: "栃木県", sector: "kensetsu", id: "tochigi_kensetsu", name: "栃木県 建設業者監督処分", url: "https://www.pref.tochigi.lg.jp/h01/work/kensetsugyou/kyoka/kensetugyou_syobun.html", discoveryStatus: "candidate", notes: "処分基準ページ（R5年5月施行）。処分実績一覧なし。MLIT検索サイト誘導。", expectedCoverage: "mlit_primary" }),
-  prefSource({ pref: "群馬県", sector: "kensetsu", id: "gunma_kensetsu", name: "群馬県 建設業者監督処分", url: "https://www.pref.gunma.jp/page/10901.html", discoveryStatus: "candidate", notes: "処分基準ページ。処分実績一覧なし。MLIT検索サイト誘導。", expectedCoverage: "mlit_primary" }),
+  prefSource({ pref: "栃木県", sector: "kensetsu", id: "tochigi_kensetsu", name: "栃木県 建設業者監督処分（基準）", url: "https://www.pref.tochigi.lg.jp/h01/work/kensetsugyou/kyoka/kensetugyou_syobun.html", discoveryStatus: "candidate", notes: "最終確認済。処分基準ページのみ（R5年5月施行）。処分簿・一覧はWeb未掲載。MLIT誘導。confirmed不可。", expectedCoverage: "mlit_primary" }),
+  prefSource({ pref: "群馬県", sector: "kensetsu", id: "gunma_kensetsu", name: "群馬県 建設業者監督処分（基準）", url: "https://www.pref.gunma.jp/page/10901.html", discoveryStatus: "candidate", notes: "最終確認済。処分基準ページのみ。建設分野の処分一覧・処分簿はWeb未掲載。MLIT誘導。confirmed不可。", expectedCoverage: "mlit_primary" }),
   prefSource({ pref: "埼玉県", sector: "kensetsu", id: "saitama_kensetsu", name: "埼玉県 建設業者指導監督", url: "https://www.pref.saitama.lg.jp/a1002/kantoku.html", discoveryStatus: "confirmed", notes: "建設業者等の指導監督ページ。" }),
   prefSource({ pref: "千葉県", sector: "kensetsu", id: "chiba_kensetsu", name: "千葉県 建設業者監督処分", url: "https://www.pref.chiba.lg.jp/kenfudou/gyouseishobun/kensetu/index.html", discoveryStatus: "confirmed", notes: "年度別一覧。県ページに載せていない処分はMLITに掲載との案内あり。", expectedCoverage: "hybrid" }),
   prefSource({ pref: "東京都", sector: "kensetsu", id: "tokyo_kensetsu", name: "東京都 建設業者監督処分", url: "https://www.toshiseibi.metro.tokyo.lg.jp/kenchiku_kaihatsu/kenchiku_shidou/gyosya_shido/kensetsu/kensetsu04", discoveryStatus: "confirmed", notes: "不正行為等に対する監督処分基準。" }),
