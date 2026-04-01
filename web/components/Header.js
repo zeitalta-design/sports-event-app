@@ -109,22 +109,28 @@ export default function Header() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
                 </svg>
               </HeaderIconLink>
-              {/* リスク監視アイコン + 未読バッジ */}
-              <Link
-                href="/risk-watch"
-                className="relative inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                title="リスク監視"
-              >
-                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+              {/* リスク監視アイコン（眼→/risk-watch）+ 未読バッジ（→/risk-alerts） */}
+              <div className="relative">
+                <Link
+                  href="/risk-watch"
+                  className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                  title="リスク監視"
+                >
+                  <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </Link>
                 {riskUnreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full">
+                  <Link
+                    href="/risk-alerts"
+                    className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full hover:bg-red-600 transition-colors"
+                    title="リスク通知を見る"
+                  >
                     {riskUnreadCount > 9 ? "9+" : riskUnreadCount}
-                  </span>
+                  </Link>
                 )}
-              </Link>
+              </div>
               <NotificationBell />
             </>
           )}
@@ -192,6 +198,7 @@ export default function Header() {
               <MobileNavLink href="/favorites" label="お気に入り" onClick={() => setMenuOpen(false)} />
               <MobileNavLink href="/saved-searches" label="保存検索" onClick={() => setMenuOpen(false)} />
               <MobileNavLink href="/risk-watch" label={`リスク監視${riskUnreadCount > 0 ? ` (${riskUnreadCount})` : ""}`} onClick={() => setMenuOpen(false)} />
+              <MobileNavLink href="/risk-alerts" label="リスク通知" onClick={() => setMenuOpen(false)} />
               <MobileNavLink href="/notifications" label="通知一覧" onClick={() => setMenuOpen(false)} />
               <MobileNavLink href="/notification-settings" label="通知設定" onClick={() => setMenuOpen(false)} />
               {isAdmin && (
