@@ -77,15 +77,15 @@ const DB_CARDS = [
   },
   {
     id: "watchlist",
-    status: "一部提供中",
+    status: "提供中",
     category: "監視 / アラート",
     icon: "👁",
-    title: "ウォッチ・通知データベース",
-    description: "特定の事業者や条件の更新を継続的に確認するための監視向けデータベースです。",
-    tags: ["監視", "通知", "更新確認"],
-    targetUsers: "管理部門 / 調査担当 / 監視担当",
-    href: "/gyosei-shobun",
-    cta: "詳細を見る",
+    title: "リスク監視・通知",
+    description: "取引先・競合の行政処分を継続監視。新着処分が登録されると通知を受け取れます。危険度スコアで優先度を可視化。",
+    tags: ["ウォッチ", "リスク管理", "通知", "継続監視"],
+    targetUsers: "管理部門 / 審査部門 / 経営層",
+    href: "/risk-watch",
+    cta: "監視を始める",
   },
 ];
 
