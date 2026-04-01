@@ -1279,6 +1279,27 @@ export function getDb() {
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_watched_orgs_name ON watched_organizations(organization_name)`);
     // 既存テーブルへのカラム追加（冪等）
     try { _db.exec("ALTER TABLE watched_organizations ADD COLUMN last_notified_action_date TEXT"); } catch {}
+
+    // risk_alerts: 行政処分アラート（一般ユーザー向け）
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS risk_alerts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        watched_org_id INTEGER REFERENCES watched_organizations(id) ON DELETE CASCADE,
+        action_id INTEGER REFERENCES administrative_actions(id) ON DELETE CASCADE,
+        organization_name TEXT NOT NULL,
+        industry TEXT NOT NULL DEFAULT '',
+        action_type TEXT NOT NULL DEFAULT 'other',
+        action_date TEXT,
+        title TEXT NOT NULL,
+        body TEXT,
+        is_read INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_risk_alerts_user ON risk_alerts(user_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_risk_alerts_read ON risk_alerts(user_id, is_read)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_risk_alerts_created ON risk_alerts(created_at)`);
   }
   return _db;
 }
