@@ -14,6 +14,7 @@ import {
   removeWatchById,
   getWatchedOrgSet,
 } from "@/lib/repositories/watched-organizations";
+import { syncRiskAlerts } from "@/lib/watchlist-notification-service";
 
 const FREE_WATCH_LIMIT = 3;
 
@@ -58,6 +59,8 @@ export async function POST(request) {
     }
 
     const result = addWatch(user.id, organization_name, industry || "");
+    // ウォッチ追加直後に既存処分を risk_alerts に同期（冪等）
+    try { syncRiskAlerts(); } catch {}
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });

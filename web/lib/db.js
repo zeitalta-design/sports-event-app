@@ -1300,6 +1300,8 @@ export function getDb() {
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_risk_alerts_user ON risk_alerts(user_id)`);
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_risk_alerts_read ON risk_alerts(user_id, is_read)`);
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_risk_alerts_created ON risk_alerts(created_at)`);
+    // 冪等性保証: (user_id, action_id) 重複挿入防止
+    _db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_risk_alerts_unique ON risk_alerts(user_id, action_id) WHERE action_id IS NOT NULL`);
   }
   return _db;
 }
