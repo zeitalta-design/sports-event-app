@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { gyoseiShobunConfig } from "@/lib/gyosei-shobun-config";
+import RiskBadge from "@/components/RiskBadge";
 
 const ACTION_TYPE_COLORS = {
   license_revocation: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200" },
@@ -35,6 +36,74 @@ export default function GyoseiShobunListPage() {
     sort: searchParams.get("sort") || "newest",
     page: Math.max(1, parseInt(searchParams.get("page") || "1", 10)),
   });
+
+  const [watchedKeys, setWatchedKeys] = useState(new Set());
+  const [watchLoading, setWatchLoading] = useState(false);
+  const [riskScores, setRiskScores] = useState({});
+
+  // ウォッチ済みキーセット取得
+  const fetchWatchedKeys = useCallback(async () => {
+    try {
+      const res = await fetch("/api/watchlist?mode=set");
+      if (res.ok) {
+        const data = await res.json();
+        setWatchedKeys(new Set(data.watchedKeys || []));
+      }
+    } catch {}
+  }, []);
+
+  // 危険度スコア一括取得（表示中アイテム）
+  const fetchRiskScores = useCallback(async (items) => {
+    if (!items || items.length === 0) return;
+    const results = {};
+    await Promise.all(
+      items.slice(0, 20).map(async (item) => {
+        const key = `${item.organization_name_raw}::${item.industry || ""}`;
+        if (riskScores[key]) return;
+        try {
+          const res = await fetch(
+            `/api/entities/risk-summary?name=${encodeURIComponent(item.organization_name_raw)}&industry=${encodeURIComponent(item.industry || "")}`
+          );
+          if (res.ok) results[key] = await res.json();
+        } catch {}
+      })
+    );
+    if (Object.keys(results).length > 0) {
+      setRiskScores((prev) => ({ ...prev, ...results }));
+    }
+  }, [riskScores]);
+
+  // ウォッチ追加/解除
+  const toggleWatch = useCallback(async (e, item) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (watchLoading) return;
+    setWatchLoading(true);
+    const key = `${item.organization_name_raw}::${item.industry || ""}`;
+    const isWatched = watchedKeys.has(key);
+    try {
+      if (isWatched) {
+        await fetch("/api/watchlist", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ organization_name: item.organization_name_raw, industry: item.industry || "" }),
+        });
+        setWatchedKeys((prev) => { const s = new Set(prev); s.delete(key); return s; });
+      } else {
+        const res = await fetch("/api/watchlist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ organization_name: item.organization_name_raw, industry: item.industry || "" }),
+        });
+        if (res.status === 403) {
+          alert("ウォッチ登録は最大3件までです。");
+        } else if (res.ok) {
+          setWatchedKeys((prev) => new Set([...prev, key]));
+        }
+      }
+    } catch {}
+    setWatchLoading(false);
+  }, [watchedKeys, watchLoading]);
 
   const syncUrl = useCallback((f) => {
     const params = new URLSearchParams();
@@ -98,6 +167,14 @@ export default function GyoseiShobunListPage() {
     fetchData();
     syncUrl(filters);
   }, [fetchData, syncUrl, filters]);
+
+  useEffect(() => {
+    fetchWatchedKeys();
+  }, [fetchWatchedKeys]);
+
+  useEffect(() => {
+    if (items.length > 0) fetchRiskScores(items);
+  }, [items]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateFilter = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
@@ -207,17 +284,34 @@ export default function GyoseiShobunListPage() {
               const actionIcon = gyoseiShobunConfig.actionTypes.find((t) => t.slug === item.action_type)?.icon || "📄";
               const industryLabel = gyoseiShobunConfig.industries.find((i) => i.slug === item.industry)?.label || "";
 
+              const watchKey = `${item.organization_name_raw}::${item.industry || ""}`;
+              const isWatched = watchedKeys.has(watchKey);
+              const riskData = riskScores[watchKey];
+
               return (
                 <Link
                   key={item.id}
                   href={`/gyosei-shobun/${item.slug}`}
                   className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 block hover:shadow-md hover:border-gray-300 transition-all"
                 >
-                  {/* 上段: 事業者名 + 処分種別バッジ */}
+                  {/* 上段: 事業者名 + 処分種別バッジ + ウォッチ・危険度 */}
                   <div className="flex items-start gap-2.5 mb-2">
                     <span className="text-xl flex-shrink-0 mt-0.5">{actionIcon}</span>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-bold text-gray-900 leading-snug break-words">{item.organization_name_raw}</h3>
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="text-base font-bold text-gray-900 leading-snug break-words">{item.organization_name_raw}</h3>
+                        <button
+                          onClick={(e) => toggleWatch(e, item)}
+                          className={`flex-shrink-0 text-xs px-2 py-1 rounded border transition-colors ${
+                            isWatched
+                              ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                              : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-700"
+                          }`}
+                          title={isWatched ? "ウォッチ解除" : "ウォッチ登録"}
+                        >
+                          {isWatched ? "👁 監視中" : "+ ウォッチ"}
+                        </button>
+                      </div>
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         <span className={`text-[11px] px-2 py-0.5 rounded border font-medium ${tc.bg} ${tc.text} ${tc.border}`}>
                           {actionLabel}
@@ -226,6 +320,9 @@ export default function GyoseiShobunListPage() {
                           <span className="text-[11px] px-2 py-0.5 rounded bg-gray-100 text-gray-500">
                             {industryLabel}
                           </span>
+                        )}
+                        {riskData && (
+                          <RiskBadge score={riskData.score} level={riskData.level} label={riskData.label} />
                         )}
                       </div>
                     </div>
