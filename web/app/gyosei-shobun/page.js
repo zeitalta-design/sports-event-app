@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { gyoseiShobunConfig } from "@/lib/gyosei-shobun-config";
@@ -17,7 +17,15 @@ const ACTION_TYPE_COLORS = {
 
 const PAGE_SIZE = 20;
 
-export default function GyoseiShobunListPage() {
+export default function GyoseiShobunListPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="w-8 h-8 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" /></div>}>
+      <GyoseiShobunListPage />
+    </Suspense>
+  );
+}
+
+function GyoseiShobunListPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 

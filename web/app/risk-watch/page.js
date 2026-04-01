@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import RiskBadge from "@/components/RiskBadge";
@@ -25,7 +25,15 @@ const ACTION_LABELS = {
 
 const FREE_WATCH_LIMIT = 3;
 
-export default function RiskWatchPage() {
+export default function RiskWatchPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="w-8 h-8 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" /></div>}>
+      <RiskWatchPage />
+    </Suspense>
+  );
+}
+
+function RiskWatchPage() {
   const searchParams = useSearchParams();
   const [items, setItems] = useState([]);
   const [riskScores, setRiskScores] = useState({});
