@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getAdministrativeActionBySlug, getRelatedAdministrativeActions, getAdjacentAdministrativeActions } from "@/lib/repositories/gyosei-shobun";
 import { gyoseiShobunConfig } from "@/lib/gyosei-shobun-config";
 import { siteConfig } from "@/lib/site-config";
@@ -62,6 +62,11 @@ export default async function GyoseiShobunDetailPage({ params, searchParams }) {
   const sp = await searchParams;
   const item = getAdministrativeActionBySlug(decodedSlug);
   if (!item) notFound();
+
+  // 旧日本語 slug で来た場合、canonical ASCII slug へ 301 redirect
+  if (item.slug !== decodedSlug) {
+    redirect(`/gyosei-shobun/${encodeURIComponent(item.slug)}`);
+  }
 
   const filters = buildFilterQuery(sp);
   const actionType = gyoseiShobunConfig.actionTypes.find((t) => t.slug === item.action_type);
