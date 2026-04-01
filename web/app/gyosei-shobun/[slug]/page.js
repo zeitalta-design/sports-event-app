@@ -10,7 +10,8 @@ import RiskBadge from "@/components/RiskBadge";
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const item = getAdministrativeActionBySlug(slug);
+  const decodedSlug = decodeURIComponent(slug);
+  const item = getAdministrativeActionBySlug(decodedSlug);
   if (!item) return { title: "行政処分情報が見つかりません" };
 
   const actionLabel = gyoseiShobunConfig.actionTypes.find((t) => t.slug === item.action_type)?.label || item.action_type;
@@ -57,8 +58,9 @@ function appendFilterQuery(basePath, filters) {
 
 export default async function GyoseiShobunDetailPage({ params, searchParams }) {
   const { slug } = await params;
+  const decodedSlug = decodeURIComponent(slug);
   const sp = await searchParams;
-  const item = getAdministrativeActionBySlug(slug);
+  const item = getAdministrativeActionBySlug(decodedSlug);
   if (!item) notFound();
 
   const filters = buildFilterQuery(sp);
