@@ -1,238 +1,249 @@
 "use client";
 import Link from "next/link";
 
-/**
- * トップページ — 大海ナビ: 公開データ / 業務DBカタログ
- *
- * 利用可能なデータベースをカード一覧で表示する。
- * DB_CARDS 配列にカードを追加するだけで拡張可能。
- */
-
-// ─── カテゴリカラー定義 ─────────────────────
-const CATEGORY_COLORS = {
-  "行政 / 規制":  { accent: "#1F6FB2", bg: "bg-[#EBF4FB]", text: "text-[#1F6FB2]" },
-  "産廃 / 環境":  { accent: "#0E7490", bg: "bg-[#E6F7FA]", text: "text-[#0E7490]" },
-  "調達 / 入札":  { accent: "#5B6B8A", bg: "bg-[#EEF0F5]", text: "text-[#5B6B8A]" },
-  "公共施設":     { accent: "#2E7D6B", bg: "bg-[#EAF4F1]", text: "text-[#2E7D6B]" },
-  "支援制度":     { accent: "#2E8B57", bg: "bg-[#EAF5EF]", text: "text-[#2E8B57]" },
-  "事業者情報":   { accent: "#7C5CFA", bg: "bg-[#F0ECFE]", text: "text-[#7C5CFA]" },
-};
-
-// ─── 状態バッジスタイル ─────────────────────
-const STATUS_STYLES = {
-  "公開中":     { bg: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-200" },
-  "一部提供中": { bg: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-200" },
-  "準備中":     { bg: "bg-gray-50",   text: "text-gray-500",   border: "border-gray-200" },
-  "構想中":     { bg: "bg-gray-50",   text: "text-gray-400",   border: "border-gray-200" },
-};
-
-// ─── DBカードデータ（公開6カテゴリ統一）─────────────────────
-const DB_CARDS = [
+// ─── 6カテゴリ定義 ────────────────────────────────────────────────
+const CATEGORIES = [
   {
     id: "gyosei-shobun",
-    status: "公開中",
-    category: "行政 / 規制",
-    icon: "📋",
-    title: "行政処分データベース",
-    description: "建設業・宅建業・建築士事務所など各業種の行政処分情報を横断検索。事業者確認や継続監視に活用できます。",
-    tags: ["コンプライアンス", "監視", "調査", "審査"],
-    targetUsers: "管理部門 / 審査部門 / 調査担当",
     href: "/gyosei-shobun",
-    cta: "検索する",
+    status: "公開中",
+    accent: "#1F6FB2",
+    lightBg: "#EBF4FB",
+    title: "行政処分",
+    description: "公開された行政処分情報を検索・確認",
+    detail: "建設業・宅建業・建築士事務所など各業種の行政処分を横断検索できます。",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-7 h-7">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" />
+      </svg>
+    ),
   },
   {
     id: "sanpai",
-    status: "準備中",
-    category: "産廃 / 環境",
-    icon: "♻️",
-    title: "産廃処分データベース",
-    description: "産業廃棄物処理業者への行政処分情報を確認できるデータベースです。",
-    tags: ["産廃", "環境", "処分業者確認"],
-    targetUsers: "管理部門 / 調査担当 / 環境担当",
     href: null,
-    cta: "準備中",
+    status: "準備中",
+    accent: "#0E7490",
+    lightBg: "#E6F7FA",
+    title: "産廃処分",
+    description: "産廃業関連の処分情報を確認",
+    detail: "産業廃棄物処理業者への行政処分情報を業者名・地域・処分種別で確認できます。",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-7 h-7">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+      </svg>
+    ),
   },
   {
     id: "nyusatsu",
-    status: "準備中",
-    category: "調達 / 入札",
-    icon: "🏛",
-    title: "公共調達・入札データベース",
-    description: "官公庁・自治体の調達、公募、入札関連情報を整理して確認できるデータベースです。",
-    tags: ["公共営業", "案件探索", "市場調査"],
-    targetUsers: "営業部門 / 企画部門",
     href: null,
-    cta: "準備中",
+    status: "準備中",
+    accent: "#4A5568",
+    lightBg: "#EEF0F5",
+    title: "入札",
+    description: "官公庁・自治体の入札/公募情報を探す",
+    detail: "国・都道府県・市区町村の入札公告、公募情報を横断して確認できます。",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-7 h-7">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
+      </svg>
+    ),
   },
   {
     id: "shitei",
-    status: "準備中",
-    category: "公共施設",
-    icon: "🏢",
-    title: "指定管理者データベース",
-    description: "公共施設の指定管理者に関する情報を横断検索できるデータベースです。",
-    tags: ["指定管理", "公共施設", "自治体"],
-    targetUsers: "営業部門 / 企画部門 / 自治体担当",
     href: null,
-    cta: "準備中",
+    status: "準備中",
+    accent: "#2E7D6B",
+    lightBg: "#EAF4F1",
+    title: "指定管理",
+    description: "指定管理者の公募・募集情報を確認",
+    detail: "公共施設の指定管理者制度に関する公募・選定・更新情報を確認できます。",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-7 h-7">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+      </svg>
+    ),
   },
   {
     id: "hojokin",
-    status: "準備中",
-    category: "支援制度",
-    icon: "💡",
-    title: "補助金・支援制度データベース",
-    description: "国や自治体の補助金・助成金・支援制度を整理して確認できるデータベースです。",
-    tags: ["制度調査", "営業支援", "情報収集"],
-    targetUsers: "営業部門 / 企画部門 / 支援担当",
     href: null,
-    cta: "準備中",
+    status: "準備中",
+    accent: "#2E8B57",
+    lightBg: "#EAF5EF",
+    title: "補助金",
+    description: "国・自治体の補助金情報を探す",
+    detail: "国・都道府県・市区町村の補助金・助成金・支援制度を条件付きで確認できます。",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-7 h-7">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
   },
   {
     id: "kyoninka",
-    status: "構想中",
-    category: "事業者情報",
-    icon: "🔍",
-    title: "許認可・登録事業者データベース",
-    description: "許認可や登録事業者の公開情報を横断して確認できるデータベースです。",
-    tags: ["事業者確認", "調査", "審査補助"],
-    targetUsers: "審査部門 / 管理部門 / 調査担当",
     href: null,
-    cta: "構想中",
+    status: "構想中",
+    accent: "#6B7280",
+    lightBg: "#F3F4F6",
+    title: "許認可",
+    description: "許認可・登録・更新情報を確認",
+    detail: "各業種の許認可・登録事業者情報を横断して確認できるデータベースです。",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-7 h-7">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+      </svg>
+    ),
   },
 ];
 
-// ─── 用途セクションデータ ─────────────────────
-const USE_CASES = [
-  { icon: "🔎", title: "調査・審査", description: "対象事業者の確認や初動調査に。" },
-  { icon: "👁", title: "監視・継続確認", description: "更新や変化の継続監視に。" },
-  { icon: "📊", title: "営業・企画", description: "市場調査や提案機会の把握に。" },
-];
+const STATUS_STYLES = {
+  "公開中": { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" },
+  "準備中": { bg: "bg-gray-50", text: "text-gray-500", border: "border-gray-200" },
+  "構想中": { bg: "bg-gray-50", text: "text-gray-400", border: "border-gray-200" },
+};
 
-// ─── DBカードコンポーネント ─────────────────────
-function DbCard({ card }) {
-  const catColor = CATEGORY_COLORS[card.category] || CATEGORY_COLORS["行政 / 規制"];
-  const statusStyle = STATUS_STYLES[card.status] || STATUS_STYLES["準備中"];
-  const isActive = !!card.href && card.status !== "準備中" && card.status !== "構想中";
+// ─── カテゴリカード ──────────────────────────────────────────────
+function CategoryCard({ cat }) {
+  const isActive = !!cat.href && cat.status === "公開中";
+  const ss = STATUS_STYLES[cat.status] || STATUS_STYLES["準備中"];
 
   const inner = (
     <div
-      className={`h-full overflow-hidden rounded-2xl bg-white border border-gray-100
-                  shadow-sm flex flex-col transition-all duration-300
-                  ${isActive ? "hover:shadow-md hover:-translate-y-0.5 group" : "opacity-90"}`}
+      className={`
+        relative h-full bg-white rounded-2xl border overflow-hidden flex flex-col
+        transition-all duration-200
+        ${isActive
+          ? "border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-gray-300 group cursor-pointer"
+          : "border-gray-200 opacity-80"}
+      `}
     >
-      {/* アクセントバー */}
-      <div className="h-1 w-full" style={{ backgroundColor: catColor.accent }} />
+      {/* 左サイドアクセントバー */}
+      <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ backgroundColor: cat.accent }} />
 
-      {/* ヘッダー: 状態バッジ + カテゴリ */}
-      <div className="px-5 pt-4 pb-2 flex items-center gap-2">
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
-          {card.status}
-        </span>
-        <span className={`text-[10px] font-semibold ${catColor.text}`}>
-          {card.category}
-        </span>
-      </div>
-
-      {/* タイトル */}
-      <div className="px-5 pb-2 flex items-start gap-2.5">
-        <span className="text-2xl flex-shrink-0 mt-0.5">{card.icon}</span>
-        <h3 className={`font-bold text-[15px] leading-snug text-gray-900 ${isActive ? "group-hover:text-[#1F6FB2]" : ""} transition-colors`}>
-          {card.title}
-        </h3>
-      </div>
-
-      {/* 説明 */}
-      <div className="px-5 pb-3 flex-1">
-        <p className="text-[13px] leading-[1.7] text-gray-600 line-clamp-3">
-          {card.description}
-        </p>
-      </div>
-
-      {/* タグ */}
-      <div className="px-5 pb-3 flex flex-wrap gap-1.5">
-        {card.tags.map((tag) => (
-          <span key={tag} className="text-[11px] px-2.5 py-0.5 rounded-full bg-gray-50 text-gray-600 border border-gray-100">
-            {tag}
+      <div className="pl-5 pr-5 pt-5 pb-4 flex flex-col gap-3 flex-1">
+        {/* アイコン + ステータス */}
+        <div className="flex items-start justify-between">
+          <div
+            className="flex items-center justify-center w-12 h-12 rounded-xl"
+            style={{ backgroundColor: cat.lightBg, color: cat.accent }}
+          >
+            {cat.icon}
+          </div>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${ss.bg} ${ss.text} ${ss.border}`}>
+            {cat.status}
           </span>
-        ))}
-      </div>
+        </div>
 
-      {/* 対象ユーザー */}
-      <div className="px-5 pb-3">
-        <p className="text-xs text-gray-500">
-          <span className="font-semibold text-gray-600">対象:</span> {card.targetUsers}
+        {/* タイトル + 短説明 */}
+        <div>
+          <h3
+            className="text-[17px] font-extrabold text-gray-900 leading-tight mb-1 transition-colors"
+            style={isActive ? undefined : undefined}
+          >
+            <span className={isActive ? "group-hover:text-[var(--accent)]" : ""} style={{"--accent": cat.accent}}>
+              {cat.title}
+            </span>
+          </h3>
+          <p className="text-[13px] font-medium text-gray-500 leading-snug">
+            {cat.description}
+          </p>
+        </div>
+
+        {/* 詳細説明 */}
+        <p className="text-[12px] text-gray-400 leading-relaxed flex-1">
+          {cat.detail}
         </p>
       </div>
 
-      {/* CTA */}
-      <div className="px-5 pb-4 pt-2 mt-auto border-t border-gray-50">
+      {/* フッター */}
+      <div className="px-5 py-3 border-t border-gray-50 flex items-center justify-between">
         {isActive ? (
-          <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#1F6FB2] group-hover:gap-2 transition-all">
-            {card.cta}
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <span
+            className="text-[13px] font-bold flex items-center gap-1 group-hover:gap-2 transition-all"
+            style={{ color: cat.accent }}
+          >
+            検索する
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
             </svg>
           </span>
         ) : (
-          <span className="text-sm text-gray-400 font-medium">{card.cta}</span>
+          <span className="text-[12px] text-gray-300 font-medium">近日公開予定</span>
         )}
       </div>
     </div>
   );
 
   if (isActive) {
-    return <Link href={card.href} className="block">{inner}</Link>;
+    return <Link href={cat.href} className="block h-full">{inner}</Link>;
   }
-  return <div>{inner}</div>;
+  return <div className="h-full">{inner}</div>;
 }
 
-// ─── メインページ ─────────────────────
+// ─── メインページ ─────────────────────────────────────────────────
 export default function HomePage() {
   return (
-    <>
-      {/* ── ヒーロー — 行政処分DB統合エントリー ── */}
-      <section className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0F2A4A 0%, #1A3F6B 40%, #1F5080 100%)" }}>
-        <div
-          className="absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 15% 60%, rgba(100,180,255,0.5), transparent 45%), " +
-              "radial-gradient(circle at 85% 30%, rgba(80,160,240,0.4), transparent 50%)",
-          }}
-        />
-        <div className="relative z-10 max-w-4xl mx-auto px-4 pt-12 pb-10 sm:pt-16 sm:pb-14">
+    <div className="bg-gray-50 min-h-screen">
+
+      {/* ═══ HERO ═══════════════════════════════════════════════════ */}
+      <section
+        className="relative overflow-hidden"
+        style={{ background: "linear-gradient(150deg, #0C2340 0%, #133257 45%, #1A4070 100%)" }}
+      >
+        {/* 背景グロー */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          backgroundImage:
+            "radial-gradient(ellipse at 20% 70%, rgba(31,111,178,0.25) 0%, transparent 50%), " +
+            "radial-gradient(ellipse at 80% 20%, rgba(14,116,144,0.15) 0%, transparent 45%)",
+        }} />
+
+        <div className="relative z-10 max-w-5xl mx-auto px-5 sm:px-8 pt-14 pb-12 sm:pt-20 sm:pb-16">
+
           {/* ラベル */}
-          <p className="text-[11px] font-semibold tracking-widest text-white/40 uppercase mb-3">
-            行政処分 · リスク監視 · コンプライアンス支援
-          </p>
+          <div className="inline-flex items-center gap-2 mb-5 px-3 py-1 rounded-full border border-white/10 bg-white/5">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+            <span className="text-[11px] font-semibold tracking-widest text-white/50 uppercase">
+              公開データ · 業務DB · コンプライアンス支援
+            </span>
+          </div>
+
           {/* タイトル */}
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight mb-2">
-            行政処分データベース
+          <h1 className="text-[2rem] sm:text-[2.75rem] font-extrabold text-white leading-[1.15] tracking-tight mb-4 max-w-2xl">
+            公開情報データベースで、<br className="hidden sm:block" />
+            <span style={{ color: "#5BB4F0" }}>調査・確認・監視</span>をすばやく。
           </h1>
-          <p className="text-sm text-white/60 mb-6 max-w-xl">
-            建設業・宅建業・建築士事務所・産廃業の行政処分情報を横断検索。取引先の確認・継続監視に活用できます。
+
+          {/* サブ */}
+          <p className="text-base sm:text-[17px] text-white/60 leading-relaxed mb-8 max-w-xl">
+            行政処分・入札・指定管理・補助金・許認可など、業務で使える公開情報を横断検索できます。
           </p>
-          {/* 検索フォーム — GETで /gyosei-shobun へ */}
-          <form
-            action="/gyosei-shobun"
-            method="get"
-            className="flex gap-2 max-w-xl"
-          >
-            <input
-              name="organization"
-              type="text"
-              placeholder="事業者名・キーワードで検索..."
-              className="flex-1 px-4 py-2.5 rounded-xl text-sm bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:bg-white/15 focus:border-white/40"
-            />
+
+          {/* 検索フォーム */}
+          <form action="/gyosei-shobun" method="get" className="flex gap-3 max-w-2xl">
+            <div className="flex-1 relative">
+              <svg
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+              <input
+                name="organization"
+                type="text"
+                placeholder="事業者名・キーワードで検索..."
+                className="w-full pl-11 pr-4 py-3.5 rounded-xl text-[15px] bg-white/10 border border-white/20 text-white placeholder-white/35
+                           focus:outline-none focus:bg-white/15 focus:border-white/40 focus:ring-2 focus:ring-white/10 transition-all"
+              />
+            </div>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-[#1F6FB2] hover:bg-[#1a5e99] text-white text-sm font-bold transition-colors whitespace-nowrap"
+              className="px-7 py-3.5 rounded-xl font-bold text-[15px] text-white transition-all whitespace-nowrap shadow-lg hover:shadow-blue-900/30 hover:brightness-110"
+              style={{ background: "linear-gradient(135deg, #1F6FB2 0%, #1558A0 100%)" }}
             >
               検索
             </button>
           </form>
-          {/* 業種タグ */}
+
+          {/* 業種クイックリンク */}
           <div className="flex flex-wrap gap-2 mt-4">
             {[
               { label: "建設業", slug: "construction" },
@@ -243,136 +254,160 @@ export default function HomePage() {
               <a
                 key={slug}
                 href={`/gyosei-shobun?industry=${slug}`}
-                className="text-[11px] px-2.5 py-1 rounded-full border border-white/15 text-white/55 hover:border-white/35 hover:text-white/80 transition-colors"
+                className="text-[12px] px-3 py-1 rounded-full border border-white/12 text-white/45 hover:border-white/30 hover:text-white/70 transition-colors"
               >
                 {label}
               </a>
             ))}
+            <span className="text-[12px] px-3 py-1 text-white/25 flex items-center">↑ 行政処分DBを絞り込む</span>
           </div>
+
           {/* 統計バー */}
-          <div className="flex items-center gap-6 mt-6 pt-5 border-t border-white/10">
-            <a href="/gyosei-shobun" className="group flex items-center gap-2 text-white/70 hover:text-white transition-colors">
-              <svg className="w-4 h-4 text-white/40 group-hover:text-white/70 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-              </svg>
-              <span className="text-xs font-medium">行政処分DB</span>
-              <svg className="w-3.5 h-3.5 opacity-40 group-hover:opacity-70 transition-opacity" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-8 pt-6 border-t border-white/8 text-[12px] text-white/40 font-medium">
+            <a href="/gyosei-shobun" className="hover:text-white/70 transition-colors flex items-center gap-1.5 group">
+              <span className="w-2 h-2 rounded-full bg-blue-500/60 group-hover:bg-blue-400 transition-colors" />
+              行政処分DB
+              <svg className="w-3 h-3 opacity-50 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
               </svg>
             </a>
-            <a href="/risk-watch" className="group flex items-center gap-2 text-white/70 hover:text-white transition-colors">
-              <svg className="w-4 h-4 text-white/40 group-hover:text-white/70 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span className="text-xs font-medium">リスク監視</span>
-              <svg className="w-3.5 h-3.5 opacity-40 group-hover:opacity-70 transition-opacity" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <a href="/risk-watch" className="hover:text-white/70 transition-colors flex items-center gap-1.5 group">
+              <span className="w-2 h-2 rounded-full bg-teal-500/60 group-hover:bg-teal-400 transition-colors" />
+              リスク監視
+              <svg className="w-3 h-3 opacity-50 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
               </svg>
             </a>
+            <span className="text-white/20">|</span>
+            <span>無料で利用可能 · 会員登録で通知・監視機能を追加</span>
           </div>
         </div>
       </section>
 
-      {/* ── 大海ナビとは ── */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-1 h-7 rounded-full" style={{ backgroundColor: "#1F6FB2" }} />
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-gray-900">
-            大海ナビとは
+      {/* ═══ CATEGORY GRID ══════════════════════════════════════════ */}
+      <section className="max-w-5xl mx-auto px-5 sm:px-8 py-12 sm:py-16">
+
+        {/* セクション見出し */}
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-1 h-6 rounded-full" style={{ backgroundColor: "#1F6FB2" }} />
+          <h2 className="text-lg sm:text-xl font-extrabold text-gray-900 tracking-tight">
+            データベース一覧
           </h2>
         </div>
-        <p className="text-sm sm:text-[15px] leading-relaxed text-gray-600">
-          公開情報や業務利用可能なデータを、実務で使いやすい形で整理して案内するためのカタログです。
-        </p>
-        <p className="mt-2 text-sm sm:text-[15px] leading-relaxed text-gray-500">
-          単なるリンク集ではなく、概要・用途・対象ユーザーを確認しながらデータベースを探せます。
-        </p>
-      </section>
-
-      {/* ── DB一覧 ── */}
-      <section id="databases" className="max-w-6xl mx-auto px-4 sm:px-6 pb-12 sm:pb-16 scroll-mt-8">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-1 h-7 rounded-full" style={{ backgroundColor: "#1F6FB2" }} />
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-gray-900">
-            公開中 / 提供予定のデータベース
-          </h2>
-        </div>
-        <p className="text-xs sm:text-sm text-gray-500 mb-8 ml-4">
-          各データベースの概要、用途、対象ユーザーを一覧で確認できます。
+        <p className="text-sm text-gray-400 mb-8 pl-4">
+          各カテゴリの公開情報を横断検索・確認できます。公開中のDBからご利用いただけます。
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {DB_CARDS.map((card) => (
-            <DbCard key={card.id} card={card} />
+        {/* 6カテゴリグリッド */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+          {CATEGORIES.map((cat) => (
+            <CategoryCard key={cat.id} cat={cat} />
           ))}
         </div>
 
-        <p className="mt-8 text-xs text-gray-400 text-center">
-          各データベースの収録範囲や提供状況は、順次更新・拡充していきます。
+        <p className="mt-8 text-[11px] text-gray-300 text-center">
+          各データベースの収録範囲・提供状況は順次拡充していきます。
         </p>
       </section>
 
-      {/* ── 会員機能（マイページ）── */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-10 sm:pb-12">
-        <div className="rounded-2xl border border-blue-100 bg-blue-50/40 px-6 py-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-6 rounded-full bg-blue-400" />
-            <h2 className="text-base font-bold text-gray-800">マイページ / 会員機能</h2>
-            <span className="text-[11px] font-semibold text-blue-600 bg-blue-100 border border-blue-200 rounded-full px-2 py-0.5">要ログイン</span>
+      {/* ═══ MEMBER AREA ════════════════════════════════════════════ */}
+      <section className="max-w-5xl mx-auto px-5 sm:px-8 pb-12">
+        <div className="rounded-2xl border border-blue-100 bg-white px-6 py-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-1 h-6 rounded-full bg-blue-500" />
+            <h2 className="text-base font-extrabold text-gray-800">マイページ / 会員機能</h2>
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-2.5 py-0.5 ml-1">
+              要ログイン
+            </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { href: "/risk-watch",  icon: "👁", label: "ウォッチリスト",  desc: "監視中の事業者一覧" },
-              { href: "/risk-alerts", icon: "🔔", label: "リスク通知",      desc: "新着処分の通知" },
-              { href: "/favorites",   icon: "⭐", label: "お気に入り",      desc: "保存した処分情報" },
-              { href: "/login",       icon: "👤", label: "ログイン / 登録", desc: "アカウント管理" },
+              {
+                href: "/risk-watch",
+                label: "ウォッチリスト",
+                desc: "監視中の事業者一覧",
+                color: "#1F6FB2",
+                bg: "#EBF4FB",
+                icon: (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                ),
+              },
+              {
+                href: "/risk-alerts",
+                label: "リスク通知",
+                desc: "新着処分の通知",
+                color: "#D97706",
+                bg: "#FEF3E2",
+                icon: (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                  </svg>
+                ),
+              },
+              {
+                href: "/favorites",
+                label: "お気に入り",
+                desc: "保存した処分情報",
+                color: "#2E8B57",
+                bg: "#EAF5EF",
+                icon: (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                  </svg>
+                ),
+              },
+              {
+                href: "/login",
+                label: "ログイン / 登録",
+                desc: "アカウント管理",
+                color: "#6B7280",
+                bg: "#F3F4F6",
+                icon: (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                  </svg>
+                ),
+              },
             ].map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex flex-col gap-1 bg-white border border-blue-100 rounded-xl px-4 py-3 hover:border-blue-300 hover:shadow-sm transition-all"
+                className="group flex flex-col gap-2 bg-white border border-gray-100 rounded-xl px-4 py-3.5 hover:border-gray-200 hover:shadow-md transition-all"
               >
-                <span className="text-xl">{item.icon}</span>
-                <span className="text-sm font-bold text-gray-800">{item.label}</span>
-                <span className="text-[11px] text-gray-400">{item.desc}</span>
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
+                  style={{ backgroundColor: item.bg, color: item.color }}
+                >
+                  {item.icon}
+                </div>
+                <div>
+                  <p className="text-[13px] font-bold text-gray-800 group-hover:text-gray-900">{item.label}</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{item.desc}</p>
+                </div>
               </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── 用途セクション ── */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 pb-12 sm:pb-16">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-1 h-7 rounded-full" style={{ backgroundColor: "#1F6FB2" }} />
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-gray-900">
-            こんな用途で活用できます
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {USE_CASES.map((uc) => (
-            <div
-              key={uc.title}
-              className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm"
-            >
-              <span className="text-2xl">{uc.icon}</span>
-              <h3 className="mt-2 font-bold text-sm text-gray-900">{uc.title}</h3>
-              <p className="mt-1 text-xs text-gray-500 leading-relaxed">{uc.description}</p>
-            </div>
-          ))}
+      {/* ═══ FOOTER COPY ════════════════════════════════════════════ */}
+      <section className="max-w-5xl mx-auto px-5 sm:px-8 pb-16 text-center">
+        <p className="text-sm text-gray-400 leading-relaxed">
+          大海ナビは、公開情報の中から業務で使えるデータベースを<br className="hidden sm:block" />
+          見つけやすく整理していくサービスです。
+        </p>
+        <div className="flex items-center justify-center gap-4 mt-4 text-[12px] text-gray-300">
+          <Link href="/login" className="hover:text-gray-500 transition-colors">ログイン</Link>
+          <span>·</span>
+          <Link href="/signup" className="hover:text-gray-500 transition-colors">無料登録</Link>
+          <span>·</span>
+          <Link href="/gyosei-shobun" className="hover:text-gray-500 transition-colors">行政処分DB</Link>
         </div>
       </section>
 
-      {/* ── 締め ── */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20 text-center">
-        <h2 className="text-base sm:text-lg font-bold text-gray-800 mb-2">
-          大海原の情報を、業務で使える形に。
-        </h2>
-        <p className="text-xs sm:text-sm text-gray-500 max-w-lg mx-auto leading-relaxed">
-          大海ナビは、公開情報の中から実務に役立つデータベースを見つけやすく整理していきます。
-        </p>
-      </section>
-    </>
+    </div>
   );
 }
