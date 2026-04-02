@@ -58,17 +58,14 @@ export default function Header() {
     if (isLoggedIn) fetchRiskUnread();
   }, [isLoggedIn, fetchRiskUnread]);
 
-  // ドメインナビリンク
+  // 公開カテゴリナビ（6カテゴリ統一）
   const domainNavLinks = useMemo(() => [
-    { href: "/sanpai", label: "産廃処分", key: "sanpai" },
-    { href: "/kyoninka", label: "許認可", key: "kyoninka" },
-    { href: "/shitei", label: "指定管理", key: "shitei" },
-    { href: "/food-recall", label: "食品リコール", key: "food-recall" },
     { href: "/gyosei-shobun", label: "行政処分", key: "gyosei-shobun" },
-    { href: "/hojokin", label: "補助金", key: "hojokin" },
-    { href: "/nyusatsu", label: "入札", key: "nyusatsu" },
-    { href: "/yutai", label: "株主優待", key: "yutai" },
-    { href: "/minpaku", label: "民泊", key: "minpaku" },
+    { href: "/sanpai",        label: "産廃処分",   key: "sanpai" },
+    { href: "/nyusatsu",      label: "入札",       key: "nyusatsu" },
+    { href: "/shitei",        label: "指定管理",   key: "shitei" },
+    { href: "/hojokin",       label: "補助金",     key: "hojokin" },
+    { href: "/kyoninka",      label: "許認可",     key: "kyoninka" },
   ], []);
 
   return (
@@ -86,13 +83,14 @@ export default function Header() {
           </span>
         </Link>
 
-        {/* 中央: ドメインナビ（PC） */}
+        {/* 中央: ドメインナビ（PC） — 公開6カテゴリ */}
         <nav className="hidden lg:flex items-center gap-1" aria-label="メインナビゲーション">
-          <NavLink href="/sanpai" label="産廃処分" active={pathname.startsWith("/sanpai")} />
-          <NavLink href="/kyoninka" label="許認可" active={pathname.startsWith("/kyoninka")} />
-          <NavLink href="/shitei" label="指定管理" active={pathname.startsWith("/shitei")} />
-          <NavLink href="/hojokin" label="補助金" active={pathname.startsWith("/hojokin")} />
-          <NavLink href="/platform/search" label="横断検索" active={pathname === "/platform/search"} />
+          <NavLink href="/gyosei-shobun" label="行政処分" active={pathname.startsWith("/gyosei-shobun")} />
+          <NavLink href="/sanpai"        label="産廃処分"  active={pathname.startsWith("/sanpai")} />
+          <NavLink href="/nyusatsu"      label="入札"      active={pathname.startsWith("/nyusatsu")} />
+          <NavLink href="/shitei"        label="指定管理"  active={pathname.startsWith("/shitei")} />
+          <NavLink href="/hojokin"       label="補助金"    active={pathname.startsWith("/hojokin")} />
+          <NavLink href="/kyoninka"      label="許認可"    active={pathname.startsWith("/kyoninka")} />
         </nav>
 
         {/* 右: ユーザー導線（PC） */}
@@ -186,21 +184,20 @@ export default function Header() {
       {/* モバイルメニュー */}
       {menuOpen && (
         <div className="sm:hidden border-t border-gray-100 bg-white px-4 py-3 space-y-1">
-          <MobileNavLink href="/platform/search" label="横断検索" onClick={() => setMenuOpen(false)} />
-          <div className="my-2 border-t border-gray-100" />
+          {/* 公開カテゴリ */}
           <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider pt-1 pb-0.5">カテゴリ</p>
           {domainNavLinks.map((link) => (
             <MobileNavLink key={link.key} href={link.href} label={link.label} onClick={() => setMenuOpen(false)} />
           ))}
+          {/* マイページ / 会員機能 */}
           <div className="my-2 border-t border-gray-100" />
           {isLoggedIn ? (
             <>
-              <MobileNavLink href="/favorites" label="お気に入り" onClick={() => setMenuOpen(false)} />
-              <MobileNavLink href="/saved-searches" label="保存検索" onClick={() => setMenuOpen(false)} />
-              <MobileNavLink href="/risk-watch" label={`リスク監視${riskUnreadCount > 0 ? ` (${riskUnreadCount})` : ""}`} onClick={() => setMenuOpen(false)} />
-              <MobileNavLink href="/risk-alerts" label="リスク通知" onClick={() => setMenuOpen(false)} />
-              <MobileNavLink href="/notifications" label="通知一覧" onClick={() => setMenuOpen(false)} />
-              <MobileNavLink href="/notification-settings" label="通知設定" onClick={() => setMenuOpen(false)} />
+              <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider pt-1 pb-0.5">マイページ</p>
+              <MobileNavLink href="/risk-watch"   label={`ウォッチリスト${riskUnreadCount > 0 ? ` (${riskUnreadCount})` : ""}`} onClick={() => setMenuOpen(false)} />
+              <MobileNavLink href="/risk-alerts"  label="リスク通知"    onClick={() => setMenuOpen(false)} />
+              <MobileNavLink href="/favorites"    label="お気に入り"    onClick={() => setMenuOpen(false)} />
+              <MobileNavLink href="/notifications" label="通知一覧"     onClick={() => setMenuOpen(false)} />
               {isAdmin && (
                 <MobileNavLink href="/admin/ops" label="管理" onClick={() => setMenuOpen(false)} className="text-gray-400" />
               )}

@@ -10,11 +10,12 @@ import Link from "next/link";
 
 // ─── カテゴリカラー定義 ─────────────────────
 const CATEGORY_COLORS = {
-  "行政 / 規制":    { accent: "#1F6FB2", bg: "bg-[#EBF4FB]", text: "text-[#1F6FB2]" },
-  "調達 / 入札":    { accent: "#0E7490", bg: "bg-[#E6F7FA]", text: "text-[#0E7490]" },
-  "支援制度":       { accent: "#2E8B57", bg: "bg-[#EAF5EF]", text: "text-[#2E8B57]" },
-  "事業者情報":     { accent: "#7C5CFA", bg: "bg-[#F0ECFE]", text: "text-[#7C5CFA]" },
-  "監視 / アラート": { accent: "#D97706", bg: "bg-[#FEF3E2]", text: "text-[#D97706]" },
+  "行政 / 規制":  { accent: "#1F6FB2", bg: "bg-[#EBF4FB]", text: "text-[#1F6FB2]" },
+  "産廃 / 環境":  { accent: "#0E7490", bg: "bg-[#E6F7FA]", text: "text-[#0E7490]" },
+  "調達 / 入札":  { accent: "#5B6B8A", bg: "bg-[#EEF0F5]", text: "text-[#5B6B8A]" },
+  "公共施設":     { accent: "#2E7D6B", bg: "bg-[#EAF4F1]", text: "text-[#2E7D6B]" },
+  "支援制度":     { accent: "#2E8B57", bg: "bg-[#EAF5EF]", text: "text-[#2E8B57]" },
+  "事業者情報":   { accent: "#7C5CFA", bg: "bg-[#F0ECFE]", text: "text-[#7C5CFA]" },
 };
 
 // ─── 状態バッジスタイル ─────────────────────
@@ -25,7 +26,7 @@ const STATUS_STYLES = {
   "構想中":     { bg: "bg-gray-50",   text: "text-gray-400",   border: "border-gray-200" },
 };
 
-// ─── DBカードデータ ─────────────────────
+// ─── DBカードデータ（公開6カテゴリ統一）─────────────────────
 const DB_CARDS = [
   {
     id: "gyosei-shobun",
@@ -33,11 +34,23 @@ const DB_CARDS = [
     category: "行政 / 規制",
     icon: "📋",
     title: "行政処分データベース",
-    description: "不動産・建設・運輸などの行政処分情報を確認できるデータベースです。事業者確認や継続監視に活用できます。",
+    description: "建設業・宅建業・建築士事務所など各業種の行政処分情報を横断検索。事業者確認や継続監視に活用できます。",
     tags: ["コンプライアンス", "監視", "調査", "審査"],
     targetUsers: "管理部門 / 審査部門 / 調査担当",
     href: "/gyosei-shobun",
-    cta: "詳細を見る",
+    cta: "検索する",
+  },
+  {
+    id: "sanpai",
+    status: "準備中",
+    category: "産廃 / 環境",
+    icon: "♻️",
+    title: "産廃処分データベース",
+    description: "産業廃棄物処理業者への行政処分情報を確認できるデータベースです。",
+    tags: ["産廃", "環境", "処分業者確認"],
+    targetUsers: "管理部門 / 調査担当 / 環境担当",
+    href: null,
+    cta: "準備中",
   },
   {
     id: "nyusatsu",
@@ -48,6 +61,18 @@ const DB_CARDS = [
     description: "官公庁・自治体の調達、公募、入札関連情報を整理して確認できるデータベースです。",
     tags: ["公共営業", "案件探索", "市場調査"],
     targetUsers: "営業部門 / 企画部門",
+    href: null,
+    cta: "準備中",
+  },
+  {
+    id: "shitei",
+    status: "準備中",
+    category: "公共施設",
+    icon: "🏢",
+    title: "指定管理者データベース",
+    description: "公共施設の指定管理者に関する情報を横断検索できるデータベースです。",
+    tags: ["指定管理", "公共施設", "自治体"],
+    targetUsers: "営業部門 / 企画部門 / 自治体担当",
     href: null,
     cta: "準備中",
   },
@@ -74,18 +99,6 @@ const DB_CARDS = [
     targetUsers: "審査部門 / 管理部門 / 調査担当",
     href: null,
     cta: "構想中",
-  },
-  {
-    id: "watchlist",
-    status: "提供中",
-    category: "監視 / アラート",
-    icon: "👁",
-    title: "リスク監視・通知",
-    description: "取引先・競合の行政処分を継続監視。新着処分が登録されると通知を受け取れます。危険度スコアで優先度を可視化。",
-    tags: ["ウォッチ", "リスク管理", "通知", "継続監視"],
-    targetUsers: "管理部門 / 審査部門 / 経営層",
-    href: "/risk-watch",
-    cta: "監視を始める",
   },
 ];
 
@@ -298,6 +311,35 @@ export default function HomePage() {
         <p className="mt-8 text-xs text-gray-400 text-center">
           各データベースの収録範囲や提供状況は、順次更新・拡充していきます。
         </p>
+      </section>
+
+      {/* ── 会員機能（マイページ）── */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-10 sm:pb-12">
+        <div className="rounded-2xl border border-blue-100 bg-blue-50/40 px-6 py-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-1 h-6 rounded-full bg-blue-400" />
+            <h2 className="text-base font-bold text-gray-800">マイページ / 会員機能</h2>
+            <span className="text-[11px] font-semibold text-blue-600 bg-blue-100 border border-blue-200 rounded-full px-2 py-0.5">要ログイン</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { href: "/risk-watch",  icon: "👁", label: "ウォッチリスト",  desc: "監視中の事業者一覧" },
+              { href: "/risk-alerts", icon: "🔔", label: "リスク通知",      desc: "新着処分の通知" },
+              { href: "/favorites",   icon: "⭐", label: "お気に入り",      desc: "保存した処分情報" },
+              { href: "/login",       icon: "👤", label: "ログイン / 登録", desc: "アカウント管理" },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex flex-col gap-1 bg-white border border-blue-100 rounded-xl px-4 py-3 hover:border-blue-300 hover:shadow-sm transition-all"
+              >
+                <span className="text-xl">{item.icon}</span>
+                <span className="text-sm font-bold text-gray-800">{item.label}</span>
+                <span className="text-[11px] text-gray-400">{item.desc}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* ── 用途セクション ── */}
