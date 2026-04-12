@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { listFoodRecallItems, getFoodRecallByIds } from "@/lib/repositories/food-recall";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);

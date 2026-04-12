@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getYutaiBySlug } from "@/lib/repositories/yutai";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request, { params }) {
   try {
     const { slug } = await params;

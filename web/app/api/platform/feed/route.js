@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
-
 /**
  * GET /api/platform/feed
  * 横断新着フィード + ドメイン統計ランキング

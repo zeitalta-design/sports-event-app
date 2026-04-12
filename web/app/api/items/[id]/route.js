@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getItemBySlug, getItemById, getAlternatives } from "@/lib/items-service";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request, { params }) {
   try {
     const { id } = await params;

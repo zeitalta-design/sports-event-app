@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { searchItems, getCategoryCounts } from "@/lib/items-service";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);

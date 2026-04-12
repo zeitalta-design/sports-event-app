@@ -10,8 +10,6 @@ import { getCurrentUser } from "@/lib/auth";
 import { addFavorite, removeFavorite, listFavorites } from "@/lib/repositories/gyosei-shobun";
 import { getDb } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
-
 /** セッションまたはリクエストから user_key を解決 */
 async function resolveUserKey(request, fromBody = false) {
   // 1. ログインユーザーのIDを優先

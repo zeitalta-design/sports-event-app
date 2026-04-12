@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { listKyoninkaEntities, getKyoninkaByIds } from "@/lib/repositories/kyoninka";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);

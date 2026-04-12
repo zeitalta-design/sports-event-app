@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getUnreadCount, getRecentNotifications } from "@/lib/user-notifications";
 
-export const dynamic = "force-dynamic";
-
 /**
  * GET /api/notifications/unread-count
  *

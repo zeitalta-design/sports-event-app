@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import { siteConfig } from "@/lib/site-config";
 
 export const metadata = {
