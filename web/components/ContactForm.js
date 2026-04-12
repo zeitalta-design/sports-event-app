@@ -8,11 +8,10 @@ import { useState } from "react";
 
 const INQUIRY_TYPES = [
   { value: "general", label: "一般的なお問い合わせ" },
-  { value: "listing_request", label: "大会の掲載依頼" },
   { value: "correction", label: "掲載情報の修正依頼" },
   { value: "deletion", label: "掲載情報の削除依頼" },
   { value: "bug_report", label: "不具合の報告" },
-  { value: "organizer_apply", label: "主催者としての登録申請" },
+  { value: "other", label: "その他" },
 ];
 
 export default function ContactForm() {

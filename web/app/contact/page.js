@@ -19,20 +19,29 @@ export default function ContactPage() {
           Risk Monitorをご利用いただきありがとうございます。
         </p>
         <p className="text-sm text-gray-700 leading-relaxed">
-          掲載内容の修正依頼、削除依頼、サービスに関するお問い合わせは、以下のフォームよりご連絡ください。
-        </p>
-        <p className="text-sm text-gray-700 leading-relaxed">
-          Risk Monitorでは、公開されている大会情報をもとに情報を掲載しています。
-          掲載内容に誤りがある場合や、掲載停止・削除をご希望の場合は、内容を確認のうえ迅速に対応いたします。
+          掲載内容の修正依頼、削除依頼、サービスに関するご質問・ご意見は、以下のフォームよりご連絡ください。
         </p>
 
-        {/* ご連絡いただきたい内容 */}
+        {/* サービスの説明 */}
         <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-          <h2 className="text-sm font-bold text-gray-800 mb-2">ご連絡いただきたい内容</h2>
+          <h2 className="text-sm font-bold text-gray-800 mb-2">Risk Monitorのお問い合わせについて</h2>
+          <p className="text-sm text-gray-700 leading-relaxed">
+            Risk Monitorは、官公庁・地方自治体が公開している情報を基に整理・提供する情報提供プラットフォームです。
+            掲載情報は参考情報として提供しており、公式情報を代行するものではありません。
+          </p>
+          <p className="text-sm text-gray-700 leading-relaxed mt-2">
+            掲載内容に誤りがある場合や、掲載停止・削除をご希望の場合は、内容を確認のうえ、可能な範囲で対応いたします。
+          </p>
+        </div>
+
+        {/* ご連絡いただきたい内容 */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <h2 className="text-sm font-bold text-gray-800 mb-2">ご連絡いただきたい内容（可能な限りご記入ください）</h2>
           <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
-            <li>大会名</li>
-            <li>該当ページURL</li>
-            <li>お問い合わせ内容（例：掲載修正、削除依頼、情報更新、その他）</li>
+            <li>企業名・対象情報</li>
+            <li>該当ページのURL</li>
+            <li>お問い合わせ種別（修正依頼、削除依頼、情報更新、その他）</li>
+            <li>お問い合わせ内容（詳細）</li>
             <li>ご担当者名</li>
             <li>ご連絡先メールアドレス</li>
           </ul>
@@ -42,9 +51,10 @@ export default function ContactPage() {
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <h2 className="text-sm font-bold text-gray-800 mb-2">ご注意</h2>
           <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
-            <li>大会の最新情報は、必ず公式サイトをご確認ください。</li>
-            <li>掲載画像等の著作権は各権利者に帰属します。</li>
-            <li>内容確認のため、返信まで少しお時間をいただく場合があります。</li>
+            <li>本サービスに掲載されている情報は参考情報です。<strong>重要な判断を行う際は、各行政機関の公式発表・公文書で必ず最新情報をご確認</strong>ください。</li>
+            <li>掲載画像・資料等の著作権は、各権利者または公開元に帰属します。</li>
+            <li>内容確認および対応には、数日程度お時間をいただく場合があります。</li>
+            <li>官公庁が公開している情報そのものの修正・削除については、各行政機関へ直接お問い合わせいただくようお願いいたします。</li>
           </ul>
         </div>
 
