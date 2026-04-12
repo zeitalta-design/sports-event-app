@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { gyoseiShobunConfig } from "@/lib/gyosei-shobun-config";
+import RiskScoreBadge from "@/components/gyosei-shobun/RiskScoreBadge";
+import LegalDisclaimer from "@/components/gyosei-shobun/LegalDisclaimer";
 
 const ACTION_TYPE_COLORS = {
   license_revocation: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200" },
@@ -227,6 +229,7 @@ export default function GyoseiShobunListPage() {
                             {industryLabel}
                           </span>
                         )}
+                        <RiskScoreBadge action={item} mode="compact" />
                       </div>
                     </div>
                   </div>
@@ -265,6 +268,7 @@ export default function GyoseiShobunListPage() {
             onPageChange={goToPage}
           />
         )}
+        <LegalDisclaimer />
       </div>
     </div>
   );

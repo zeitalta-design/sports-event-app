@@ -43,7 +43,7 @@ if (fs.existsSync(envPath)) {
 // ==============================
 // DB setup
 // ==============================
-const DB_PATH = path.join(__dirname, "..", "web", "data", "sports-event.db");
+const DB_PATH = path.join(__dirname, "..", "web", "data", "risk-monitor.db");
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const db = new Database(DB_PATH);
 db.pragma("journal_mode = WAL");

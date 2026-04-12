@@ -45,7 +45,7 @@ if (ADMIN_PASSWORD.length < 8) {
 }
 
 // --- DB接続 ---
-const DB_PATH = path.join(__dirname, "..", "web", "data", "sports-event.db");
+const DB_PATH = path.join(__dirname, "..", "web", "data", "risk-monitor.db");
 const SCHEMA_PATH = path.join(__dirname, "..", "sql", "001_create_tables.sql");
 
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });

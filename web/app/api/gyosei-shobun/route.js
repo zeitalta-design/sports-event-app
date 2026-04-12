@@ -1,9 +1,19 @@
 import { NextResponse } from "next/server";
-import { listAdministrativeActions } from "@/lib/repositories/gyosei-shobun";
+import { listAdministrativeActions, getAdministrativeActionsByIds } from "@/lib/repositories/gyosei-shobun";
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
+
+    // 複数ID指定の場合（比較機能用）
+    const idsParam = searchParams.get("ids");
+    if (idsParam) {
+      const ids = idsParam.split(",").map(Number).filter(Boolean);
+      if (ids.length === 0) return NextResponse.json({ items: [] });
+      const items = getAdministrativeActionsByIds(ids);
+      return NextResponse.json({ ok: true, items });
+    }
+
     const result = listAdministrativeActions({
       keyword: searchParams.get("keyword") || "",
       action_type: searchParams.get("action_type") || "",

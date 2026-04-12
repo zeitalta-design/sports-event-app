@@ -128,7 +128,7 @@ function generateSummary(item, detail) {
 async function main() {
   const Database = require("better-sqlite3");
   const { join } = require("path");
-  const db = new Database(join(__dirname, "..", "data", "sports-event.db"));
+  const db = new Database(join(__dirname, "..", "data", "risk-monitor.db"));
 
   console.log("=== 行政処分DB — summary/detail 品質強化 ===");
   console.log(`Mode: ${DRY_RUN ? "DRY-RUN" : "LIVE"}${INDUSTRY ? ` | Industry: ${INDUSTRY}` : ""}`);

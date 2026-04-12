@@ -38,12 +38,13 @@ export const metadata = {
   },
 };
 
-// Phase222: 構造化データ（JSON-LD）
+// 構造化データ（JSON-LD）
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
     {
       "@type": "WebSite",
+      "@id": `${siteConfig.siteUrl}/#website`,
       name: siteConfig.siteName,
       alternateName: siteConfig.siteNameEn,
       url: siteConfig.siteUrl,
@@ -53,16 +54,24 @@ const jsonLd = {
         "@type": "SearchAction",
         target: {
           "@type": "EntryPoint",
-          urlTemplate: `${siteConfig.siteUrl}/platform/search?q={search_term_string}`,
+          urlTemplate: `${siteConfig.siteUrl}/gyosei-shobun?keyword={search_term_string}`,
         },
         "query-input": "required name=search_term_string",
       },
     },
     {
       "@type": "Organization",
+      "@id": `${siteConfig.siteUrl}/#organization`,
       name: siteConfig.siteName,
+      alternateName: siteConfig.siteNameEn,
       url: siteConfig.siteUrl,
-      description: siteConfig.siteDescription,
+      description: "企業リスク監視プラットフォーム。行政処分・入札情報・補助金・許認可などのビジネスデータを横断検索できるサービス。",
+      foundingDate: "2024",
+      sameAs: [],
+      knowsAbout: [
+        "行政処分", "企業リスク管理", "取引先審査", "入札情報", "補助金", "許認可",
+        "建設業", "不動産業", "廃棄物処理業", "コンプライアンス",
+      ],
     },
   ],
 };

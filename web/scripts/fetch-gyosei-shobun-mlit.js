@@ -255,7 +255,7 @@ async function fetchDetail(url) {
 async function upsertItems(items) {
   const Database = require("better-sqlite3");
   const { join } = require("path");
-  const db = new Database(join(__dirname, "..", "data", "sports-event.db"));
+  const db = new Database(join(__dirname, "..", "data", "risk-monitor.db"));
   db.pragma("journal_mode = WAL");
 
   let created = 0, updated = 0, skipped = 0;

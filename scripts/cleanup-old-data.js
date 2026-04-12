@@ -8,7 +8,7 @@ const webRequire = createRequire(
 );
 const Database = webRequire("better-sqlite3");
 
-const dbPath = path.join(__dirname, "..", "web", "data", "sports-event.db");
+const dbPath = path.join(__dirname, "..", "web", "data", "risk-monitor.db");
 const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");

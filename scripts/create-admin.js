@@ -28,7 +28,7 @@ const webRequire = createRequire(
 const Database = webRequire("better-sqlite3");
 const bcrypt = webRequire("bcryptjs");
 
-const DB_PATH = path.join(__dirname, "..", "web", "data", "sports-event.db");
+const DB_PATH = path.join(__dirname, "..", "web", "data", "risk-monitor.db");
 const PASSWORD_MIN_LENGTH = 8;
 const BCRYPT_ROUNDS = 10;
 

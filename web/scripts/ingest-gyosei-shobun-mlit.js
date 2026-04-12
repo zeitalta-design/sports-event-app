@@ -289,7 +289,7 @@ function findOrCreateOrg(db, rawName, corporateNumber, prefecture) {
 async function main() {
   const { default: Database } = await import("better-sqlite3");
   const { join } = await import("path");
-  const dbPath = join(process.cwd(), "data", "sports-event.db");
+  const dbPath = join(process.cwd(), "data", "risk-monitor.db");
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
 

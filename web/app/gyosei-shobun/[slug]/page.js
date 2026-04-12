@@ -3,6 +3,12 @@ import { notFound } from "next/navigation";
 import { getAdministrativeActionBySlug, getRelatedAdministrativeActions, getAdjacentAdministrativeActions } from "@/lib/repositories/gyosei-shobun";
 import { gyoseiShobunConfig } from "@/lib/gyosei-shobun-config";
 import { siteConfig } from "@/lib/site-config";
+import FavoriteButton from "@/components/gyosei-shobun/FavoriteButton";
+import AddToCompareButton from "@/components/gyosei-shobun/AddToCompareButton";
+import RiskScoreBadge from "@/components/gyosei-shobun/RiskScoreBadge";
+import WatchButton from "@/components/gyosei-shobun/WatchButton";
+import { calculateRiskScore } from "@/lib/risk-score";
+import LegalDisclaimer from "@/components/gyosei-shobun/LegalDisclaimer";
 
 // ─── 動的 metadata ─────────────────────
 
@@ -68,8 +74,49 @@ export default async function GyoseiShobunDetailPage({ params, searchParams }) {
   const { prev, next } = getAdjacentAdministrativeActions(item, filters);
   const hasFilterQuery = Object.keys(filters).length > 0;
 
+  // JSON-LD: 個別処分情報
+  const risk = calculateRiskScore(item);
+  const detailJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "GovernmentAction",
+    name: `${item.organization_name_raw} — ${actionType?.label || item.action_type}`,
+    description: item.summary || `${item.organization_name_raw}に対する行政処分情報。`,
+    url: `${siteConfig.siteUrl}/gyosei-shobun/${item.slug}`,
+    actionDate: item.action_date || undefined,
+    agent: item.authority_name ? {
+      "@type": "GovernmentOrganization",
+      name: item.authority_name,
+    } : undefined,
+    object: {
+      "@type": "Organization",
+      name: item.organization_name_raw,
+      address: item.prefecture ? {
+        "@type": "PostalAddress",
+        addressRegion: item.prefecture,
+        addressLocality: item.city || undefined,
+      } : undefined,
+    },
+    result: {
+      "@type": "Thing",
+      name: actionType?.label || item.action_type,
+      description: item.legal_basis || undefined,
+    },
+  });
+
+  const detailBreadcrumbJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "トップ", item: siteConfig.siteUrl },
+      { "@type": "ListItem", position: 2, name: "行政処分DB", item: `${siteConfig.siteUrl}/gyosei-shobun` },
+      { "@type": "ListItem", position: 3, name: item.organization_name_raw, item: `${siteConfig.siteUrl}/gyosei-shobun/${item.slug}` },
+    ],
+  });
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: detailJsonLd }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: detailBreadcrumbJsonLd }} />
       <div className="max-w-4xl mx-auto px-4 py-8">
 
         {/* パンくず */}
@@ -86,14 +133,23 @@ export default async function GyoseiShobunDetailPage({ params, searchParams }) {
           {/* アクセントバー */}
           <div className="h-1.5" style={{ backgroundColor: tc.accent }} />
 
-          <div className="p-6">
-            {/* 事業者名 */}
-            <div className="flex items-start gap-3 mb-4">
-              <span className="text-3xl mt-0.5 shrink-0">{actionType?.icon || "📄"}</span>
-              <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 leading-snug mb-3">
+          <div className="p-4 sm:p-6">
+            {/* 事業者名 + アクションボタン */}
+            <div className="mb-4">
+              <div className="flex items-start gap-2 sm:gap-3 mb-3">
+                <span className="text-2xl sm:text-3xl mt-0.5 shrink-0">{actionType?.icon || "📄"}</span>
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900 leading-snug flex-1 min-w-0">
                   {item.organization_name_raw}
                 </h1>
+              </div>
+              {/* ボタン群: モバイルは折り返し対応 */}
+              <div className="flex flex-wrap items-center gap-2">
+                <FavoriteButton actionId={item.id} />
+                <WatchButton organizationName={item.organization_name_raw} industry={item.industry || ""} />
+                <AddToCompareButton actionId={item.id} />
+              </div>
+            </div>
+
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={`text-sm px-3 py-1 rounded-lg border font-bold ${tc.bg} ${tc.text} ${tc.border}`}>
                     {actionType?.label || item.action_type}
@@ -104,8 +160,6 @@ export default async function GyoseiShobunDetailPage({ params, searchParams }) {
                     </span>
                   )}
                 </div>
-              </div>
-            </div>
 
             {/* キーメタ情報（処分日・行政庁・所在地） */}
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm border-t border-gray-100 pt-4">
@@ -131,6 +185,11 @@ export default async function GyoseiShobunDetailPage({ params, searchParams }) {
               )}
             </div>
           </div>
+        </div>
+
+        {/* ──── リスクスコア ──── */}
+        <div className="mb-6">
+          <RiskScoreBadge action={item} mode="full" />
         </div>
 
         {/* ──── 事案概要 ──── */}
@@ -346,6 +405,7 @@ export default async function GyoseiShobunDetailPage({ params, searchParams }) {
           </Link>
         </div>
       </div>
+        <LegalDisclaimer />
     </div>
   );
 }

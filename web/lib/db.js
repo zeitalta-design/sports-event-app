@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 
-const DB_PATH = path.join(process.cwd(), "data", "sports-event.db");
+const DB_PATH = path.join(process.cwd(), "data", "risk-monitor.db");
 const SCHEMA_PATH = path.join(process.cwd(), "..", "sql", "001_create_tables.sql");
 
 let _db = null;
@@ -126,6 +126,11 @@ export function getDb() {
     for (const sql of migrations) {
       try { _db.exec(sql); } catch { /* duplicate column → ignore */ }
     }
+
+    // ============================================================
+    // ▼▼▼ LEGACY: スポーツイベント関連テーブル（将来削除予定）▼▼▼
+    // 行政処分DB・リスクモニター機能には影響しません
+    // ============================================================
 
     // Phase205: event_tags テーブル
     _db.exec(`
@@ -607,7 +612,12 @@ export function getDb() {
 
     // ============================================================
     // SaaS Navi: 共通ナビ基盤テーブル
-    // 既存 events 系テーブルには一切影響しない追加テーブル群
+    // ============================================================
+    // ▲▲▲ LEGACY: スポーツイベント関連テーブル ここまで ▲▲▲
+    // ============================================================
+
+    // ============================================================
+    // ▼▼▼ ACTIVE: リスクモニター / カタログ系テーブル ▼▼▼
     // ============================================================
 
     // providers: ベンダー / 提供者

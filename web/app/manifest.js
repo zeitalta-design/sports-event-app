@@ -2,7 +2,7 @@ export default function manifest() {
   return {
     name: "大会ナビ",
     short_name: "大会ナビ",
-    description: "全国のスポーツ大会を探せる検索・通知サービス",
+    description: "公開データ / 業務DBカタログ — 行政処分・入札情報・補助金など業務で使える情報を横断検索",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

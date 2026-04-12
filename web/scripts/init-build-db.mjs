@@ -6,7 +6,7 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 
-const dbPath = path.join(process.cwd(), "data", "sports-event.db");
+const dbPath = path.join(process.cwd(), "data", "risk-monitor.db");
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = new Database(dbPath);
 

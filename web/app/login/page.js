@@ -43,6 +43,29 @@ function LoginForm() {
     denied ? "このページにアクセスするにはログインが必要です" : ""
   );
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  /** ログイン成功後: anon_keyのお気に入りをユーザーアカウントに移行 */
+  async function migrateFavoritesAfterLogin() {
+    if (typeof window === "undefined") return;
+    const anonKey = localStorage.getItem("risk_monitor_user_key");
+    if (!anonKey || !anonKey.startsWith("anon_")) return;
+
+    try {
+      const res = await fetch("/api/gyosei-shobun/favorites/migrate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ anon_key: anonKey }),
+      });
+      const data = await res.json();
+      if (data.ok && data.migrated > 0) {
+        localStorage.removeItem("risk_monitor_user_key");
+        setToast(`お気に入り ${data.migrated}件をアカウントに引き継ぎました`);
+      }
+    } catch {
+      // 移行失敗はログイン自体に影響させない
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -61,6 +84,9 @@ function LoginForm() {
         setError(data.error || "ログインに失敗しました");
         return;
       }
+
+      // お気に入りの移行（エラーでもログインは成功させる）
+      await migrateFavoritesAfterLogin();
 
       // 管理者の場合は管理画面へ
       if (data.user?.role === "admin" && redirectTo === "/") {
@@ -181,6 +207,16 @@ function LoginForm() {
           </p>
         </div>
       </div>
+
+      {/* トースト（お気に入り移行通知） */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <div className="px-5 py-3 rounded-xl text-sm font-medium bg-green-600 text-white shadow-xl flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            {toast}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

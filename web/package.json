@@ -1,6 +1,7 @@
 {
-  "name": "sports-event-web",
-  "version": "0.1.0",
+  "name": "risk-monitor",
+  "version": "1.0.0",
+  "description": "企業リスク監視プラットフォーム（行政処分・入札情報・補助金など横断検索）",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001 --webpack",

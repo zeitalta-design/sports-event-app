@@ -22,7 +22,15 @@ export default function Footer() {
           </nav>
         </div>
 
-        {/* 下段: コピーライト */}
+        {/* 法的注記 */}
+        <div className="mt-6 pt-4 border-t border-gray-100">
+          <p className="text-[10px] text-gray-400 leading-relaxed max-w-3xl">
+            本サイトは官公庁が公開している情報を基に整理・提供しています。データの正確性・完全性を保証するものではありません。
+            最新の情報は各行政機関の公式発表をご確認ください。掲載情報の利用により生じた損害について、当サイトは一切の責任を負いません。
+          </p>
+        </div>
+
+        {/* コピーライト */}
         <div className="mt-6 pt-4 border-t border-gray-100">
           <p className="text-[11px] text-gray-400">&copy; 2026 大海ナビ (TAIKAI NAVI)</p>
         </div>

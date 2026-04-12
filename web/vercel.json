@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/fetch-gyosei-shobun",
+      "schedule": "0 18 * * 1"
+    },
+    {
+      "path": "/api/cron/fetch-prefecture-shobun",
+      "schedule": "0 19 * * 3"
+    },
+    {
+      "path": "/api/cron/watchlist-notify",
+      "schedule": "0 19 * * 1"
+    }
+  ]
+}

@@ -43,7 +43,7 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-const DB_PATH = path.join(__dirname, "..", "web", "data", "sports-event.db");
+const DB_PATH = path.join(__dirname, "..", "web", "data", "risk-monitor.db");
 const SCHEMA_PATH = path.join(__dirname, "..", "sql", "001_create_tables.sql");
 
 // --- DB setup ---

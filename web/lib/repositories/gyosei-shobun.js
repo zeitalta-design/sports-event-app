@@ -413,6 +413,63 @@ export function getGyoseiShobunAdminById(id) {
   return db.prepare("SELECT * FROM administrative_actions WHERE id = ?").get(id);
 }
 
+// ─── 比較（Compare） ─────────────────────
+
+export function getAdministrativeActionsByIds(ids) {
+  if (!ids || ids.length === 0) return [];
+  const db = getDb();
+  const placeholders = ids.map(() => "?").join(",");
+  return db.prepare(`SELECT * FROM administrative_actions WHERE id IN (${placeholders}) AND is_published = 1`).all(...ids);
+}
+
+// ─── お気に入り（Favorites / Watchlist） ─────────────────────
+
+export function addFavorite(userKey, actionId) {
+  const db = getDb();
+  const action = db.prepare("SELECT id FROM administrative_actions WHERE id = ?").get(actionId);
+  if (!action) return { ok: false, error: "action_not_found" };
+  try {
+    db.prepare("INSERT INTO administrative_action_favorites (user_key, action_id) VALUES (?, ?)").run(userKey, actionId);
+    return { ok: true };
+  } catch (e) {
+    if (e.code === "SQLITE_CONSTRAINT_UNIQUE" || e.message?.includes("UNIQUE")) {
+      return { ok: true, already: true };
+    }
+    throw e;
+  }
+}
+
+export function removeFavorite(userKey, actionId) {
+  const db = getDb();
+  const result = db.prepare("DELETE FROM administrative_action_favorites WHERE user_key = ? AND action_id = ?").run(userKey, actionId);
+  return { ok: true, deleted: result.changes > 0 };
+}
+
+export function listFavorites(userKey, { page = 1, pageSize = 20 } = {}) {
+  const db = getDb();
+  const total = db.prepare("SELECT COUNT(*) as c FROM administrative_action_favorites WHERE user_key = ?").get(userKey).c;
+  const items = db.prepare(`
+    SELECT a.*, f.created_at AS favorited_at
+    FROM administrative_action_favorites f
+    JOIN administrative_actions a ON a.id = f.action_id
+    WHERE f.user_key = ?
+    ORDER BY f.created_at DESC
+    LIMIT ? OFFSET ?
+  `).all(userKey, pageSize, (page - 1) * pageSize);
+  return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+}
+
+export function checkFavorite(userKey, actionId) {
+  const db = getDb();
+  const row = db.prepare("SELECT id FROM administrative_action_favorites WHERE user_key = ? AND action_id = ?").get(userKey, actionId);
+  return { isFavorite: !!row };
+}
+
+export function countFavorites(userKey) {
+  const db = getDb();
+  return db.prepare("SELECT COUNT(*) as c FROM administrative_action_favorites WHERE user_key = ?").get(userKey).c;
+}
+
 // ─── sitemap 用 ─────────────────────
 
 export function listGyoseiShobunSlugsForSitemap() {

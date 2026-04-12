@@ -9,9 +9,9 @@ export const siteConfig = {
   /** サービス名（英語） */
   siteNameEn: "TAIKAI NAVI",
   /** サービス説明 */
-  siteDescription: "公開データ / 業務DBカタログ — インターネットという大海原から、業務で使える情報を見つけやすく整理しています",
+  siteDescription: "企業リスク監視プラットフォーム — 行政処分・入札情報・補助金など、業務で使える公開データを横断検索",
   /** キャッチコピー */
-  tagline: "公開データ / 業務DBカタログ",
+  tagline: "企業リスク監視プラットフォーム",
   /** サイトURL */
   siteUrl: process.env.APP_BASE_URL || "http://localhost:3001",
   /** ロゴ画像パス */
