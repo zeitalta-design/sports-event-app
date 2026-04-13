@@ -2,7 +2,6 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import AdminNav from "@/components/AdminNav";
 
 // ─── JSON項目のサンプルデータ ─────────────────
 
@@ -184,7 +183,6 @@ export default function AdminMarathonDetailEditPage({ params }) {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <AdminNav />
         <div className="text-center py-12 text-gray-400">読み込み中...</div>
       </div>
     );
@@ -193,7 +191,6 @@ export default function AdminMarathonDetailEditPage({ params }) {
   if (!event) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <AdminNav />
         <div className="text-center py-12 text-gray-400">
           リスク情報が見つかりません
         </div>
@@ -203,7 +200,6 @@ export default function AdminMarathonDetailEditPage({ params }) {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
-      <AdminNav />
 
       {/* ヘッダー */}
       <div className="mb-6">

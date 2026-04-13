@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import AdminNav from "@/components/AdminNav";
 
 /**
  * 公開情報源 × 公開情報源 ソース統合管理画面
@@ -105,7 +104,6 @@ export default function SourceMergePage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <AdminNav />
 
       <h1 className="text-xl font-bold text-gray-900 mb-1">
         🔗 ソース統合（公開情報源 × 公開情報源）

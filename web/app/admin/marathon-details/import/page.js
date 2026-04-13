@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import AdminNav from "@/components/AdminNav";
 
 // ─── ソース種別 ──────────────────────────
 
@@ -26,7 +25,6 @@ export default function AdminMarathonDetailImportPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <AdminNav />
 
       <h1 className="text-2xl font-bold text-gray-900 mb-6">
         リスク情報の取込

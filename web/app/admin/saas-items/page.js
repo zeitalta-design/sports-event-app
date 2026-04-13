@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import AdminNav from "@/components/AdminNav";
 import { getCategoryLabel, saasConfig } from "@/lib/saas-config";
 
 export default function AdminSaasItemsPage() {
@@ -50,7 +49,6 @@ export default function AdminSaasItemsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <AdminNav />
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">SaaS ツール管理</h1>

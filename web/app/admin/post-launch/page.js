@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import AdminNav from "@/components/AdminNav";
 
 /**
  * Phase229: 公開後チェックダッシュボード
@@ -38,7 +37,6 @@ export default function PostLaunchPage() {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <AdminNav />
         <p className="text-sm text-gray-400">チェック中...</p>
       </div>
     );
@@ -47,7 +45,6 @@ export default function PostLaunchPage() {
   if (!data) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <AdminNav />
         <p className="text-sm text-red-500">チェックAPIの取得に失敗しました。</p>
       </div>
     );
@@ -65,7 +62,6 @@ export default function PostLaunchPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <AdminNav />
       <h1 className="text-xl font-bold text-gray-900 mb-1">公開後チェック</h1>
       <p className="text-sm text-gray-500 mb-6">
         公開直後に確認すべき項目の自動チェック結果。

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import AdminNav from "@/components/AdminNav";
 
 /**
  * 管理画面 — リスク情報詳細情報一覧
@@ -52,7 +51,6 @@ export default function AdminMarathonDetailsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <AdminNav />
 
       <h1 className="text-xl font-bold text-gray-900 mb-2">
         リスク情報詳細情報 データ管理

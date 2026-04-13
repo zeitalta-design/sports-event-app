@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import AdminNav from "@/components/AdminNav";
 
 /**
  * Phase155: 結果管理画面
@@ -49,7 +48,6 @@ export default function AdminResultsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <AdminNav />
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-gray-900">データ結果管理</h1>
         <Link href="/admin/results/upload" className="px-4 py-2 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">

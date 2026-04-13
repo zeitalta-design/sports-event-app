@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import AdminNav from "@/components/AdminNav";
 
 /**
  * Phase225: 公開前チェックページ
@@ -94,7 +93,6 @@ export default function LaunchCheckPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <AdminNav />
       <h1 className="text-xl font-bold text-gray-900 mb-1">公開前チェックリスト</h1>
       <p className="text-sm text-gray-500 mb-6">
         公開前に確認すべき項目。自動チェック + 手動確認。

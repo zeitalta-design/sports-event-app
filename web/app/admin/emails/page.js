@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import AdminNav from "@/components/AdminNav";
 
 const STATUS_LABELS = {
   pending: { label: "待機中", className: "bg-yellow-100 text-yellow-800" },
@@ -119,7 +118,6 @@ export default function AdminEmailsPage() {
       <p className="text-sm text-gray-500 mb-4">
         通知からのメール送信キューを管理します
       </p>
-      <AdminNav />
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">

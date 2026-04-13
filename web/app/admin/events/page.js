@@ -1,6 +1,5 @@
 import { getDb } from "@/lib/db";
 import Link from "next/link";
-import AdminNav from "@/components/AdminNav";
 
 export const dynamic = "force-dynamic";
 
@@ -93,7 +92,6 @@ export default async function AdminEventsPage({ searchParams }) {
       <p className="text-sm text-gray-500 mb-4">
         リスクデータの管理・確認
       </p>
-      <AdminNav />
 
       {/* 統計 */}
       <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-13 gap-3 mb-8">

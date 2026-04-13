@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import AdminNav from "@/components/AdminNav";
 
 export default function AdminSaasProvidersPage() {
   const [providers, setProviders] = useState([]);
@@ -28,7 +27,6 @@ export default function AdminSaasProvidersPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
-      <AdminNav />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">ベンダー管理</h1>
         <Link href="/admin/saas-providers/new" className="btn-primary">+ 新規登録</Link>

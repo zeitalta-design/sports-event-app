@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import AdminNav from "@/components/AdminNav";
 
 /**
  * 公開情報源統合 検証レビュー画面
@@ -79,7 +78,6 @@ export default function MergeVerificationPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <AdminNav />
 
       <h1 className="text-xl font-bold text-gray-900 mb-1">
         🔬 統合検証レビュー

@@ -2,7 +2,6 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
-import AdminNav from "@/components/AdminNav";
 
 /**
  * Phase198+199: 結果CSVアップロードページ
@@ -67,7 +66,6 @@ export default function AdminResultsUploadPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
-      <AdminNav />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">結果CSVアップロード</h1>
         <Link href="/admin/results" className="text-xs text-blue-600 hover:text-blue-800">

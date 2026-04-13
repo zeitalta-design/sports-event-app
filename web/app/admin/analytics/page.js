@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import AdminNav from "@/components/AdminNav";
 import Link from "next/link";
 
 /**
@@ -51,7 +50,6 @@ export default function AdminAnalyticsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <AdminNav />
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">📊 行動ログ分析</h1>

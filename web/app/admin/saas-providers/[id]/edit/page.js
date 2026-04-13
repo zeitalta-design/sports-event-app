@@ -1,7 +1,6 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import AdminNav from "@/components/AdminNav";
 import ProviderForm from "@/components/ProviderForm";
 
 export default function AdminProviderEditPage() {
@@ -9,7 +8,6 @@ export default function AdminProviderEditPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
-      <AdminNav />
       <h1 className="text-xl font-bold text-gray-900 mb-6">ベンダー編集</h1>
       <ProviderForm providerId={id} />
     </div>

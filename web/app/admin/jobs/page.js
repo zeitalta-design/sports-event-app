@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import AdminNav from "@/components/AdminNav";
 
 const STATUS_LABELS = {
   success: { label: "成功", className: "bg-green-100 text-green-800" },
@@ -94,7 +93,6 @@ export default function AdminJobsPage() {
       <p className="text-sm text-gray-500 mb-4">
         日次ジョブの実行状況を確認・管理します
       </p>
-      <AdminNav />
 
       {/* 今日のサマリーカード */}
       <div className="card p-5 mb-6">

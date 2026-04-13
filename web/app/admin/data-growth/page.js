@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import AdminNav from "@/components/AdminNav";
 
 /**
  * Phase207: データ成長ダッシュボード
@@ -28,7 +27,6 @@ export default function AdminDataGrowthPage() {
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <AdminNav />
         <p className="text-sm text-gray-400 py-12 text-center">読み込み中...</p>
       </div>
     );
@@ -37,7 +35,6 @@ export default function AdminDataGrowthPage() {
   if (error) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <AdminNav />
         <p className="text-sm text-red-500 py-12 text-center">{error}</p>
       </div>
     );
@@ -54,7 +51,6 @@ export default function AdminDataGrowthPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <AdminNav />
       <h1 className="text-xl font-bold text-gray-900 mb-6">データ成長KPI</h1>
 
       {/* KPIカード */}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import AdminNav from "@/components/AdminNav";
 
 /**
  * Phase164: 写真管理画面
@@ -99,7 +98,6 @@ export default function AdminPhotosPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <AdminNav />
       <h1 className="text-xl font-bold text-gray-900 mb-4">写真管理</h1>
 
       {/* フィルタ */}

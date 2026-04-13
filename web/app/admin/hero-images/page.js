@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import AdminNav from "@/components/AdminNav";
 
 /**
  * ヒーロー画像管理画面
@@ -28,7 +27,6 @@ export default function HeroImagesPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <AdminNav />
 
       <h1 className="text-xl font-bold text-gray-900 mb-1">
         🖼 ヒーロー画像管理
