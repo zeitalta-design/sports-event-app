@@ -14,11 +14,14 @@ const COLUMNS = [
 export default function NyusatsuAdminListPage() {
   return (
     <AdminListPage
-      title="入札ナビ 管理"
+      title="入札 管理"
       apiPath="/api/admin/nyusatsu"
       basePath="/admin/nyusatsu"
       publicPath="/nyusatsu"
       columns={COLUMNS}
+      syncActions={[
+        { label: "入札情報更新", endpoint: "/api/admin/sync?domain=nyusatsu", confirmMessage: "入札情報の最新データを確認しますか？（数十秒かかります）" },
+      ]}
     />
   );
 }

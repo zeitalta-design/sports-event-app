@@ -24,11 +24,14 @@ const COLUMNS = [
 export default function ShiteiAdminListPage() {
   return (
     <AdminListPage
-      title="指定管理公募まとめ 管理"
+      title="指定管理 管理"
       apiPath="/api/admin/shitei"
       basePath="/admin/shitei"
       publicPath="/shitei"
       columns={COLUMNS}
+      syncActions={[
+        { label: "指定管理更新", endpoint: "/api/admin/sync?domain=shitei", confirmMessage: "指定管理情報の最新データを確認しますか？（数十秒かかります）" },
+      ]}
     />
   );
 }

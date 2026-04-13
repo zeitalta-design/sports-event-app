@@ -13,11 +13,14 @@ const COLUMNS = [
 export default function HojokinAdminListPage() {
   return (
     <AdminListPage
-      title="補助金ナビ 管理"
+      title="補助金 管理"
       apiPath="/api/admin/hojokin"
       basePath="/admin/hojokin"
       publicPath="/hojokin"
       columns={COLUMNS}
+      syncActions={[
+        { label: "補助金情報更新", endpoint: "/api/admin/sync?domain=hojokin", confirmMessage: "補助金情報の最新データを確認しますか？（数十秒かかります）" },
+      ]}
     />
   );
 }

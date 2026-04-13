@@ -19,11 +19,14 @@ const COLUMNS = [
 export default function KyoninkaAdminListPage() {
   return (
     <AdminListPage
-      title="許認可検索 管理"
+      title="許認可 管理"
       apiPath="/api/admin/kyoninka"
       basePath="/admin/kyoninka"
       publicPath="/kyoninka"
       columns={COLUMNS}
+      syncActions={[
+        { label: "許認可情報更新", endpoint: "/api/admin/sync?domain=kyoninka", confirmMessage: "許認可情報の最新データを確認しますか？（数十秒かかります）" },
+      ]}
     />
   );
 }

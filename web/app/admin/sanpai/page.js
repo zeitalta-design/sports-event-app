@@ -28,11 +28,14 @@ const COLUMNS = [
 export default function SanpaiAdminListPage() {
   return (
     <AdminListPage
-      title="産廃処分ウォッチ 管理"
+      title="産廃処分 管理"
       apiPath="/api/admin/sanpai"
       basePath="/admin/sanpai"
       publicPath="/sanpai"
       columns={COLUMNS}
+      syncActions={[
+        { label: "産廃データ更新", endpoint: "/api/admin/sync?domain=sanpai", confirmMessage: "産廃処分の最新データを確認しますか？（数十秒かかります）" },
+      ]}
     />
   );
 }
