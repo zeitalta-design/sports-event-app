@@ -6,6 +6,9 @@ const nextConfig = {
   output: "standalone",
   serverExternalPackages: ["better-sqlite3", "libsql"],
 
+  experimental: {
+    instrumentationHook: false,
+  },
 
   // セキュリティ & パフォーマンスヘッダー
   async headers() {
