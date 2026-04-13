@@ -8,29 +8,26 @@ import {
   COVERAGE_LABELS,
   DISCOVERY_STATUS_LABELS,
   ALL_PREFECTURES,
-  getSourcesBySector,
   getRegisteredPrefectures,
   getMissingPrefectures,
   getCoverageMatrix,
 } from "@/lib/gyosei-shobun-source-registry";
 
 // ─── カテゴリ定義 ─────────────────────
-// registrySector: SOURCE_REGISTRY内のsectorキー（あればレジストリ表示）
-// dbDomain: data_sourcesテーブルのdomain_id（あればDB表示）
 
 const CATEGORIES = [
-  { id: "gyosei-shobun", label: "行政処分", registrySectors: ["takken", "kensetsu", "architect_office"] },
-  { id: "sanpai", label: "産廃処分", registrySectors: ["sanpai"] },
-  { id: "nyusatsu", label: "入札", dbDomain: "nyusatsu" },
-  { id: "shitei", label: "指定管理", dbDomain: "shitei" },
-  { id: "hojokin", label: "補助金", dbDomain: "hojokin" },
-  { id: "kyoninka", label: "許認可", dbDomain: "kyoninka" },
-  { id: "food-recall", label: "食品リコール", dbDomain: "food-recall" },
-  { id: "yutai", label: "株主優待", dbDomain: "yutai" },
-  { id: "minpaku", label: "民泊", dbDomain: "minpaku" },
+  { id: "gyosei-shobun", label: "行政処分", registrySectors: ["takken", "kensetsu", "architect_office"], description: "宅建業・建設業・建築士事務所の行政処分情報源" },
+  { id: "sanpai", label: "産廃処分", registrySectors: ["sanpai"], description: "産業廃棄物処理業の行政処分情報源" },
+  { id: "nyusatsu", label: "入札", dbDomain: "nyusatsu", description: "官公庁・自治体の入札・公募情報源" },
+  { id: "shitei", label: "指定管理", dbDomain: "shitei", description: "自治体の指定管理者公募情報源" },
+  { id: "hojokin", label: "補助金", dbDomain: "hojokin", description: "国・自治体の補助金・助成金情報源" },
+  { id: "kyoninka", label: "許認可", dbDomain: "kyoninka", description: "許認可・登録事業者情報源" },
+  { id: "food-recall", label: "食品リコール", dbDomain: "food-recall", description: "食品リコール・自主回収情報源" },
+  { id: "yutai", label: "株主優待", dbDomain: "yutai", description: "上場企業の株主優待情報源" },
+  { id: "minpaku", label: "民泊", dbDomain: "minpaku", description: "住宅宿泊事業者届出情報源" },
 ];
 
-// ─── バッジコンポーネント ─────────────────────
+// ─── バッジ ─────────────────────
 
 const STATUS_STYLES = {
   ok: { bg: "bg-green-50", text: "text-green-700", border: "border-green-200", label: "正常" },
@@ -65,11 +62,13 @@ function DiscoveryBadge({ status }) {
 
 export default function DataSourceAuditPage() {
   const [activeCategory, setActiveCategory] = useState("gyosei-shobun");
+  const [sectorFilter, setSectorFilter] = useState("");
   const [discoveryFilter, setDiscoveryFilter] = useState("");
   const [auditResults, setAuditResults] = useState(null);
   const [auditing, setAuditing] = useState(false);
   const [dbSources, setDbSources] = useState([]);
   const [dbLoading, setDbLoading] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
 
   const activeCat = CATEGORIES.find((c) => c.id === activeCategory);
   const isRegistryBased = !!activeCat?.registrySectors;
@@ -86,11 +85,13 @@ export default function DataSourceAuditPage() {
       .finally(() => setDbLoading(false));
   }, [activeCategory, isRegistryBased, activeCat?.dbDomain]);
 
-  // ─── レジストリベースのデータ ─────
+  // レジストリソース
   const registrySources = useMemo(() => {
     if (!isRegistryBased) return [];
-    return SOURCE_REGISTRY.filter((s) => registrySectors.includes(s.sector));
-  }, [isRegistryBased, registrySectors]);
+    let list = SOURCE_REGISTRY.filter((s) => registrySectors.includes(s.sector));
+    if (sectorFilter) list = list.filter((s) => s.sector === sectorFilter);
+    return list;
+  }, [isRegistryBased, registrySectors, sectorFilter]);
 
   const sourcesWithAudit = useMemo(() => {
     return registrySources.map((s) => {
@@ -105,22 +106,38 @@ export default function DataSourceAuditPage() {
     return list;
   }, [sourcesWithAudit, discoveryFilter]);
 
-  // カバレッジマトリクス（該当sectorのみ）
+  // カバレッジ
   const coverageMatrix = useMemo(() => getCoverageMatrix(), []);
 
-  // サマリー
-  const summary = useMemo(() => {
-    const sources = registrySources;
+  // 分野別サマリー
+  const sectorSummaries = useMemo(() => {
+    return registrySectors.map((sec) => {
+      const sources = SOURCE_REGISTRY.filter((s) => s.sector === sec);
+      const registered = getRegisteredPrefectures(sec);
+      const missing = getMissingPrefectures(sec);
+      return {
+        sector: sec,
+        label: SECTORS[sec]?.short || sec,
+        total: sources.length,
+        active: sources.filter((s) => s.active).length,
+        confirmed: sources.filter((s) => s.discoveryStatus === "confirmed").length,
+        candidate: sources.filter((s) => s.discoveryStatus === "candidate").length,
+        manualReview: sources.filter((s) => s.discoveryStatus === "manual_review").length,
+        prefCovered: registered.length,
+        prefMissing: missing.length,
+      };
+    });
+  }, [registrySectors]);
+
+  const totalSummary = useMemo(() => {
     return {
-      total: sources.length,
-      active: sources.filter((s) => s.active).length,
-      confirmed: sources.filter((s) => s.discoveryStatus === "confirmed").length,
-      candidate: sources.filter((s) => s.discoveryStatus === "candidate").length,
-      manual_review: sources.filter((s) => s.discoveryStatus === "manual_review").length,
-      prefCovered: getRegisteredPrefectures(registrySectors[0] || "").length,
-      prefMissing: getMissingPrefectures(registrySectors[0] || "").length,
+      total: sectorSummaries.reduce((s, v) => s + v.total, 0),
+      active: sectorSummaries.reduce((s, v) => s + v.active, 0),
+      confirmed: sectorSummaries.reduce((s, v) => s + v.confirmed, 0),
+      candidate: sectorSummaries.reduce((s, v) => s + v.candidate, 0),
+      manualReview: sectorSummaries.reduce((s, v) => s + v.manualReview, 0),
     };
-  }, [registrySources, registrySectors]);
+  }, [sectorSummaries]);
 
   // 監査
   const runAudit = async () => {
@@ -133,27 +150,20 @@ export default function DataSourceAuditPage() {
     finally { setAuditing(false); }
   };
 
-  const auditSummary = useMemo(() => {
-    if (!auditResults) return null;
-    const relevant = auditResults.filter((r) => registrySources.some((s) => s.id === r.sourceId));
-    const counts = { ok: 0, warn: 0, error: 0, unknown: 0 };
-    relevant.forEach((r) => { counts[r.status] = (counts[r.status] || 0) + 1; });
-    return counts;
-  }, [auditResults, registrySources]);
-
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* ヘッダー */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900 mb-1">データソース監査</h1>
-        <p className="text-sm text-gray-500">カテゴリ別の情報源管理・到達性監査・カバレッジ確認</p>
+        <p className="text-sm text-gray-500">カテゴリ別の情報源管理・到達性監査・都道府県カバレッジ確認</p>
       </div>
 
       {/* 凡例 */}
       <div className="flex flex-wrap gap-4 mb-6 p-3 bg-gray-50 rounded-lg border border-gray-100 text-xs text-gray-600">
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500" /> 確認済み — 正式登録</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500" /> 確認済 — 正式登録</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500" /> 候補 — 調査中</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-sky-400" /> 補完 — 上位ソースで補完</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-400" /> 要確認 — 手動確認必要</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500" /> 未登録 — 情報源なし</span>
       </div>
 
@@ -162,7 +172,7 @@ export default function DataSourceAuditPage() {
         {CATEGORIES.map((cat) => (
           <button
             key={cat.id}
-            onClick={() => { setActiveCategory(cat.id); setDiscoveryFilter(""); }}
+            onClick={() => { setActiveCategory(cat.id); setSectorFilter(""); setDiscoveryFilter(""); setShowAddForm(false); }}
             className={`px-4 py-2.5 text-sm font-bold border-b-2 transition-colors ${
               activeCategory === cat.id ? "border-blue-600 text-blue-600" : "border-transparent text-gray-400 hover:text-gray-700"
             }`}
@@ -172,27 +182,54 @@ export default function DataSourceAuditPage() {
         ))}
       </div>
 
-      {/* ──── レジストリベースカテゴリ（行政処分・産廃） ──── */}
+      {/* カテゴリ説明 */}
+      <p className="text-xs text-gray-400 mb-4">{activeCat.description}</p>
+
+      {/* ========== レジストリベースカテゴリ ========== */}
       {isRegistryBased && (
         <>
-          {/* サマリーカード */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
-            <SummaryCard label="情報源数" value={summary.total} />
-            <SummaryCard label="有効" value={summary.active} />
-            <SummaryCard label="確認済" value={summary.confirmed} accent="green" />
-            <SummaryCard label="候補" value={summary.candidate} accent="blue" />
-            <SummaryCard label="要確認" value={summary.manual_review} accent="amber" />
-            <SummaryCard label="都道府県カバー" value={`${summary.prefCovered}/47`} accent="green" />
-            <SummaryCard label="未登録都道府県" value={summary.prefMissing} accent={summary.prefMissing > 0 ? "red" : "green"} />
-          </div>
-
-          {/* 監査サマリー */}
-          {auditSummary && (
-            <div className="grid grid-cols-4 gap-3 mb-6">
-              <SummaryCard label="正常" value={auditSummary.ok} accent="green" />
-              <SummaryCard label="警告" value={auditSummary.warn} accent="amber" />
-              <SummaryCard label="エラー" value={auditSummary.error} accent="red" />
-              <SummaryCard label="未確認" value={auditSummary.unknown} />
+          {/* 分野別サマリー */}
+          {sectorSummaries.length > 1 ? (
+            <div className="mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                {sectorSummaries.map((ss) => (
+                  <button
+                    key={ss.sector}
+                    onClick={() => setSectorFilter(sectorFilter === ss.sector ? "" : ss.sector)}
+                    className={`bg-white rounded-xl border p-4 text-left transition-all ${
+                      sectorFilter === ss.sector ? "border-blue-400 ring-2 ring-blue-100" : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-bold text-gray-900">{ss.label}</span>
+                      <span className="text-[10px] text-gray-400">{ss.total}件</span>
+                    </div>
+                    <div className="flex gap-2 text-[10px]">
+                      <span className="text-green-600">確認済 {ss.confirmed}</span>
+                      <span className="text-blue-600">候補 {ss.candidate}</span>
+                      <span className="text-amber-600">要確認 {ss.manualReview}</span>
+                    </div>
+                    <div className="mt-2 text-[10px] text-gray-500">
+                      都道府県カバー: <span className={ss.prefMissing > 0 ? "text-red-500 font-bold" : "text-green-600 font-bold"}>{ss.prefCovered}/47</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              {sectorFilter && (
+                <button onClick={() => setSectorFilter("")} className="text-[11px] text-blue-600 hover:underline">
+                  × フィルタ解除（全分野表示）
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+              <SummaryCard label="情報源数" value={totalSummary.total} />
+              <SummaryCard label="有効" value={totalSummary.active} />
+              <SummaryCard label="確認済" value={totalSummary.confirmed} accent="green" />
+              <SummaryCard label="候補" value={totalSummary.candidate} accent="blue" />
+              <SummaryCard label="要確認" value={totalSummary.manualReview} accent="amber" />
+              <SummaryCard label="都道府県カバー" value={`${sectorSummaries[0]?.prefCovered || 0}/47`} accent="green" />
+              <SummaryCard label="未登録" value={sectorSummaries[0]?.prefMissing || 0} accent={sectorSummaries[0]?.prefMissing > 0 ? "red" : "green"} />
             </div>
           )}
 
@@ -207,16 +244,15 @@ export default function DataSourceAuditPage() {
             <button onClick={runAudit} disabled={auditing} className={`text-xs px-4 py-2 rounded-lg font-medium transition-colors ${auditing ? "bg-gray-100 text-gray-400" : "bg-gray-900 text-white hover:bg-gray-800"}`}>
               {auditing ? "監査実行中..." : "到達性監査を実行"}
             </button>
-            <span className="text-[11px] text-gray-400">
-              {filteredSources.length}件表示
-            </span>
+            <span className="text-[11px] text-gray-400">{filteredSources.length}件表示</span>
           </div>
 
           {/* 情報源テーブル */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-8">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-gray-100">
               <h2 className="text-sm font-bold text-gray-700">
                 {activeCat.label} 情報源一覧（{filteredSources.length}件）
+                {sectorFilter && <span className="text-gray-400 font-normal ml-2">— {SECTORS[sectorFilter]?.short}のみ表示</span>}
               </h2>
             </div>
             <div className="overflow-x-auto">
@@ -273,14 +309,19 @@ export default function DataSourceAuditPage() {
           {/* 都道府県カバレッジマトリクス */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100">
-              <h2 className="text-sm font-bold text-gray-700">都道府県カバレッジ</h2>
-              <p className="text-[11px] text-gray-400 mt-0.5">各都道府県の情報源登録状況。47都道府県中 {summary.prefCovered}件カバー済み。</p>
+              <h2 className="text-sm font-bold text-gray-700">都道府県カバレッジ（47都道府県）</h2>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                各都道府県の情報源登録状況。
+                {sectorSummaries.map((ss) => (
+                  <span key={ss.sector} className="ml-2">{ss.label}: {ss.prefCovered}/47</span>
+                ))}
+              </p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-gray-50 text-gray-500 text-left">
-                    <th className="px-3 py-2 font-medium">都道府県</th>
+                    <th className="px-3 py-2 font-medium sticky left-0 bg-gray-50">都道府県</th>
                     {registrySectors.map((sec) => (
                       <th key={sec} className="px-3 py-2 font-medium text-center">{SECTORS[sec]?.short || sec}</th>
                     ))}
@@ -289,7 +330,7 @@ export default function DataSourceAuditPage() {
                 <tbody className="divide-y divide-gray-50">
                   {coverageMatrix.map((row) => (
                     <tr key={row.prefecture} className="hover:bg-gray-50/50">
-                      <td className="px-3 py-1.5 text-gray-700 font-medium">{row.prefecture}</td>
+                      <td className="px-3 py-1.5 text-gray-700 font-medium sticky left-0 bg-white">{row.prefecture}</td>
                       {registrySectors.map((sector) => {
                         const cell = COVERAGE_CELL[row[sector]] || COVERAGE_CELL.missing;
                         return (
@@ -307,72 +348,185 @@ export default function DataSourceAuditPage() {
         </>
       )}
 
-      {/* ──── DBベースカテゴリ ──── */}
+      {/* ========== DBベースカテゴリ ========== */}
       {!isRegistryBased && (
         <>
           {dbLoading ? (
             <div className="py-16 text-center text-gray-400">読み込み中...</div>
-          ) : dbSources.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-2xl flex items-center justify-center">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">{activeCat.label}のデータソース</h3>
-              <p className="text-sm text-gray-500 mb-4">このカテゴリにはまだデータソースが登録されていません。</p>
-              <p className="text-xs text-gray-400">管理者がデータソースを登録すると、ここに一覧表示されます。</p>
-            </div>
           ) : (
             <>
+              {/* サマリー */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                 <SummaryCard label="登録ソース数" value={dbSources.length} />
                 <SummaryCard label="有効" value={dbSources.filter((s) => s.status === "active").length} accent="green" />
                 <SummaryCard label="日次巡回" value={dbSources.filter((s) => s.run_frequency === "daily").length} accent="blue" />
-                <SummaryCard label="最終確認" value={dbSources.reduce((l, s) => (s.last_checked_at && s.last_checked_at > l ? s.last_checked_at : l), "-").substring(0, 10)} />
+                <SummaryCard label="最終確認" value={
+                  dbSources.length > 0
+                    ? dbSources.reduce((l, s) => (s.last_checked_at && s.last_checked_at > l ? s.last_checked_at : l), "").substring(0, 10) || "未確認"
+                    : "—"
+                } />
               </div>
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <h2 className="text-sm font-bold text-gray-700">{activeCat.label} データソース一覧（{dbSources.length}件）</h2>
+
+              {/* 新規追加ボタン */}
+              <div className="mb-6">
+                <button
+                  onClick={() => setShowAddForm(!showAddForm)}
+                  className="text-xs px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                >
+                  {showAddForm ? "閉じる" : "+ 新規情報源を追加"}
+                </button>
+              </div>
+
+              {/* 新規追加フォーム */}
+              {showAddForm && (
+                <AddSourceForm
+                  category={activeCat.dbDomain}
+                  onAdded={() => {
+                    setShowAddForm(false);
+                    // リロード
+                    fetch(`/api/admin/ops/gyosei-shobun-sources?category=${activeCat.dbDomain}`)
+                      .then((r) => r.json())
+                      .then((data) => setDbSources(data.sources || []));
+                  }}
+                />
+              )}
+
+              {/* ソーステーブル or 空状態 */}
+              {dbSources.length === 0 ? (
+                <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-2xl flex items-center justify-center">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">{activeCat.label}のデータソース</h3>
+                  <p className="text-sm text-gray-500 mb-2">このカテゴリにはまだデータソースが登録されていません。</p>
+                  <p className="text-xs text-gray-400">上の「+ 新規情報源を追加」ボタンから登録できます。</p>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-gray-50 text-gray-500 text-left">
-                        <th className="px-3 py-2 font-medium">ソース名</th>
-                        <th className="px-3 py-2 font-medium">種別</th>
-                        <th className="px-3 py-2 font-medium">URL</th>
-                        <th className="px-3 py-2 font-medium">取得方法</th>
-                        <th className="px-3 py-2 font-medium">巡回頻度</th>
-                        <th className="px-3 py-2 font-medium">最終確認</th>
-                        <th className="px-3 py-2 font-medium">ステータス</th>
-                        <th className="px-3 py-2 font-medium">メモ</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {dbSources.map((s) => (
-                        <tr key={s.id} className="hover:bg-gray-50/50">
-                          <td className="px-3 py-2.5 text-gray-900 font-medium">{s.source_name}</td>
-                          <td className="px-3 py-2.5 text-gray-500">{s.source_type || "web"}</td>
-                          <td className="px-3 py-2.5">
-                            {s.source_url ? <a href={s.source_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline truncate max-w-[200px] block">{s.source_url}</a> : <span className="text-gray-300">-</span>}
-                          </td>
-                          <td className="px-3 py-2.5 text-gray-500">{s.fetch_method || "manual"}</td>
-                          <td className="px-3 py-2.5 text-gray-500">{s.run_frequency || "-"}</td>
-                          <td className="px-3 py-2.5 text-gray-400">{s.last_checked_at?.substring(0, 10) || "未確認"}</td>
-                          <td className="px-3 py-2.5"><StatusBadge status={s.status || "unknown"} /></td>
-                          <td className="px-3 py-2.5 text-gray-400 max-w-[180px]"><span className="line-clamp-2">{s.notes || "-"}</span></td>
+              ) : (
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <h2 className="text-sm font-bold text-gray-700">{activeCat.label} データソース一覧（{dbSources.length}件）</h2>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-gray-50 text-gray-500 text-left">
+                          <th className="px-3 py-2 font-medium">ソース名</th>
+                          <th className="px-3 py-2 font-medium">種別</th>
+                          <th className="px-3 py-2 font-medium">URL</th>
+                          <th className="px-3 py-2 font-medium">取得方法</th>
+                          <th className="px-3 py-2 font-medium">巡回頻度</th>
+                          <th className="px-3 py-2 font-medium">最終確認</th>
+                          <th className="px-3 py-2 font-medium">ステータス</th>
+                          <th className="px-3 py-2 font-medium">メモ</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {dbSources.map((s) => (
+                          <tr key={s.id} className="hover:bg-gray-50/50">
+                            <td className="px-3 py-2.5 text-gray-900 font-medium">{s.source_name}</td>
+                            <td className="px-3 py-2.5 text-gray-500">{s.source_type || "web"}</td>
+                            <td className="px-3 py-2.5">
+                              {s.source_url ? <a href={s.source_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline truncate max-w-[200px] block">{s.source_url}</a> : <span className="text-gray-300">-</span>}
+                            </td>
+                            <td className="px-3 py-2.5 text-gray-500">{s.fetch_method || "manual"}</td>
+                            <td className="px-3 py-2.5 text-gray-500">{s.run_frequency || "-"}</td>
+                            <td className="px-3 py-2.5 text-gray-400">{s.last_checked_at?.substring(0, 10) || "未確認"}</td>
+                            <td className="px-3 py-2.5"><StatusBadge status={s.status || "unknown"} /></td>
+                            <td className="px-3 py-2.5 text-gray-400 max-w-[180px]"><span className="line-clamp-2">{s.notes || "-"}</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </>
       )}
     </div>
+  );
+}
+
+// ─── 新規情報源追加フォーム ─────────────────────
+
+function AddSourceForm({ category, onAdded }) {
+  const [form, setForm] = useState({
+    source_name: "",
+    source_type: "web",
+    source_url: "",
+    fetch_method: "manual",
+    run_frequency: "daily",
+    notes: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.source_name.trim()) { setError("ソース名を入力してください"); return; }
+    setSubmitting(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/ops/gyosei-shobun-sources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, domain_id: category }),
+      });
+      if (res.ok) {
+        onAdded();
+      } else {
+        const data = await res.json();
+        setError(data.error || "登録に失敗しました");
+      }
+    } catch {
+      setError("通信エラーが発生しました");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-5 mb-6 space-y-4">
+      <h3 className="text-sm font-bold text-gray-900">新規情報源を追加</h3>
+      {error && <p className="text-xs text-red-600 bg-red-50 p-2 rounded">{error}</p>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">ソース名 *</label>
+          <input type="text" value={form.source_name} onChange={(e) => setForm({ ...form, source_name: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="例: 東京都 産業廃棄物処理業者名簿" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">URL</label>
+          <input type="url" value={form.source_url} onChange={(e) => setForm({ ...form, source_url: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="https://..." />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">取得方法</label>
+          <select value={form.fetch_method} onChange={(e) => setForm({ ...form, fetch_method: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm">
+            <option value="manual">手動</option>
+            <option value="scraping">自動スクレイピング</option>
+            <option value="api">API連携</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">巡回頻度</label>
+          <select value={form.run_frequency} onChange={(e) => setForm({ ...form, run_frequency: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm">
+            <option value="daily">毎日</option>
+            <option value="weekly">週1回</option>
+            <option value="monthly">月1回</option>
+            <option value="manual">手動のみ</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">メモ</label>
+        <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="備考（任意）" />
+      </div>
+      <button type="submit" disabled={submitting} className="text-sm px-5 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
+        {submitting ? "登録中..." : "登録する"}
+      </button>
+    </form>
   );
 }
 
