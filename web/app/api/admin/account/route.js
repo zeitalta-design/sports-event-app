@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { changePassword, getCurrentUser } from "@/lib/auth";
+import { changePassword } from "@/lib/auth";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { extractRequestInfo } from "@/lib/audit-log";
 
@@ -12,7 +12,8 @@ export async function GET() {
   try {
     const guard = await requireAdminApi();
     if (guard.error) return guard.error;
-    const admin = await requireAdmin();
+
+    const admin = guard.user;
     if (!admin) {
       return NextResponse.json(
         { error: "管理者権限が必要です" },
@@ -26,8 +27,8 @@ export async function GET() {
         email: admin.email,
         name: admin.name,
         role: admin.role,
-        lastLoginAt: admin.lastLoginAt,
-        passwordChangedAt: admin.passwordChangedAt,
+        lastLoginAt: admin.lastLoginAt || admin.last_login_at || null,
+        passwordChangedAt: admin.passwordChangedAt || admin.password_changed_at || null,
       },
     });
   } catch (error) {
@@ -37,11 +38,13 @@ export async function GET() {
 
 /**
  * PATCH /api/admin/account — パスワード変更
- * body: { currentPassword, newPassword, newPasswordConfirm }
  */
 export async function PATCH(request) {
   try {
-    const admin = await requireAdmin();
+    const guard = await requireAdminApi();
+    if (guard.error) return guard.error;
+
+    const admin = guard.user;
     if (!admin) {
       return NextResponse.json(
         { error: "管理者権限が必要です" },
@@ -52,7 +55,6 @@ export async function PATCH(request) {
     const body = await request.json();
     const { currentPassword, newPassword, newPasswordConfirm } = body;
 
-    // 入力チェック
     if (!currentPassword || !newPassword || !newPasswordConfirm) {
       return NextResponse.json(
         { error: "すべての項目を入力してください" },
