@@ -36,7 +36,6 @@ const TAB_GROUPS = [
       { href: "/admin/emails", label: "メール" },
       { href: "/admin/audit-logs", label: "監査ログ" },
       { href: "/admin/launch-check", label: "公開チェック" },
-      { href: "/admin/ops-guide", label: "運用ガイド" },
     ],
   },
 ];
