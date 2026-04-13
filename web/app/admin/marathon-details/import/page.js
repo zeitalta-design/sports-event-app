@@ -7,9 +7,9 @@ import AdminNav from "@/components/AdminNav";
 // ─── ソース種別 ──────────────────────────
 
 const SOURCE_TYPES = [
-  { value: "moshicom", label: "moshicom" },
-  { value: "runnet", label: "RUNNET" },
-  { value: "sportsentry", label: "スポーツエントリー" },
+  { value: "moshicom", label: "公開情報源" },
+  { value: "runnet", label: "公開情報源" },
+  { value: "sportsentry", label: "公開情報源" },
   { value: "official", label: "公式サイト" },
   { value: "manual", label: "手入力" },
 ];
@@ -124,7 +124,7 @@ function UrlImportMode({ prefilledEventId = "" }) {
     <>
       <div className="card p-6 mb-6">
         <h2 className="text-lg font-bold text-gray-900 mb-1">
-          URL自動取得（RUNNET / MOSHICOM / スポーツエントリー）
+          URL自動取得（公開情報源 / 公開情報源 / 公開情報源）
         </h2>
         <p className="text-xs text-gray-400 mb-4">
           URLを入力するだけで、HTML取得 → 解析 → LLM構造化 → DB保存を一括で行います。
@@ -139,7 +139,7 @@ function UrlImportMode({ prefilledEventId = "" }) {
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://runnet.jp/entry/... / https://moshicom.com/... / https://www.sportsentry.ne.jp/event/t/..."
+            placeholder="公開情報源のURLを入力"
             className="border border-gray-300 rounded px-3 py-2 w-full text-sm"
             onKeyDown={(e) => e.key === "Enter" && !loading && handleImport()}
           />
@@ -466,7 +466,7 @@ function TextImportMode({ router }) {
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Moshicom / RUNNET / 公式サイトなどからリスク情報のテキストを貼り付けてください"
+            placeholder="公開情報源 / 公開情報源 / 公式サイトなどからリスク情報のテキストを貼り付けてください"
             rows={15}
             className="border border-gray-300 rounded px-3 py-2 w-full text-sm font-mono leading-relaxed"
           />

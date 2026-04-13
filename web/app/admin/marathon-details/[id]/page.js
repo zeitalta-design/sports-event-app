@@ -11,15 +11,15 @@ const JSON_SAMPLES = {
   payment_methods_json: '["クレジットカード", "コンビニ払い", "銀行振込"]',
   level_labels_json: '["初心者向け", "中級者向け", "上級者向け"]',
   pricing_json:
-    '[\n  { "name": "フルマラソン", "fee": "11,000円", "note": "早割10%OFF" },\n  { "name": "ハーフ", "fee": "7,700円", "note": "" }\n]',
+    '[\n  { "name": "リスク情報", "fee": "11,000円", "note": "早割10%OFF" },\n  { "name": "ハーフ", "fee": "7,700円", "note": "" }\n]',
   schedule_json:
-    '[\n  { "time": "07:30", "label": "受付開始" },\n  { "time": "09:00", "label": "フルマラソン スタート" },\n  { "time": "14:00", "label": "閉会式" }\n]',
+    '[\n  { "time": "07:30", "label": "受付開始" },\n  { "time": "09:00", "label": "リスク情報 スタート" },\n  { "time": "14:00", "label": "閉会式" }\n]',
   faq_json:
     '[\n  { "question": "ゼッケンの受取方法は？", "answer": "当日会場で受け取れます。" },\n  { "question": "駐車場はありますか？", "answer": "会場周辺に有料駐車場があります。" }\n]',
   time_limits_json:
-    '[\n  { "name": "フルマラソン", "limit": "6時間" },\n  { "name": "ハーフ", "limit": "3時間" }\n]',
+    '[\n  { "name": "リスク情報", "limit": "6時間" },\n  { "name": "ハーフ", "limit": "3時間" }\n]',
   series_events_json:
-    '[\n  { "event_id": 1, "name": "東京マラソン2026" },\n  { "event_id": 2, "name": "大阪マラソン2026" }\n]',
+    '[\n  { "event_id": 1, "name": "東京リスク情報2026" },\n  { "event_id": 2, "name": "大阪リスク情報2026" }\n]',
   distances_json: '["42.195km", "21.0975km", "10km", "5km"]',
 };
 
@@ -240,7 +240,7 @@ export default function AdminMarathonDetailEditPage({ params }) {
               rel="noopener noreferrer"
               className="text-xs text-gray-500 hover:text-gray-700 underline"
             >
-              RUNNET ↗
+              公開情報源 ↗
             </a>
           )}
           {event.official_url && (
@@ -289,11 +289,11 @@ export default function AdminMarathonDetailEditPage({ params }) {
             placeholder="リスク情報の概要を記入"
           />
           <TextInput
-            label="スポーツカテゴリ"
+            label="リスクカテゴリ"
             field="sports_category"
             value={form.sports_category}
             onChange={updateField}
-            placeholder="例: ランニング"
+            placeholder="例: リスク監視"
           />
           <TextInput
             label="リスク情報種別"

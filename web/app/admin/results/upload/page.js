@@ -11,8 +11,8 @@ import AdminNav from "@/components/AdminNav";
  */
 
 const SPORT_OPTIONS = [
-  { value: "marathon", label: "マラソン" },
-  { value: "trail", label: "トレイル" },
+  { value: "marathon", label: "リスク情報" },
+  { value: "trail", label: "データ" },
 ];
 
 export default function AdminResultsUploadPage() {
@@ -104,7 +104,7 @@ export default function AdminResultsUploadPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">スポーツ種別</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">リスク種別</label>
               <select
                 value={sportType}
                 onChange={(e) => setSportType(e.target.value)}
@@ -221,8 +221,8 @@ export default function AdminResultsUploadPage() {
         </div>
         <div className="mt-3 p-3 bg-gray-50 rounded text-xs text-gray-600 font-mono">
           ゼッケン,総合順位,タイム,ネットタイム,種目,性別,年代<br />
-          101,1,3:05:23,3:04:58,フルマラソン,男,30代<br />
-          102,2,3:12:45,3:12:01,フルマラソン,女,20代
+          101,1,3:05:23,3:04:58,リスク情報,男,30代<br />
+          102,2,3:12:45,3:12:01,リスク情報,女,20代
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import AdminNav from "@/components/AdminNav";
 
 /**
- * RUNNET × MOSHICOM ソース統合管理画面
+ * 公開情報源 × 公開情報源 ソース統合管理画面
  *
  * 1. リスクデータ一覧（統合ステータスフィルタ）
  * 2. 自動検索 → マッチ候補表示
@@ -108,10 +108,10 @@ export default function SourceMergePage() {
       <AdminNav />
 
       <h1 className="text-xl font-bold text-gray-900 mb-1">
-        🔗 ソース統合（RUNNET × MOSHICOM）
+        🔗 ソース統合（公開情報源 × 公開情報源）
       </h1>
       <p className="text-sm text-gray-500 mb-6">
-        RUNNETリスクデータにMOSHICOMの詳細情報を統合
+        公開情報源リスクデータに公開情報源の詳細情報を統合
       </p>
 
       {/* フィルタ */}
@@ -191,7 +191,7 @@ export default function SourceMergePage() {
                         </span>
                       ) : (
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                          RUNNET
+                          公開情報源
                         </span>
                       )}
                     </div>
@@ -246,7 +246,7 @@ export default function SourceMergePage() {
               {/* MOSHICOM検索結果 */}
               {searching ? (
                 <p className="text-sm text-gray-400 py-6 text-center">
-                  MOSHICOM検索中...
+                  公開情報源検索中...
                 </p>
               ) : searchResult?.alreadyMerged ? (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -265,7 +265,7 @@ export default function SourceMergePage() {
               ) : searchResult?.matchResult ? (
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold text-gray-700">
-                    MOSHICOM候補（上位{searchResult.matchResult.allResults?.length || 0}件）
+                    公開情報源候補（上位{searchResult.matchResult.allResults?.length || 0}件）
                   </h4>
                   {searchResult.matchResult.allResults?.map((r, i) => (
                     <div
@@ -341,7 +341,7 @@ export default function SourceMergePage() {
               {/* 手動URL入力 */}
               <div className="border-t pt-4">
                 <h4 className="text-xs font-bold text-gray-700 mb-2">
-                  手動でMOSHICOM URLを入力
+                  手動で公開情報源 URLを入力
                 </h4>
                 <div className="flex gap-2">
                   <input
@@ -379,7 +379,7 @@ export default function SourceMergePage() {
                   ) : (
                     <>
                       <p className="text-xs text-gray-700 mb-2">
-                        MOSHICOM: {previewResult.moshicomTitle} （{previewResult.moshicomRacesCount}種目）
+                        公開情報源: {previewResult.moshicomTitle} （{previewResult.moshicomRacesCount}種目）
                       </p>
                       {previewResult.differences?.diffs?.length > 0 ? (
                         <div className="space-y-1.5">
@@ -432,7 +432,7 @@ export default function SourceMergePage() {
                         統合完了
                       </p>
                       <p className="text-xs text-green-700 mt-1">
-                        {mergeResult.eventTitle} ← {mergeResult.moshicomTitle}
+                        {mergeResult.eventTitle} ← {mergeResult.moshicomTitle} (公開情報源)
                         （{mergeResult.fieldsUpdated}フィールド更新, {mergeResult.moshicomRacesCount}種目）
                       </p>
                     </>

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import AdminNav from "@/components/AdminNav";
 
 /**
- * MOSHICOM統合 検証レビュー画面
+ * 公開情報源統合 検証レビュー画面
  *
  * 検証ログの一覧表示・手動レビュー・レポート表示
  */
@@ -85,7 +85,7 @@ export default function MergeVerificationPage() {
         🔬 統合検証レビュー
       </h1>
       <p className="text-sm text-gray-500 mb-6">
-        MOSHICOM検索マッチングの精度を検証・レビュー
+        公開情報源検索マッチングの精度を検証・レビュー
       </p>
 
       {/* レポートカード */}
@@ -174,7 +174,7 @@ export default function MergeVerificationPage() {
         <div className="text-center py-16 text-gray-400">
           <p className="text-sm mb-2">検証ログがありません</p>
           <p className="text-xs">
-            <code className="bg-gray-100 px-2 py-1 rounded">node scripts/verify-moshicom-match.js --limit 50</code>
+            <code className="bg-gray-100 px-2 py-1 rounded">node scripts/verify-source-match.js --limit 50</code>
             <br />を実行して検証データを生成してください
           </p>
         </div>
@@ -217,11 +217,11 @@ export default function MergeVerificationPage() {
                     )}
                   </div>
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    RUNNET: {log.runnet_title}
+                    公開情報源: {log.runnet_title}
                   </p>
                   {log.moshicom_title && (
                     <p className="text-sm text-blue-700 truncate mt-0.5">
-                      MOSHICOM: {log.moshicom_title}
+                      公開情報源: {log.moshicom_title}
                     </p>
                   )}
                   <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-400">
@@ -230,7 +230,7 @@ export default function MergeVerificationPage() {
                     <span>{log.prefecture || ""}</span>
                     {log.moshicom_url && (
                       <a href={log.moshicom_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                        MOSHICOM ↗
+                        公開情報源 ↗
                       </a>
                     )}
                   </div>

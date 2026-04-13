@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 /**
  * Phase228: 基本分析ページ
  * - 期間別KPI（今日/7日/30日）
- * - 人気スポーツ・エリア
+ * - 人気リスク・エリア
  * - よく見られているリスク情報
  * - アクション分布
  * - 日別推移
@@ -61,11 +61,11 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         <MiniCard label="登録ユーザー" value={userCount} />
         <MiniCard label="月間問い合わせ" value={monthlyInquiries} />
-        <MiniCard label="スポーツ種目" value={sportDistribution.length} />
+        <MiniCard label="リスク種目" value={sportDistribution.length} />
         <MiniCard label="対応エリア" value={popularAreas.length} />
       </div>
 
-      {/* 3カラム: 日別推移・人気スポーツ・人気エリア */}
+      {/* 3カラム: 日別推移・人気リスク・人気エリア */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* 日別推移 */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
@@ -98,10 +98,10 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* 人気スポーツ種目 */}
+        {/* 人気リスク種目 */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="font-extrabold text-gray-900">スポーツ種目分布</h3>
+            <h3 className="font-extrabold text-gray-900">リスク種目分布</h3>
           </div>
           <div className="p-5">
             {sportDistribution.length === 0 ? (

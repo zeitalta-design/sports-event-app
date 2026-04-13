@@ -26,9 +26,9 @@ const PERIOD_OPTIONS = [
 ];
 
 const SPORT_OPTIONS = [
-  { value: "", label: "全スポーツ" },
-  { value: "marathon", label: "マラソン" },
-  { value: "trail", label: "トレイル" },
+  { value: "", label: "全リスク" },
+  { value: "marathon", label: "リスク情報" },
+  { value: "trail", label: "データ" },
   { value: "triathlon", label: "トライアスロン" },
   { value: "cycling", label: "自転車" },
   { value: "walking", label: "ウォーキング" },

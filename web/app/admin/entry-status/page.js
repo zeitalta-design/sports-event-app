@@ -52,8 +52,8 @@ const UNKNOWN_REASON_LABELS = {
 
 const SOURCE_TYPE_LABELS = {
   official: "🏢 公式サイト",
-  runnet: "🏃 RUNNET",
-  moshicom: "📋 MOSHICOM",
+  runnet: "🏃 公開情報源",
+  moshicom: "📋 公開情報源",
   other: "🔗 その他",
   unset: "⚪ 未設定",
 };

@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 /**
  * Phase132: 管理メモコンポーネント
  *
- * 大会ごとの管理メモ表示・追加UI。
+ * データごとの管理メモ表示・追加UI。
  * 管理画面内で埋め込みで使用。
  */
 

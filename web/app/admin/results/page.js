@@ -11,9 +11,9 @@ import AdminNav from "@/components/AdminNav";
  */
 
 const SPORT_OPTIONS = [
-  { value: "", label: "全スポーツ" },
-  { value: "marathon", label: "マラソン" },
-  { value: "trail", label: "トレイル" },
+  { value: "", label: "全リスク" },
+  { value: "marathon", label: "リスク情報" },
+  { value: "trail", label: "データ" },
 ];
 
 export default function AdminResultsPage() {

@@ -101,8 +101,8 @@ export default async function AdminEventsPage({ searchParams }) {
           { label: "総数", value: stats.total },
           { label: "有効", value: stats.active },
           { label: "都道府県", value: stats.prefectures },
-          { label: "RUNNET件数", value: runnetStats.count },
-          { label: "moshicom系", value: moshicomCount },
+          { label: "公開情報源件数", value: runnetStats.count },
+          { label: "公開情報源(2)", value: moshicomCount },
           { label: "詳細取得済", value: `${detailStats.with_detail}/${runnetStats.count}` },
           { label: "race登録済", value: detailStats.with_races },
           { label: "race未登録", value: noRaceCount, warn: noRaceCount > 0 },
@@ -168,7 +168,7 @@ export default async function AdminEventsPage({ searchParams }) {
                   </td>
                   <td className="py-2 px-3 text-gray-400 text-xs whitespace-nowrap">
                     {e.source_site}
-                    {isMoshicom && <span className="ml-1 text-purple-500 font-medium" title="moshicom系">M</span>}
+                    {isMoshicom && <span className="ml-1 text-purple-500 font-medium" title="公開情報源">M</span>}
                   </td>
                   <td className="py-2 px-3 text-gray-400 text-xs">{e.source_event_id || "-"}</td>
                 </tr>

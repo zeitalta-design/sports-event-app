@@ -10,22 +10,15 @@ import { usePathname } from "next/navigation";
 
 const TAB_GROUPS = [
   {
-    label: "SaaSナビ",
+    label: "リスクデータ",
     tabs: [
-      { href: "/admin/saas-items", label: "ツール" },
-      { href: "/admin/saas-providers", label: "ベンダー" },
-    ],
-  },
-  {
-    label: "データ管理",
-    tabs: [
-      { href: "/admin/events", label: "データ管理" },
-      { href: "/admin/marathon-details/import", label: "取込" },
-      { href: "/admin/marathon-details", label: "詳細" },
-      { href: "/admin/reviews", label: "口コミ" },
-      { href: "/admin/photos", label: "写真" },
-      { href: "/admin/results", label: "結果" },
-      { href: "/admin/source-merge", label: "ソース統合" },
+      { href: "/admin/gyosei-shobun", label: "行政処分" },
+      { href: "/admin/sanpai", label: "産廃処分" },
+      { href: "/admin/nyusatsu", label: "入札" },
+      { href: "/admin/shitei", label: "指定管理" },
+      { href: "/admin/hojokin", label: "補助金" },
+      { href: "/admin/kyoninka", label: "許認可" },
+      { href: "/admin/food-recall", label: "食品リコール" },
     ],
   },
   {
@@ -33,22 +26,18 @@ const TAB_GROUPS = [
     tabs: [
       { href: "/admin/quality", label: "品質管理" },
       { href: "/admin/data-growth", label: "成長KPI" },
-      { href: "/admin/event-metrics", label: "指標" },
       { href: "/admin/verification-conflicts", label: "相互検証" },
-      { href: "/admin/merge-verification", label: "統合検証" },
       { href: "/admin/analytics", label: "分析" },
     ],
   },
   {
     label: "運用",
     tabs: [
-      { href: "/admin/organizer-requests", label: "ソース依頼" },
-      { href: "/admin/event-notifications", label: "通知" },
+      { href: "/admin/watchlist", label: "ウォッチリスト" },
       { href: "/admin/jobs", label: "ジョブ" },
       { href: "/admin/emails", label: "メール" },
-      { href: "/admin/hero-images", label: "ヒーロー画像" },
+      { href: "/admin/audit-logs", label: "監査ログ" },
       { href: "/admin/launch-check", label: "公開チェック" },
-      { href: "/admin/post-launch", label: "公開後" },
       { href: "/admin/ops-guide", label: "運用ガイド" },
     ],
   },
