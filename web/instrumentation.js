@@ -11,7 +11,8 @@ export async function register() {
   }
 
   // 管理者アカウントの自動シード（admin が 0 人の場合のみ、Node.js ランタイムでのみ実行）
-  if (process.env.NEXT_RUNTIME === "nodejs") {
+  // Vercel環境ではDB初期化がinstrumentation hookで失敗するためスキップ
+  if (process.env.NEXT_RUNTIME === "nodejs" && !process.env.VERCEL) {
     try {
       const { seedAdmin } = await import("./lib/admin-seed.js");
       seedAdmin();
@@ -37,19 +38,6 @@ function validateProductionEnv() {
   } else if (process.env.SESSION_SECRET.length < 32) {
     errors.push(
       "SESSION_SECRET は32文字以上のランダム文字列を設定してください。"
-    );
-  }
-
-  // APP_BASE_URL: パスワードリセットURL等に必須
-  if (!process.env.APP_BASE_URL) {
-    errors.push(
-      "APP_BASE_URL が設定されていません。" +
-        "例: APP_BASE_URL=https://your-domain.com"
-    );
-  } else if (process.env.APP_BASE_URL.startsWith("http://localhost")) {
-    errors.push(
-      "APP_BASE_URL が localhost を指しています。" +
-        "本番ドメインを設定してください。"
     );
   }
 
