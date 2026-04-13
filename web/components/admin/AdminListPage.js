@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 
 /**
- * 管理画面共通一覧コンポーネント
+ * 管理画面共通一覧コンポーネント（ページネーション対応）
  *
  * @param {Object} props
  * @param {string} props.title - ページタイトル
@@ -18,6 +18,9 @@ import Link from "next/link";
 export default function AdminListPage({ title, apiPath, basePath, publicPath, columns, slugField = "slug", syncActions = [] }) {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize] = useState(50);
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(true);
   const [syncingIdx, setSyncingIdx] = useState(-1);
@@ -28,18 +31,23 @@ export default function AdminListPage({ title, apiPath, basePath, publicPath, co
     try {
       const params = new URLSearchParams();
       if (keyword) params.set("keyword", keyword);
+      params.set("page", String(page));
       const res = await fetch(`${apiPath}?${params}`);
       const data = await res.json();
       setItems(data.items || []);
       setTotal(data.total || 0);
+      setTotalPages(data.totalPages || 1);
     } catch (err) {
       console.error("Admin fetch error:", err);
     } finally {
       setLoading(false);
     }
-  }, [apiPath, keyword]);
+  }, [apiPath, keyword, page]);
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
+
+  // キーワード変更時はページを1に戻す
+  useEffect(() => { setPage(1); }, [keyword]);
 
   async function togglePublish(id, current) {
     try {
@@ -61,7 +69,7 @@ export default function AdminListPage({ title, apiPath, basePath, publicPath, co
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          <p className="text-sm text-gray-500 mt-1">{total}件</p>
+          <p className="text-sm text-gray-500 mt-1">全{total}件</p>
         </div>
         <div className="flex gap-2">
           {syncActions.map((action, i) => (
@@ -96,7 +104,7 @@ export default function AdminListPage({ title, apiPath, basePath, publicPath, co
                 syncingIdx === i ? "bg-gray-100 text-gray-400" : "hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
               }`}
             >
-              {syncingIdx === i ? "⏳ 取得中..." : `🔄 ${action.label}`}
+              {syncingIdx === i ? "取得中..." : action.label}
             </button>
           ))}
           <Link href={`${basePath}/new`} className="text-sm bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700">
@@ -111,7 +119,7 @@ export default function AdminListPage({ title, apiPath, basePath, publicPath, co
           syncResult.type === "error" ? "bg-red-50 text-red-700 border border-red-200" : "bg-green-50 text-green-700 border border-green-200"
         }`}>
           {syncResult.message}
-          <button onClick={() => setSyncResult(null)} className="ml-3 text-xs opacity-60 hover:opacity-100">✕</button>
+          <button onClick={() => setSyncResult(null)} className="ml-3 text-xs opacity-60 hover:opacity-100">x</button>
         </div>
       )}
 
@@ -150,7 +158,7 @@ export default function AdminListPage({ title, apiPath, basePath, publicPath, co
                   <td className="p-3 text-gray-400">{item.id}</td>
                   {columns.map((col) => (
                     <td key={col.key} className="p-3 text-gray-900">
-                      {col.render ? col.render(item) : (item[col.key] ?? "—")}
+                      {col.render ? col.render(item) : (item[col.key] ?? "--")}
                     </td>
                   ))}
                   <td className="p-3">
@@ -180,9 +188,80 @@ export default function AdminListPage({ title, apiPath, basePath, publicPath, co
         </div>
       )}
 
-      <div className="mt-4">
-        <Link href="/admin" className="text-sm text-gray-500 hover:underline">← 管理トップ</Link>
+      {/* ページネーション */}
+      <div className="mt-4 flex items-center justify-between">
+        <Link href="/admin" className="text-sm text-gray-500 hover:underline">管理トップ</Link>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-gray-400 mr-2">
+            {total > 0 ? `${(page - 1) * pageSize + 1}~${Math.min(page * pageSize, total)}件 / 全${total}件` : "0件"}
+          </p>
+          {totalPages > 1 && (
+            <div className="flex gap-1">
+              <button
+                onClick={() => setPage(1)}
+                disabled={page === 1}
+                className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-default"
+              >
+                最初
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-default"
+              >
+                前へ
+              </button>
+              {generatePageNumbers(page, totalPages).map((p, i) =>
+                p === "..." ? (
+                  <span key={`ellipsis-${i}`} className="text-xs px-1 py-1 text-gray-400">...</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`text-xs px-2.5 py-1 rounded border transition ${
+                      p === page
+                        ? "bg-blue-600 text-white border-blue-600 font-bold"
+                        : "border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-default"
+              >
+                次へ
+              </button>
+              <button
+                onClick={() => setPage(totalPages)}
+                disabled={page === totalPages}
+                className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-default"
+              >
+                最後
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
+}
+
+/**
+ * ページ番号リスト生成（1 2 ... 5 [6] 7 ... 13 14）
+ */
+function generatePageNumbers(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = [];
+  pages.push(1);
+  if (current > 3) pages.push("...");
+  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+    pages.push(i);
+  }
+  if (current < total - 2) pages.push("...");
+  pages.push(total);
+  return pages;
 }

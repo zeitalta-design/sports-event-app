@@ -19,20 +19,23 @@ const ACTION_COLORS = {
   guidance: "text-gray-700 bg-gray-100 border-gray-200",
 };
 const REVIEW_STATUS = {
-  pending: { label: "審査待ち", color: "bg-amber-100 text-amber-800 border-amber-300", icon: "⏳" },
-  approved: { label: "承認済み", color: "bg-green-100 text-green-800 border-green-300", icon: "✅" },
-  rejected: { label: "却下", color: "bg-red-100 text-red-800 border-red-300", icon: "❌" },
+  pending: { label: "審査待ち", color: "bg-amber-100 text-amber-800 border-amber-300", icon: "?" },
+  approved: { label: "承認済み", color: "bg-green-100 text-green-800 border-green-300", icon: "o" },
+  rejected: { label: "却下", color: "bg-red-100 text-red-800 border-red-300", icon: "x" },
 };
 
 export default function GyoseiShobunAdminListPage() {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize] = useState(50);
   const [keyword, setKeyword] = useState("");
   const [reviewFilter, setReviewFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [watchedKeys, setWatchedKeys] = useState(new Set());
   const [selected, setSelected] = useState(new Set());
-  const [bulkAction, setBulkAction] = useState(null); // "approving" | "rejecting"
+  const [bulkAction, setBulkAction] = useState(null);
   const [toast, setToast] = useState(null);
   const [statusCounts, setStatusCounts] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
 
@@ -46,33 +49,40 @@ export default function GyoseiShobunAdminListPage() {
     try {
       const params = new URLSearchParams();
       if (keyword) params.set("keyword", keyword);
-      const [listRes, watchRes] = await Promise.all([
+      params.set("page", String(page));
+      const [listRes, watchRes, countsRes] = await Promise.all([
         fetch(`/api/admin/gyosei-shobun?${params}`),
         fetch("/api/admin/watchlist?mode=set"),
+        fetch("/api/admin/gyosei-shobun?counts=1"),
       ]);
       const listData = await listRes.json();
       const watchData = await watchRes.json();
-      const allItems = listData.items || [];
-      setItems(allItems);
+      const countsData = await countsRes.json();
+
+      setItems(listData.items || []);
       setTotal(listData.total || 0);
+      setTotalPages(listData.totalPages || 1);
       setWatchedKeys(new Set(watchData.watchedKeys || []));
       setSelected(new Set());
 
-      // ステータス件数を算出
-      const counts = { pending: 0, approved: 0, rejected: 0, total: allItems.length };
-      for (const item of allItems) {
-        const s = item.review_status || "pending";
-        if (counts[s] !== undefined) counts[s]++;
+      // ステータス件数はAPI全件ベースで取得
+      if (countsData.statusCounts) {
+        setStatusCounts(countsData.statusCounts);
+      } else {
+        // フォールバック: totalから推定
+        setStatusCounts({ pending: 0, approved: listData.total || 0, rejected: 0, total: listData.total || 0 });
       }
-      setStatusCounts(counts);
     } catch (err) {
       console.error("Admin fetch error:", err);
     } finally {
       setLoading(false);
     }
-  }, [keyword]);
+  }, [keyword, page]);
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
+
+  // キーワード変更時はページを1に戻す
+  useEffect(() => { setPage(1); }, [keyword]);
 
   // フィルタ適用
   const filtered = reviewFilter === "all"
@@ -249,7 +259,7 @@ export default function GyoseiShobunAdminListPage() {
               syncing ? "bg-gray-100 text-gray-400" : "hover:bg-green-50 hover:border-green-300 hover:text-green-700"
             }`}
           >
-            {syncing ? "⏳ 取得中..." : "🔄 MLIT更新"}
+            {syncing ? "取得中..." : "MLIT更新"}
           </button>
           <button
             onClick={handlePrefectureSync}
@@ -258,9 +268,9 @@ export default function GyoseiShobunAdminListPage() {
               prefSyncing ? "bg-gray-100 text-gray-400" : "hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
             }`}
           >
-            {prefSyncing ? "⏳ 取得中..." : "🏛️ 都道府県更新"}
+            {prefSyncing ? "取得中..." : "都道府県更新"}
           </button>
-          <Link href="/admin/watchlist" className="text-sm border rounded-lg px-3 py-2 hover:bg-gray-50">👁 ウォッチリスト</Link>
+          <Link href="/admin/watchlist" className="text-sm border rounded-lg px-3 py-2 hover:bg-gray-50">ウォッチリスト</Link>
           <Link href="/admin/gyosei-shobun/new" className="text-sm bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700">+ 新規作成</Link>
         </div>
       </div>
@@ -271,7 +281,7 @@ export default function GyoseiShobunAdminListPage() {
           syncResult.type === "error" ? "bg-red-50 text-red-700 border border-red-200" : "bg-green-50 text-green-700 border border-green-200"
         }`}>
           {syncResult.message}
-          <button onClick={() => setSyncResult(null)} className="ml-3 text-xs opacity-60 hover:opacity-100">✕</button>
+          <button onClick={() => setSyncResult(null)} className="ml-3 text-xs opacity-60 hover:opacity-100">x</button>
         </div>
       )}
 
@@ -279,9 +289,9 @@ export default function GyoseiShobunAdminListPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
           { key: "all", label: "すべて", count: statusCounts.total, color: "bg-white border-gray-200 text-gray-800" },
-          { key: "pending", label: "審査待ち", count: statusCounts.pending, color: "bg-amber-50 border-amber-200 text-amber-800", icon: "⏳" },
-          { key: "approved", label: "承認済み", count: statusCounts.approved, color: "bg-green-50 border-green-200 text-green-800", icon: "✅" },
-          { key: "rejected", label: "却下", count: statusCounts.rejected, color: "bg-red-50 border-red-200 text-red-800", icon: "❌" },
+          { key: "pending", label: "審査待ち", count: statusCounts.pending, color: "bg-amber-50 border-amber-200 text-amber-800" },
+          { key: "approved", label: "承認済み", count: statusCounts.approved, color: "bg-green-50 border-green-200 text-green-800" },
+          { key: "rejected", label: "却下", count: statusCounts.rejected, color: "bg-red-50 border-red-200 text-red-800" },
         ].map((s) => (
           <button
             key={s.key}
@@ -290,7 +300,7 @@ export default function GyoseiShobunAdminListPage() {
               reviewFilter === s.key ? `${s.color} ring-2 ring-offset-1 ring-blue-400` : `${s.color} opacity-70 hover:opacity-100`
             }`}
           >
-            <p className="text-xs font-medium mb-1">{s.icon} {s.label}</p>
+            <p className="text-xs font-medium mb-1">{s.label}</p>
             <p className="text-2xl font-bold">{s.count}</p>
           </button>
         ))}
@@ -381,19 +391,19 @@ export default function GyoseiShobunAdminListPage() {
                       />
                     </td>
                     <td className="p-3 text-gray-400 text-xs">{item.id}</td>
-                    <td className="p-3 text-gray-900 font-medium max-w-[200px] truncate">{item.organization_name_raw ?? "—"}</td>
+                    <td className="p-3 text-gray-900 font-medium max-w-[200px] truncate">{item.organization_name_raw ?? "--"}</td>
                     <td className="p-3">
                       {item.action_type ? (
                         <span className={`inline-block text-xs font-bold px-1.5 py-0.5 rounded border ${ACTION_COLORS[item.action_type] || ""}`}>
                           {ACTION_LABELS[item.action_type] || item.action_type}
                         </span>
-                      ) : "—"}
+                      ) : "--"}
                     </td>
-                    <td className="p-3 text-gray-700 text-xs">{item.authority_name ?? "—"}</td>
-                    <td className="p-3 text-gray-700 text-xs">{item.action_date?.substring(0, 10) || "—"}</td>
+                    <td className="p-3 text-gray-700 text-xs">{item.authority_name ?? "--"}</td>
+                    <td className="p-3 text-gray-700 text-xs">{item.action_date?.substring(0, 10) || "--"}</td>
                     <td className="p-3">
                       <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-lg border ${rs.color}`}>
-                        {rs.icon} {rs.label}
+                        {rs.label}
                       </span>
                     </td>
                     <td className="p-3">
@@ -406,7 +416,6 @@ export default function GyoseiShobunAdminListPage() {
                     </td>
                     <td className="p-3">
                       <div className="flex gap-1.5 items-center flex-wrap">
-                        {/* 審査アクション */}
                         {(item.review_status || "pending") !== "approved" && (
                           <button onClick={() => handleReview(item.id, "approved")} className="text-[11px] font-bold bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700">承認</button>
                         )}
@@ -421,11 +430,11 @@ export default function GyoseiShobunAdminListPage() {
                           onClick={() => toggleWatch(item)}
                           className={`text-[11px] px-1.5 py-1 rounded border ${watched ? "bg-amber-50 text-amber-700 border-amber-200" : "text-gray-400 border-gray-200 hover:text-amber-600"}`}
                         >
-                          {watched ? "👁" : "👁"}
+                          監視
                         </button>
                         <Link href={`/admin/gyosei-shobun/${item.id}/edit`} className="text-[11px] text-blue-600 hover:underline">編集</Link>
                         {item.slug && (
-                          <Link href={`/gyosei-shobun/${item.slug}`} target="_blank" className="text-[11px] text-gray-400 hover:underline">↗</Link>
+                          <Link href={`/gyosei-shobun/${item.slug}`} target="_blank" className="text-[11px] text-gray-400 hover:underline">公開</Link>
                         )}
                       </div>
                     </td>
@@ -437,11 +446,63 @@ export default function GyoseiShobunAdminListPage() {
         </div>
       )}
 
+      {/* ページネーション */}
       <div className="mt-4 flex items-center justify-between">
-        <Link href="/admin" className="text-sm text-gray-500 hover:underline">← 管理トップ</Link>
-        {filtered.length > 0 && (
-          <p className="text-xs text-gray-400">表示: {filtered.length}件 / 全{total}件</p>
-        )}
+        <Link href="/admin" className="text-sm text-gray-500 hover:underline">管理トップ</Link>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-gray-400 mr-2">
+            {total > 0 ? `${(page - 1) * pageSize + 1}~${Math.min(page * pageSize, total)}件 / 全${total}件` : "0件"}
+          </p>
+          {totalPages > 1 && (
+            <div className="flex gap-1">
+              <button
+                onClick={() => setPage(1)}
+                disabled={page === 1}
+                className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-default"
+              >
+                最初
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-default"
+              >
+                前へ
+              </button>
+              {generatePageNumbers(page, totalPages).map((p, i) =>
+                p === "..." ? (
+                  <span key={`ellipsis-${i}`} className="text-xs px-1 py-1 text-gray-400">...</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`text-xs px-2.5 py-1 rounded border transition ${
+                      p === page
+                        ? "bg-blue-600 text-white border-blue-600 font-bold"
+                        : "border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-default"
+              >
+                次へ
+              </button>
+              <button
+                onClick={() => setPage(totalPages)}
+                disabled={page === totalPages}
+                className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-default"
+              >
+                最後
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* トースト */}
@@ -456,4 +517,20 @@ export default function GyoseiShobunAdminListPage() {
       )}
     </div>
   );
+}
+
+/**
+ * ページ番号リスト生成（1 2 ... 5 [6] 7 ... 13 14 のような表示）
+ */
+function generatePageNumbers(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = [];
+  pages.push(1);
+  if (current > 3) pages.push("...");
+  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+    pages.push(i);
+  }
+  if (current < total - 2) pages.push("...");
+  pages.push(total);
+  return pages;
 }
