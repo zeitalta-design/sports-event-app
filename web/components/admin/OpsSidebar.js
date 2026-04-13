@@ -43,6 +43,10 @@ const NAV_SECTIONS = [
     items: [
       { href: "/admin/ops/cron-settings", label: "自動更新設定", icon: ScrapingIcon },
       { href: "/admin/jobs", label: "ジョブ実行", icon: JobIcon },
+      { href: "/admin/emails", label: "メール", icon: InquiryIcon },
+      { href: "/admin/watchlist", label: "ウォッチリスト", icon: PatrolIcon },
+      { href: "/admin/audit-logs", label: "監査ログ", icon: DetailIcon },
+      { href: "/admin/launch-check", label: "公開チェック", icon: QualityIcon },
       { href: "/admin/ops/account", label: "アカウント", icon: AccountIcon },
     ],
   },
