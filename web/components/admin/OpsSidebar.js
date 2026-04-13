@@ -42,6 +42,7 @@ const NAV_SECTIONS = [
   {
     label: "システム",
     items: [
+      { href: "/admin/ops/cron-settings", label: "自動巡回設定", icon: JobIcon },
       { href: "/admin/jobs", label: "ジョブ実行", icon: JobIcon },
       { href: "/admin/ops-guide", label: "運用ガイド", icon: GuideIcon },
       { href: "/admin/ops/account", label: "アカウント", icon: AccountIcon },
