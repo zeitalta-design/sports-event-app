@@ -159,7 +159,19 @@ export default function DataSourceAuditPage() {
           </button>
         ))}
       </div>
-      <p className="text-xs text-gray-400 mb-6">{activeCat.description}</p>
+      {/* カテゴリヘッダー */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-lg font-extrabold text-gray-900">{activeCat.label} データソース監査</h2>
+          <p className="text-xs text-gray-400 mt-0.5">{activeCat.description}</p>
+        </div>
+        {!isRegistryBased && (
+          <button onClick={() => setShowAddForm(!showAddForm)}
+            className="text-xs px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shrink-0">
+            {showAddForm ? "閉じる" : "+ 新規情報源を追加"}
+          </button>
+        )}
+      </div>
 
       {/* ========== レジストリベース ========== */}
       {isRegistryBased && (
@@ -354,31 +366,29 @@ function DbCategoryView({ cat, sources, loading, showAddForm, setShowAddForm, on
         <Card label="カバー率" value={sources.length > 0 ? `${sources.filter((s) => s.status === "active").length}件` : "0件"} accent={sources.length > 0 ? "green" : "red"} />
       </div>
 
-      {/* 追加ボタン */}
-      <div className="mb-6">
-        <button onClick={() => setShowAddForm(!showAddForm)}
-          className="text-xs px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
-          {showAddForm ? "閉じる" : "+ 新規情報源を追加"}
-        </button>
-      </div>
-
       {showAddForm && <AddSourceForm category={cat.dbDomain} onAdded={() => { setShowAddForm(false); onSourceAdded(); }} />}
 
       {sources.length === 0 ? (
-        <div className="bg-white rounded-xl border border-dashed border-gray-300 p-10 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-blue-50 rounded-2xl flex items-center justify-center">
-            <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        <div className="bg-white rounded-xl border-2 border-dashed border-blue-200 p-12 text-center">
+          <div className="w-20 h-20 mx-auto mb-5 bg-blue-50 rounded-2xl flex items-center justify-center">
+            <svg className="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375" />
             </svg>
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">{cat.label}のデータソースを登録しましょう</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            情報源を登録すると、都道府県カバレッジや巡回状況を管理できます。
+          <h3 className="text-xl font-extrabold text-gray-900 mb-3">{cat.label}のデータソースを登録しましょう</h3>
+          <p className="text-sm text-gray-500 mb-2 max-w-md mx-auto">
+            情報源を登録すると、都道府県カバレッジや巡回状況をこの画面で一元管理できます。
+          </p>
+          <p className="text-xs text-gray-400 mb-6">
+            右上の「+ 新規情報源を追加」ボタンから登録してください。
           </p>
           <button onClick={() => setShowAddForm(true)}
-            className="text-sm px-5 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
-            + 最初の情報源を追加
+            className="text-sm px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-sm">
+            + 最初の情報源を追加する
           </button>
+          <div className="mt-6 text-xs text-gray-400">
+            例: 官公庁の公開ページURL、オープンデータカタログ、API連携先など
+          </div>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
