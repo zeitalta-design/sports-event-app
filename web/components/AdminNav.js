@@ -19,7 +19,7 @@ const TAB_GROUPS = [
   {
     label: "データ管理",
     tabs: [
-      { href: "/admin/events", label: "大会" },
+      { href: "/admin/events", label: "データ管理" },
       { href: "/admin/marathon-details/import", label: "取込" },
       { href: "/admin/marathon-details", label: "詳細" },
       { href: "/admin/reviews", label: "口コミ" },
@@ -42,7 +42,7 @@ const TAB_GROUPS = [
   {
     label: "運用",
     tabs: [
-      { href: "/admin/organizer-requests", label: "運営依頼" },
+      { href: "/admin/organizer-requests", label: "ソース依頼" },
       { href: "/admin/event-notifications", label: "通知" },
       { href: "/admin/jobs", label: "ジョブ" },
       { href: "/admin/emails", label: "メール" },

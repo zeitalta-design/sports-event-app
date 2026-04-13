@@ -2,7 +2,6 @@
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { siteConfig } from "@/lib/site-config";
 
 /**
@@ -21,7 +20,7 @@ const NAV_SECTIONS = [
       { href: "/admin/ops/patrol", label: "巡回パトロール", icon: PatrolIcon },
       { href: "/admin/ops/gyosei-shobun-sources", label: "情報源監査", icon: PatrolIcon },
       { href: "/admin/ops/analytics", label: "分析", icon: AnalyticsIcon },
-      { href: "/admin/ops/placement", label: "掲載効果", icon: PlacementIcon },
+      { href: "/admin/ops/placement", label: "公開効果", icon: PlacementIcon },
     ],
   },
   {
@@ -41,7 +40,7 @@ const NAV_SECTIONS = [
   {
     label: "データ管理",
     items: [
-      { href: "/admin/events", label: "大会管理", icon: EventIcon },
+      { href: "/admin/events", label: "データ管理", icon: EventIcon },
       { href: "/admin/quality", label: "品質管理", icon: QualityIcon },
     ],
   },
@@ -78,13 +77,12 @@ export default function OpsSidebar() {
       {/* ロゴ */}
       <div className="px-5 py-4 border-b border-gray-800">
         <Link href="/admin/ops" className="flex items-center gap-2">
-          <Image
-            src={siteConfig.logoImage}
-            alt={siteConfig.siteName}
-            width={100}
-            height={30}
-            className="h-7 w-auto brightness-0 invert"
-          />
+          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+            </svg>
+          </div>
+          <span className="text-sm font-extrabold text-white tracking-tight">Risk Monitor</span>
           <span className="text-[10px] font-bold text-gray-500 tracking-widest uppercase">OPS</span>
         </Link>
       </div>
