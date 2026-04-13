@@ -19,7 +19,7 @@ export default function HojokinAdminListPage() {
       publicPath="/hojokin"
       columns={COLUMNS}
       syncActions={[
-        { label: "補助金情報更新", endpoint: "/api/admin/sync?domain=hojokin", confirmMessage: "補助金情報の最新データを確認しますか？（数十秒かかります）" },
+        { label: "最新データ取得", endpoint: "/api/admin/sync?domain=hojokin", confirmMessage: "補助金の最新データを取得しますか？（数十秒かかります）" },
       ]}
     />
   );

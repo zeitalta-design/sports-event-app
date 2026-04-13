@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 
 /**
- * 自動巡回設定ページ
- * 各カテゴリの自動更新スケジュールを管理
+ * 自動更新設定ページ
+ * 各カテゴリの自動データ取得スケジュールを管理
  */
 
 const TARGET_LABELS = {
@@ -66,16 +66,16 @@ export default function CronSettingsPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900 mb-1">自動巡回設定</h1>
-        <p className="text-sm text-gray-500">各カテゴリの自動データ更新スケジュールを設定します</p>
+        <h1 className="text-xl font-bold text-gray-900 mb-1">自動更新設定</h1>
+        <p className="text-sm text-gray-500">各カテゴリの自動データ取得スケジュールを管理</p>
       </div>
 
       {/* 説明 */}
       <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6 text-sm text-blue-800">
-        <p className="font-bold mb-1">自動巡回について</p>
+        <p className="font-bold mb-1">自動更新について</p>
         <p className="text-xs text-blue-600">
-          有効にしたカテゴリは、Vercel Cronにより指定時間にデータ取得が自動実行されます。
-          実行結果は管理画面で確認できます。
+          有効にしたカテゴリは、指定時刻にデータ取得が自動実行されます。
+          実行結果はこの画面および各カテゴリの管理画面で確認できます。
         </p>
       </div>
 
@@ -169,17 +169,28 @@ export default function CronSettingsPage() {
                 </label>
               </div>
 
-              {/* 最終実行 */}
-              {s.last_run_at && (
-                <div className="flex items-center gap-4 pt-2 border-t border-gray-100">
-                  <span className="text-xs font-medium text-gray-700 w-24 shrink-0">最終実行</span>
-                  <div className="text-xs text-gray-500">
-                    <span>{s.last_run_at?.replace("T", " ").slice(0, 19)}</span>
-                    {s.last_run_items > 0 && <span className="ml-2 text-green-600 font-bold">{s.last_run_items}件更新</span>}
-                    {s.last_run_result && <span className="ml-2 text-gray-400">{s.last_run_result}</span>}
+              {/* 前回実行 */}
+              <div className="flex items-center gap-4 pt-2 border-t border-gray-100">
+                <span className="text-xs font-medium text-gray-700 w-24 shrink-0">前回実行</span>
+                {s.last_run_at ? (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-gray-700 font-medium">{s.last_run_at?.replace("T", " ").slice(0, 16)}</span>
+                    <span className="text-gray-300">—</span>
+                    {s.last_run_items > 0 && (
+                      <span className="text-green-600 font-bold">{s.last_run_items}件更新</span>
+                    )}
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                      s.last_run_result === "success" ? "bg-green-100 text-green-700" :
+                      s.last_run_result?.startsWith("error") ? "bg-red-100 text-red-700" :
+                      "bg-gray-100 text-gray-500"
+                    }`}>
+                      {s.last_run_result === "success" ? "成功" : s.last_run_result?.startsWith("error") ? "エラー" : s.last_run_result || "—"}
+                    </span>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <span className="text-xs text-gray-400">未実行</span>
+                )}
+              </div>
             </div>
 
             {/* 保存ボタン */}

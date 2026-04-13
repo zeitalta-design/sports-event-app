@@ -25,7 +25,7 @@ export default function KyoninkaAdminListPage() {
       publicPath="/kyoninka"
       columns={COLUMNS}
       syncActions={[
-        { label: "許認可情報更新", endpoint: "/api/admin/sync?domain=kyoninka", confirmMessage: "許認可情報の最新データを確認しますか？（数十秒かかります）" },
+        { label: "最新データ取得", endpoint: "/api/admin/sync?domain=kyoninka", confirmMessage: "許認可の最新データを取得しますか？（数十秒かかります）" },
       ]}
     />
   );

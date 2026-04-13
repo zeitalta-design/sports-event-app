@@ -20,7 +20,7 @@ export default function NyusatsuAdminListPage() {
       publicPath="/nyusatsu"
       columns={COLUMNS}
       syncActions={[
-        { label: "入札情報更新", endpoint: "/api/admin/sync?domain=nyusatsu", confirmMessage: "入札情報の最新データを確認しますか？（数十秒かかります）" },
+        { label: "最新データ取得", endpoint: "/api/admin/sync?domain=nyusatsu", confirmMessage: "入札情報の最新データを取得しますか？（数十秒かかります）" },
       ]}
     />
   );

@@ -34,7 +34,7 @@ export default function SanpaiAdminListPage() {
       publicPath="/sanpai"
       columns={COLUMNS}
       syncActions={[
-        { label: "産廃データ更新", endpoint: "/api/admin/sync?domain=sanpai", confirmMessage: "産廃処分の最新データを確認しますか？（数十秒かかります）" },
+        { label: "最新データ取得", endpoint: "/api/admin/sync?domain=sanpai", confirmMessage: "産廃処分の最新データを取得しますか？（数十秒かかります）" },
       ]}
     />
   );
