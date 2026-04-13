@@ -160,9 +160,9 @@ export async function GET(request) {
       `SELECT COUNT(*) as c FROM sync_runs WHERE run_status = 'failed'`
     );
 
-    // needs_review: 要レビュー
+    // needs_review: 要レビュー（信頼度0.8未満のみ。高信頼度の同期結果は除外）
     issueCounts.needs_review = safeCount(db,
-      `SELECT COUNT(*) as c FROM change_logs WHERE requires_review = 1 AND reviewed_at IS NULL`
+      `SELECT COUNT(*) as c FROM change_logs WHERE requires_review = 1 AND reviewed_at IS NULL AND confidence_score < 0.8`
     );
 
     // low_confidence: 信頼度低
@@ -332,7 +332,7 @@ function loadIssueItems(db, issue, staleDate) {
                   cl.before_value, cl.after_value, cl.confidence_score,
                   cl.created_at as updated_at
            FROM change_logs cl
-           WHERE cl.requires_review = 1 AND cl.reviewed_at IS NULL
+           WHERE cl.requires_review = 1 AND cl.reviewed_at IS NULL AND cl.confidence_score < 0.8
            ORDER BY cl.created_at DESC LIMIT 50`
         ).all();
         for (const row of rows) {
