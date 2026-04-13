@@ -12,12 +12,10 @@ import { siteConfig } from "@/lib/site-config";
 
 const NAV_SECTIONS = [
   {
-    label: "運営",
+    label: "ダッシュボード",
     items: [
       { href: "/admin/ops", label: "ダッシュボード", icon: DashboardIcon, exact: true },
       { href: "/admin/ops/inquiries", label: "問い合わせ", icon: InquiryIcon },
-      { href: "/admin/ops/patrol", label: "データ品質チェック", icon: PatrolIcon },
-      { href: "/admin/ops/analytics", label: "分析", icon: AnalyticsIcon },
     ],
   },
   {
@@ -34,8 +32,8 @@ const NAV_SECTIONS = [
   {
     label: "データソース監査",
     items: [
-      { href: "/admin/ops/gyosei-shobun-sources", label: "行政処分DB", icon: PatrolIcon },
-      { href: "/admin/quality", label: "品質管理", icon: QualityIcon },
+      { href: "/admin/ops/gyosei-shobun-sources", label: "情報源管理", icon: PatrolIcon },
+      { href: "/admin/ops/patrol", label: "品質チェック", icon: QualityIcon },
       { href: "/admin/data-growth", label: "成長KPI", icon: AnalyticsIcon },
     ],
   },
@@ -44,7 +42,6 @@ const NAV_SECTIONS = [
     items: [
       { href: "/admin/ops/cron-settings", label: "自動更新設定", icon: ScrapingIcon },
       { href: "/admin/jobs", label: "ジョブ実行", icon: JobIcon },
-      { href: "/admin/ops-guide", label: "運用ガイド", icon: GuideIcon },
       { href: "/admin/ops/account", label: "アカウント", icon: AccountIcon },
     ],
   },
