@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { listNyusatsuAdminItems, createNyusatsuItem } from "@/lib/repositories/nyusatsu";
+import { getReviewStatusCounts } from "@/lib/repositories/generic-review";
 import { writeAuditLog, AUDIT_ACTIONS, extractRequestInfo } from "@/lib/audit-log";
 
 export async function GET(request) {
@@ -8,6 +9,9 @@ export async function GET(request) {
     const guard = await requireAdminApi();
     if (guard.error) return guard.error;
     const { searchParams } = new URL(request.url);
+    if (searchParams.get("counts") === "1") {
+      return NextResponse.json({ statusCounts: getReviewStatusCounts("nyusatsu_items") });
+    }
     return NextResponse.json(listNyusatsuAdminItems({ keyword: searchParams.get("keyword") || "", page: parseInt(searchParams.get("page") || "1") }));
   } catch (error) { return NextResponse.json({ error: error.message }, { status: 500 }); }
 }

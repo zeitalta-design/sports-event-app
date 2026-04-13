@@ -1,0 +1,49 @@
+/**
+ * 審査ワークフロー共通ハンドラー
+ * 各カテゴリのreview route.jsから呼び出す
+ */
+import { NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/admin-api-guard";
+import { updateReviewStatus, bulkUpdateReviewStatus } from "@/lib/repositories/generic-review";
+
+export function createReviewHandler(tableName) {
+  return async function PUT(request) {
+    try {
+      const guard = await requireAdminApi();
+      if (guard.error) return guard.error;
+
+      const body = await request.json();
+      const { status } = body;
+
+      if (!status) {
+        return NextResponse.json({ error: "status is required" }, { status: 400 });
+      }
+
+      // 一括更新
+      if (body.ids && Array.isArray(body.ids)) {
+        const ids = body.ids.map(Number).filter(Boolean);
+        if (ids.length === 0) {
+          return NextResponse.json({ error: "ids must not be empty" }, { status: 400 });
+        }
+        const result = bulkUpdateReviewStatus(tableName, ids, status);
+        if (!result.ok) {
+          return NextResponse.json({ error: result.error }, { status: 400 });
+        }
+        return NextResponse.json(result);
+      }
+
+      // 個別更新
+      if (body.id) {
+        const result = updateReviewStatus(tableName, Number(body.id), status);
+        if (!result.ok) {
+          return NextResponse.json({ error: result.error }, { status: result.error === "not_found" ? 404 : 400 });
+        }
+        return NextResponse.json(result);
+      }
+
+      return NextResponse.json({ error: "id or ids is required" }, { status: 400 });
+    } catch (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+  };
+}

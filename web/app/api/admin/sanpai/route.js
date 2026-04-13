@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { listSanpaiAdminItems, createSanpaiItem } from "@/lib/repositories/sanpai";
+import { getReviewStatusCounts } from "@/lib/repositories/generic-review";
 import { writeAuditLog, AUDIT_ACTIONS, extractRequestInfo } from "@/lib/audit-log";
 
 export async function GET(request) {
@@ -8,6 +9,9 @@ export async function GET(request) {
     const guard = await requireAdminApi();
     if (guard.error) return guard.error;
     const { searchParams } = new URL(request.url);
+    if (searchParams.get("counts") === "1") {
+      return NextResponse.json({ statusCounts: getReviewStatusCounts("sanpai_items") });
+    }
     return NextResponse.json(
       listSanpaiAdminItems({
         keyword: searchParams.get("keyword") || "",
