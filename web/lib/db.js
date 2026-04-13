@@ -4,21 +4,78 @@ import fs from "fs";
 
 const TURSO_URL = process.env.TURSO_DATABASE_URL;
 const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN;
+const IS_TURSO = !!(TURSO_URL && TURSO_TOKEN);
 const DB_PATH = path.join(process.cwd(), "data", "risk-monitor.db");
 const SCHEMA_PATH = path.join(process.cwd(), "..", "sql", "001_create_tables.sql");
+
+/**
+ * libsql リモートモード互換レイヤー
+ *
+ * 問題: libsql パッケージのリモートモード (Turso HTTP/Hrana) では
+ * better-sqlite3 の名前付きパラメータ (@param) が正しく動作しない。
+ * - @param を使った LIMIT/OFFSET → "datatype mismatch" エラー
+ * - @param を使った WHERE 条件 → パラメータが無視される (0件)
+ *
+ * 解決: prepare() をインターセプトし、SQL中の @paramName を ? に置換、
+ * パラメータオブジェクトを位置パラメータ配列に変換する。
+ * 既存の124ファイルのリポジトリ層は変更不要。
+ */
+function wrapDbForTurso(rawDb) {
+  const originalPrepare = rawDb.prepare.bind(rawDb);
+
+  rawDb.prepare = function (sql) {
+    // SQL に @param がなければそのまま（位置パラメータ ? を使用するクエリ）
+    if (!sql.includes("@")) {
+      return originalPrepare(sql);
+    }
+
+    // @paramName を抽出し ? に置換
+    const paramNames = [];
+    const convertedSql = sql.replace(/@(\w+)/g, (_, name) => {
+      paramNames.push(name);
+      return "?";
+    });
+
+    const stmt = originalPrepare(convertedSql);
+    const originalAll = stmt.all.bind(stmt);
+    const originalGet = stmt.get.bind(stmt);
+    const originalRun = stmt.run.bind(stmt);
+
+    function toPositional(args) {
+      // 引数が1つのオブジェクト → 名前付きパラメータを位置パラメータに変換
+      if (args.length === 1 && args[0] && typeof args[0] === "object" && !Array.isArray(args[0])) {
+        const obj = args[0];
+        return paramNames.map(name => {
+          const val = obj[name];
+          return val === undefined ? null : val;
+        });
+      }
+      // それ以外はそのまま（位置パラメータやスプレッド）
+      return args;
+    }
+
+    stmt.all = function (...args) { return originalAll(...toPositional(args)); };
+    stmt.get = function (...args) { return originalGet(...toPositional(args)); };
+    stmt.run = function (...args) { return originalRun(...toPositional(args)); };
+
+    return stmt;
+  };
+
+  return rawDb;
+}
 
 let _db = null;
 
 export function getDb() {
   if (!_db) {
     try {
-      if (TURSO_URL && TURSO_TOKEN) {
-        // Turso リモート接続（Vercel本番環境）
+      if (IS_TURSO) {
         console.log("[db] Connecting to Turso:", TURSO_URL.replace(/\/\/(.{8}).*/, "//$1..."));
         _db = new Database(TURSO_URL, { authToken: TURSO_TOKEN });
-        console.log("[db] Turso connection established");
+        // Turso リモート互換レイヤーを適用
+        wrapDbForTurso(_db);
+        console.log("[db] Turso connection established (with compat layer)");
       } else {
-        // ローカル開発用 or ビルド時フォールバック（SQLiteファイル直接アクセス）
         if (TURSO_URL && !TURSO_TOKEN) {
           console.warn("[db] TURSO_URL is set but TURSO_TOKEN is missing — falling back to local SQLite");
         }
@@ -30,8 +87,6 @@ export function getDb() {
       }
     } catch (err) {
       console.error("[db] Database connection FAILED:", err.message);
-      console.error("[db] TURSO_URL set:", !!TURSO_URL, "| TURSO_TOKEN set:", !!TURSO_TOKEN);
-      // フォールバック: ローカルSQLiteを試行
       try {
         console.log("[db] Falling back to local SQLite...");
         fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
