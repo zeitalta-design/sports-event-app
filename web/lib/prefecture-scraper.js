@@ -655,21 +655,17 @@ export async function runPrefectureFetch({ prefectures, maxPrefectures = MAX_PRE
     const allTargets = Object.entries(PREFECTURE_PARSERS)
       .filter(([, v]) => v.url && v.parse);
 
-    // 前回の巡回位置をDBから取得
+    // 前回の巡回位置をDBから取得（ローテーション）
     let offset = 0;
     try {
       const db = getDb();
       const lastRun = db.prepare(
-        "SELECT stats_json FROM sync_runs WHERE source_key = 'prefecture-scraper' ORDER BY finished_at DESC LIMIT 1"
+        "SELECT error_summary FROM sync_runs WHERE domain_id = 'prefecture-scraper' ORDER BY finished_at DESC LIMIT 1"
       ).get();
-      if (lastRun?.stats_json) {
-        const stats = JSON.parse(lastRun.stats_json);
-        const lastKeys = (stats.results || []).map(r => r.key);
-        if (lastKeys.length > 0) {
-          const lastKey = lastKeys[lastKeys.length - 1];
-          const idx = allTargets.findIndex(([k]) => k === lastKey);
-          if (idx >= 0) offset = (idx + 1) % allTargets.length;
-        }
+      if (lastRun?.error_summary) {
+        const lastKey = lastRun.error_summary;
+        const idx = allTargets.findIndex(([k]) => k === lastKey);
+        if (idx >= 0) offset = (idx + 1) % allTargets.length;
       }
     } catch { /* ignore */ }
 
@@ -716,14 +712,15 @@ export async function runPrefectureFetch({ prefectures, maxPrefectures = MAX_PRE
   const totalCreated = results.reduce((s, r) => s + (r.created || 0), 0);
   log.push(`[prefecture-scraper] Done: ${totalItems} items, ${totalCreated} created (${elapsed}s)`);
 
-  // 同期ログ記録
+  // 同期ログ記録（ローテーション位置を保存）
   if (!dryRun) {
     try {
       const db = getDb();
+      const lastKey = results.length > 0 ? results[results.length - 1].key : null;
       db.prepare(`
-        INSERT INTO sync_runs (source_key, status, stats_json, started_at, finished_at)
-        VALUES ('prefecture-scraper', 'completed', ?, datetime('now'), datetime('now'))
-      `).run(JSON.stringify({ results, elapsed }));
+        INSERT INTO sync_runs (domain_id, run_type, run_status, fetched_count, created_count, updated_count, error_summary, started_at, finished_at)
+        VALUES ('prefecture-scraper', 'scheduled', 'completed', ?, ?, ?, ?, datetime('now'), datetime('now'))
+      `).run(totalItems, totalCreated, results.reduce((s, r) => s + (r.updated || 0), 0), lastKey);
     } catch { /* ignore */ }
   }
 
