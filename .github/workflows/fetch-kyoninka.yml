@@ -1,0 +1,110 @@
+name: "Fetch: Kyoninka (許認可)"
+
+# ============================================================
+# gBizINFO API から許認可情報（certification）を取得する。
+#
+# 行政処分を受けた企業（administrative_actions）を起点として、
+# gBizINFO で法人番号を解決し、certification エンドポイントから
+# 許認可情報を取得。kyoninka_entities / kyoninka_registrations に upsert。
+#
+# スケジュール: 毎日 JST 04:37（他workflowと時刻をずらす）
+# 手動実行: workflow_dispatch で任意タイミング実行可
+#
+# 必要な GitHub Secrets:
+#   TURSO_DATABASE_URL
+#   TURSO_AUTH_TOKEN
+#   GBIZINFO_API_TOKEN  (https://info.gbiz.go.jp/hojin/APIManual で申請)
+# ============================================================
+
+on:
+  schedule:
+    # 毎日 JST 04:37 = UTC 19:37 (前日)
+    - cron: "37 19 * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "1回に処理する企業数"
+        required: false
+        default: "50"
+        type: string
+      all:
+        description: "法人番号解決済みも再取得"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: fetch-kyoninka
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    name: "許認可（gBizINFO）取得"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: "Info: 実行情報"
+        run: |
+          echo "Trigger:   ${{ github.event_name }}"
+          echo "Actor:     ${{ github.actor }}"
+          echo "Run ID:    ${{ github.run_id }}"
+          echo "Time UTC:  $(date -u '+%Y-%m-%d %H:%M:%S')"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: "Install dependencies"
+        working-directory: web
+        run: npm ci --prefer-offline --no-audit
+
+      - name: "Run: fetch-kyoninka"
+        id: fetch
+        working-directory: web
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          GBIZINFO_API_TOKEN: ${{ secrets.GBIZINFO_API_TOKEN }}
+        run: |
+          LIMIT="${{ inputs.limit || '50' }}"
+          EXTRA=""
+          if [ "${{ inputs.all }}" = "true" ]; then EXTRA="--all"; fi
+          node scripts/fetch-kyoninka.mjs --limit=${LIMIT} ${EXTRA}
+
+      - name: "Alert: 失敗時 Issue 作成"
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE="[Kyoninka] 定期実行失敗 $(date -u '+%Y-%m-%d')"
+          BODY=$(printf '%s\n' \
+            "## 許認可（gBizINFO）取得の定期実行失敗" \
+            "" \
+            "| 項目 | 値 |" \
+            "|------|----|" \
+            "| Run | [詳細](${RUN_URL}) |" \
+            "| Time (UTC) | $(date -u '+%Y-%m-%d %H:%M:%S') |" \
+            "" \
+            "### 確認事項" \
+            "1. Run リンクからログを確認" \
+            "2. GBIZINFO_API_TOKEN の有効性（トークンの有効期限切れ等）" \
+            "3. gBizINFO API 仕様変更がないか（https://info.gbiz.go.jp/hojin/APIManual）" \
+            "4. rate limit に引っかかっていないか")
+
+          EXISTING=$(gh issue list --state open --search "in:title [Kyoninka]" --limit 1 --json number --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY" --label "ops" 2>/dev/null \
+              || gh issue create --title "$TITLE" --body "$BODY"
+          fi

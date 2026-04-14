@@ -41,7 +41,9 @@
     "imports:source:dry": "node scripts/run-imports.js --all --source primary --dry-run",
     "imports:source:verbose": "node scripts/run-imports.js --all --source primary --verbose",
     "fetch:prefecture-pdf": "node scripts/fetch-prefecture-pdf.mjs",
-    "fetch:hojokin": "node scripts/fetch-hojokin.mjs"
+    "fetch:hojokin": "node scripts/fetch-hojokin.mjs",
+    "fetch:kyoninka": "node scripts/fetch-kyoninka.mjs",
+    "fetch:kyoninka:preview": "node scripts/fetch-kyoninka.mjs --preview"
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
