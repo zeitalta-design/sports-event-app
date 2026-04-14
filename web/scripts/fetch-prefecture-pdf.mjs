@@ -34,7 +34,7 @@ if (fs.existsSync(envLocalPath)) {
 }
 
 // @/ alias を解決する loader 登録（動的 import 前に必要）
-register("./prefecture-pdf-loader.mjs", pathToFileURL(import.meta.filename).href);
+register("./_alias-loader.mjs", pathToFileURL(import.meta.filename).href);
 
 // 必須環境変数チェック
 if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {

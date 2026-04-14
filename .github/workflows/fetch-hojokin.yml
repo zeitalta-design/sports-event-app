@@ -1,0 +1,93 @@
+name: "Fetch: Hojokin (補助金)"
+
+# ============================================================
+# J-Grants公開APIから補助金情報を全キーワードで取得する。
+#
+# Vercel Hobbyプランの10秒タイムアウトでは全15キーワードの
+# 処理（実測 約7分40秒）が間に合わないため、
+# GitHub Actions の Ubuntu ランナーで定期実行する。
+#
+# スケジュール: 毎日 JST 04:23（他のworkflowと時刻をずらして負荷分散）
+# 手動実行: workflow_dispatch で任意タイミング実行可
+#
+# 必要な GitHub Secrets:
+#   TURSO_DATABASE_URL
+#   TURSO_AUTH_TOKEN
+# ============================================================
+
+on:
+  schedule:
+    # 毎日 JST 04:23 = UTC 19:23 (前日)
+    - cron: "23 19 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: fetch-hojokin
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    name: "補助金（J-Grants）全キーワード取得"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: "Info: 実行情報"
+        run: |
+          echo "Trigger:   ${{ github.event_name }}"
+          echo "Actor:     ${{ github.actor }}"
+          echo "Run ID:    ${{ github.run_id }}"
+          echo "Time UTC:  $(date -u '+%Y-%m-%d %H:%M:%S')"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: "Install dependencies"
+        working-directory: web
+        run: npm ci --prefer-offline --no-audit
+
+      - name: "Run: fetch-hojokin"
+        id: fetch
+        working-directory: web
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: node scripts/fetch-hojokin.mjs
+
+      - name: "Alert: 失敗時 Issue 作成"
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE="[Hojokin] 定期実行失敗 $(date -u '+%Y-%m-%d')"
+          BODY=$(printf '%s\n' \
+            "## 補助金（J-Grants）取得の定期実行失敗" \
+            "" \
+            "| 項目 | 値 |" \
+            "|------|----|" \
+            "| Run | [詳細](${RUN_URL}) |" \
+            "| Time (UTC) | $(date -u '+%Y-%m-%d %H:%M:%S') |" \
+            "" \
+            "### 確認事項" \
+            "1. Run リンクからログを確認" \
+            "2. Turso 接続情報が有効か" \
+            "3. J-Grants API 仕様変更がないか" \
+            "4. 全キーワードでタイムアウトしていないか（rate limit の可能性）")
+
+          EXISTING=$(gh issue list --state open --search "in:title [Hojokin]" --limit 1 --json number --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY" --label "ops" 2>/dev/null \
+              || gh issue create --title "$TITLE" --body "$BODY"
+          fi
