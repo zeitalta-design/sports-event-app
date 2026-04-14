@@ -35,7 +35,7 @@ export async function POST(request) {
   try {
     const { searchParams } = new URL(request.url);
     const dryRun = searchParams.get("dryRun") === "true";
-    const maxKeywords = Math.min(parseInt(searchParams.get("max") || "5", 10), 15);
+    const maxKeywords = Math.min(parseInt(searchParams.get("max") || "1", 10), 15);
 
     const db = getDb();
     const startTime = Date.now();
@@ -76,7 +76,7 @@ export async function POST(request) {
         });
         const res = await fetch(`${JGRANTS_BASE}?${params}`, {
           headers: { "User-Agent": "RiskMonitor/1.0", Accept: "application/json" },
-          signal: AbortSignal.timeout(30000),
+          signal: AbortSignal.timeout(8000),
         });
 
         if (!res.ok) {
