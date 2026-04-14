@@ -61,6 +61,12 @@ export async function POST(request) {
             const res = await fetch(`${baseUrl}/api/cron/fetch-prefecture-shobun?max=10`, { method: "POST" });
             const data = await res.json();
             totalItems += data.results?.reduce((s, r) => s + (r.items || 0), 0) || 0;
+          } else if (target === "jgrants") {
+            // 補助金: J-Grants API取得
+            const baseUrl = process.env.APP_BASE_URL || "http://localhost:3001";
+            const res = await fetch(`${baseUrl}/api/cron/fetch-hojokin?max=10`, { method: "POST" });
+            const data = await res.json();
+            totalItems += data.totalFetched || 0;
           } else {
             // 汎用ドメイン同期
             const domain = target.replace("_sync", "");
