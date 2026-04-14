@@ -3,391 +3,403 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 
 /**
- * Phase228: 運営ダッシュボード（司令塔ページ）
- * - 上部KPIカード群
- * - 今日の対応タスク（緊急/重要/通常）
- * - 重要アラート
- * - 3カラム（問い合わせ・データ取得・品質）
- * - 最新活動ログ
+ * 運営ダッシュボード — 全情報集約ページ
+ * 行動ログ分析・巡回パトロール・問い合わせ・データ同期を一画面で把握
  */
 
-const INQUIRY_TYPE_LABELS = {
-  general: "一般",
-  listing_request: "情報提供",
-  correction: "情報修正",
-  deletion: "削除依頼",
-  bug_report: "不具合",
-  organizer_apply: "その他",
+const ACTION_LABELS = {
+  detail_view: "詳細閲覧", search: "検索", external_click: "外部クリック",
+  entry_click: "外部クリック(旧)", favorite_add: "お気に入り追加",
+  favorite_remove: "お気に入り解除", save_search: "検索保存",
+  compare: "比較", share: "共有", signup: "会員登録",
+  login: "ログイン", page_view: "ページ閲覧", impression: "表示",
 };
 
-const STATUS_STYLES = {
-  open: "bg-red-100 text-red-800",
-  in_progress: "bg-yellow-100 text-yellow-800",
-  resolved: "bg-green-100 text-green-800",
-  on_hold: "bg-gray-100 text-gray-700",
+const INQUIRY_TYPE = {
+  general: "一般", listing_request: "情報提供", correction: "情報修正",
+  deletion: "削除依頼", bug_report: "不具合", organizer_apply: "その他",
 };
 
-const PRIORITY_LABELS = {
-  urgent: { label: "緊急", style: "text-red-600 font-extrabold" },
-  high: { label: "高", style: "text-orange-600 font-bold" },
-  normal: { label: "通常", style: "text-gray-500" },
-  low: { label: "低", style: "text-gray-400" },
+const LEVEL_CONFIG = {
+  danger: { dot: "bg-red-500", card: "border-red-300 bg-red-50", badge: "bg-red-100 text-red-800 border-red-200" },
+  warning: { dot: "bg-yellow-500", card: "border-yellow-300 bg-yellow-50", badge: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+  info: { dot: "bg-blue-400", card: "border-gray-200 bg-white", badge: "bg-blue-100 text-blue-800 border-blue-200" },
 };
 
 export default function OpsDashboard() {
-  const [data, setData] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
+  const [patrol, setPatrol] = useState(null);
+  const [inquiries, setInquiries] = useState(null);
+  const [cronSettings, setCronSettings] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [analyticsDays, setAnalyticsDays] = useState(7);
 
   useEffect(() => {
-    fetch("/api/admin/ops/dashboard")
-      .then((res) => {
-        if (!res.ok) throw new Error("取得失敗");
-        return res.json();
-      })
-      .then(setData)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
+    setLoading(true);
+    Promise.all([
+      fetch(`/api/admin/analytics-summary?days=${analyticsDays}`).then(r => r.json()).catch(() => null),
+      fetch("/api/admin/ops/patrol").then(r => r.json()).catch(() => null),
+      fetch("/api/admin/ops/inquiries?limit=5").then(r => r.json()).catch(() => null),
+      fetch("/api/admin/cron-settings").then(r => r.json()).catch(() => null),
+    ]).then(([a, p, i, c]) => {
+      setAnalytics(a);
+      setPatrol(p);
+      setInquiries(i);
+      setCronSettings(c);
+      setLoading(false);
+    });
+  }, [analyticsDays]);
 
   if (loading) return <DashboardSkeleton />;
-  if (error) return <ErrorState message={error} />;
-  if (!data) return null;
-
-  const { kpi, alerts, tasks, recentInquiries, recentScraping, recentActivity } = data;
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl">
-      {/* ページヘッダー */}
       <div className="mb-8">
-        <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">運営ダッシュボード</h1>
+        <h1 className="text-2xl font-extrabold text-gray-900">運営ダッシュボード</h1>
         <p className="text-sm text-gray-500 mt-1">
-          最終更新: {new Date(data.generatedAt).toLocaleString("ja-JP")}
+          サイトの利用状況・データ品質・問い合わせ・同期状態を一画面で把握できます
         </p>
       </div>
 
-      {/* KPIカード群 */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-        <KpiCard label="今日の閲覧" value={kpi.todayViews} icon="👁" />
-        <KpiCard label="7日間の閲覧" value={kpi.weekViews} icon="📊" />
-        <KpiCard label="今日の検索" value={kpi.todaySearches} icon="🔍" />
-        <KpiCard label="外部クリック" value={kpi.todayExtClicks} icon="🔗" />
-        <KpiCard label="公開中データ数" value={kpi.totalEvents} icon="🏃" />
-        <KpiCard label="未対応問い合わせ" value={kpi.openInquiries} icon="📨"
-          alert={kpi.openInquiries > 0} href="/admin/ops/inquiries?status=open" />
-        <KpiCard label="巡回失敗" value={kpi.scrapingFails} icon="⚠️"
-          alert={kpi.scrapingFails > 0} href="/admin/ops/scraping" />
-        <KpiCard label="要確認データ" value={kpi.patrolIssues} icon="🔎"
-          alert={kpi.patrolIssues > 0} href="/admin/ops/patrol" />
-        <KpiCard label="本日更新" value={kpi.todayUpdated} icon="🔄" />
-        <KpiCard label="本日新規検出" value={kpi.todayNew} icon="🆕" />
-      </div>
-
-      {/* 今日の対応タスク */}
-      {tasks && tasks.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-lg font-extrabold text-gray-900 mb-4">今日の対応タスク</h2>
-          <div className="space-y-2">
-            {tasks.map((task, i) => (
-              <TaskItem key={i} task={task} />
-            ))}
-          </div>
-        </div>
-      )}
-      {tasks && tasks.length === 0 && (
-        <div className="mb-8 bg-green-50 border border-green-200 rounded-xl px-5 py-4">
-          <div className="flex items-center gap-3">
-            <span className="text-lg">✅</span>
-            <p className="font-extrabold text-green-800 text-sm">対応が必要なタスクはありません</p>
-          </div>
-        </div>
-      )}
-
-      {/* 重要アラート */}
-      {alerts.length > 0 && (
-        <div className="mb-8 space-y-3">
-          <h2 className="text-lg font-extrabold text-gray-900">重要アラート</h2>
-          {alerts.map((alert, i) => (
-            <AlertBanner key={i} alert={alert} />
-          ))}
-        </div>
-      )}
-
-      {/* 3カラムセクション */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* 未対応問い合わせ */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="font-extrabold text-gray-900">未対応問い合わせ</h3>
-            <Link href="/admin/ops/inquiries" className="text-xs text-blue-600 hover:text-blue-800 font-bold">
-              すべて見る →
-            </Link>
-          </div>
-          <div className="p-5">
-            {recentInquiries.length === 0 ? (
-              <EmptyState message="未対応の問い合わせはありません" />
-            ) : (
-              <ul className="space-y-3">
-                {recentInquiries.map((inq) => (
-                  <li key={inq.id}>
-                    <Link
-                      href={`/admin/ops/inquiries?id=${inq.id}`}
-                      className="block hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${STATUS_STYLES[inq.status] || "bg-gray-100"}`}>
-                          {inq.status === "open" ? "未対応" : inq.status === "in_progress" ? "対応中" : inq.status}
-                        </span>
-                        {inq.priority && PRIORITY_LABELS[inq.priority] && (
-                          <span className={`text-[10px] ${PRIORITY_LABELS[inq.priority].style}`}>
-                            {PRIORITY_LABELS[inq.priority].label}
-                          </span>
-                        )}
-                        <span className="text-[10px] text-gray-400">
-                          {INQUIRY_TYPE_LABELS[inq.inquiry_type] || inq.inquiry_type}
-                        </span>
-                      </div>
-                      <p className="text-sm font-bold text-gray-800 truncate">{inq.subject}</p>
-                      <p className="text-xs text-gray-500">{inq.name} · {formatDate(inq.created_at)}</p>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        {/* データ取得状況 */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="font-extrabold text-gray-900">データ取得状況</h3>
-            <Link href="/admin/ops/scraping" className="text-xs text-blue-600 hover:text-blue-800 font-bold">
-              詳細 →
-            </Link>
-          </div>
-          <div className="p-5">
-            {recentScraping.length === 0 ? (
-              <EmptyState message="データ取得実行履歴がありません" />
-            ) : (
-              <ul className="space-y-3">
-                {recentScraping.map((log, i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                      log.status === "success" ? "bg-green-500" :
-                      log.status === "failed" ? "bg-red-500" :
-                      "bg-yellow-500"
-                    }`} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-gray-800">{log.source_name}</p>
-                      <p className="text-xs text-gray-500">
-                        成功 {log.success_count} / 失敗 {log.fail_count} / 新規 {log.new_count}
-                      </p>
-                    </div>
-                    <span className="text-[10px] text-gray-400 shrink-0">
-                      {log.finished_at ? formatDate(log.finished_at) : "実行中"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        {/* 品質要確認 */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="font-extrabold text-gray-900">品質要確認</h3>
-            <Link href="/admin/ops/patrol" className="text-xs text-blue-600 hover:text-blue-800 font-bold">
-              詳細 →
-            </Link>
-          </div>
-          <div className="p-5">
-            <div className="space-y-3">
-              <PatrolItem label="日付未設定" count={kpi.patrolIssues > 0 ? "あり" : "0件"} level={kpi.patrolIssues > 0 ? "danger" : "ok"} />
-              <PatrolItem label="30日以上未更新" count={`${data.kpi.todayUpdated > 0 ? "更新あり" : "要確認"}`} level="info" />
-              <PatrolItem label="公開中データ数" count={`${kpi.totalEvents}件`} level="ok" />
+      {/* ===== 1. サイト利用状況 ===== */}
+      <section className="mb-10">
+        <div className="flex items-center justify-between mb-3">
+          <SectionHeader
+            title="サイト利用状況"
+            description="ユーザーの閲覧・検索・クリックなどの行動データです"
+          />
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1">
+              {[7, 30].map(d => (
+                <button key={d} onClick={() => setAnalyticsDays(d)}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded transition ${
+                    analyticsDays === d ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  }`}>{d}日</button>
+              ))}
             </div>
+            <Link href="/admin/analytics" className="text-xs text-blue-600 hover:text-blue-800 font-bold">
+              詳細 &rarr;
+            </Link>
           </div>
         </div>
-      </div>
 
-      {/* 最新活動ログ */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h3 className="font-extrabold text-gray-900">今日の活動サマリー</h3>
-        </div>
-        <div className="p-5">
-          {recentActivity.length === 0 ? (
-            <EmptyState message="今日の活動ログはまだありません" />
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              {recentActivity.map((act) => (
-                <div key={act.action_type} className="bg-gray-50 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-extrabold text-gray-900">{act.count}</p>
-                  <p className="text-xs text-gray-500 mt-1">{formatActionType(act.action_type)}</p>
+        {analytics?.kpi ? (
+          <>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
+              {[
+                { key: "pageViews", label: "閲覧数" },
+                { key: "externalClicks", label: "外部クリック" },
+                { key: "overallCTR", label: "CTR", suffix: "%" },
+                { key: "favorites", label: "お気に入り" },
+                { key: "uniqueSessions", label: "訪問数" },
+                { key: "newUsers", label: "新規会員" },
+              ].map(def => (
+                <div key={def.key} className="bg-white rounded-xl border border-gray-200 p-3">
+                  <p className="text-xl font-extrabold text-gray-900">
+                    {(analytics.kpi[def.key] ?? 0).toLocaleString()}{def.suffix || ""}
+                  </p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">{def.label}</p>
                 </div>
               ))}
             </div>
-          )}
+
+            {/* 日別アクティビティ */}
+            {analytics.dailyActivity?.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+                <p className="text-xs font-bold text-gray-600 mb-2">日別アクティビティ</p>
+                <div className="space-y-1">
+                  {analytics.dailyActivity.slice(-10).map(row => {
+                    const max = Math.max(...analytics.dailyActivity.map(d => d.cnt), 1);
+                    return (
+                      <div key={row.day} className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 w-14 shrink-0 font-mono">{row.day?.slice(5)}</span>
+                        <div className="flex-1 h-4 bg-gray-100 rounded overflow-hidden">
+                          <div className="h-full bg-blue-500 rounded" style={{ width: `${Math.max((row.cnt / max) * 100, 2)}%` }} />
+                        </div>
+                        <span className="text-[10px] font-bold text-gray-600 w-8 text-right">{row.cnt}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 検索キーワード + エリア */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <p className="text-xs font-bold text-gray-600 mb-2">検索キーワード上位</p>
+                {analytics.searchKeywords?.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {analytics.searchKeywords.slice(0, 5).map((kw, i) => (
+                      <div key={kw.keyword} className="flex items-center gap-2">
+                        <RankNumber rank={i + 1} />
+                        <span className="flex-1 text-xs text-gray-700 truncate">{kw.keyword}</span>
+                        <span className="text-xs font-bold text-gray-900">{kw.cnt}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="text-xs text-gray-400">データなし</p>}
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <p className="text-xs font-bold text-gray-600 mb-2">検索エリア上位</p>
+                {analytics.searchAreas?.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {analytics.searchAreas.slice(0, 5).map((a, i) => (
+                      <div key={a.area} className="flex items-center gap-2">
+                        <RankNumber rank={i + 1} />
+                        <span className="flex-1 text-xs text-gray-700 truncate">{a.area}</span>
+                        <span className="text-xs font-bold text-gray-900">{a.cnt}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="text-xs text-gray-400">データなし</p>}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-gray-400 text-sm">
+            利用状況データを取得できませんでした
+          </div>
+        )}
+      </section>
+
+      {/* ===== 2. データ品質 ===== */}
+      <section className="mb-10">
+        <div className="flex items-center justify-between mb-3">
+          <SectionHeader
+            title="データ品質"
+            description="6カテゴリ横断の品質チェック結果です。問題があるカードをクリックすると詳細を確認できます"
+          />
+          <Link href="/admin/ops/patrol" className="text-xs text-blue-600 hover:text-blue-800 font-bold">
+            詳細 &rarr;
+          </Link>
         </div>
-      </div>
-    </div>
-  );
-}
 
-// --- サブコンポーネント ---
+        {patrol?.issueCards ? (
+          <>
+            <p className="text-xs text-gray-500 mb-3">
+              公開データ {patrol.totalPublished?.toLocaleString() || 0} 件 / 要確認 {patrol.issueCards.reduce((s, c) => s + (c.count || 0), 0)} 件
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+              {patrol.issueCards.map(card => {
+                const lc = LEVEL_CONFIG[card.level] || LEVEL_CONFIG.info;
+                return (
+                  <Link
+                    key={card.key}
+                    href={`/admin/ops/patrol`}
+                    className={`block p-3 rounded-xl border transition-all hover:shadow-md ${
+                      card.count > 0 ? lc.card : "border-gray-200 bg-gray-50 opacity-60"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className={`w-2 h-2 rounded-full ${card.count > 0 ? lc.dot : "bg-green-500"}`} />
+                      <span className={`text-[9px] font-bold px-1 py-0.5 rounded border ${card.count > 0 ? lc.badge : "bg-green-100 text-green-800 border-green-200"}`}>
+                        {card.count > 0 ? (card.level === "danger" ? "危険" : card.level === "warning" ? "要確認" : "軽微") : "OK"}
+                      </span>
+                    </div>
+                    <p className={`text-lg font-extrabold ${card.count > 0 ? "text-gray-900" : "text-green-700"}`}>
+                      {card.count}
+                    </p>
+                    <p className="text-[10px] text-gray-600 mt-0.5 leading-tight">{card.label}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-gray-400 text-sm">
+            品質データを取得できませんでした
+          </div>
+        )}
+      </section>
 
-function TaskItem({ task }) {
-  const priorityConfig = {
-    urgent: {
-      label: "緊急",
-      bg: "bg-red-50 border-red-200 hover:bg-red-100",
-      badge: "bg-red-600 text-white",
-      dot: "bg-red-500 animate-pulse",
-    },
-    high: {
-      label: "重要",
-      bg: "bg-orange-50 border-orange-200 hover:bg-orange-100",
-      badge: "bg-orange-500 text-white",
-      dot: "bg-orange-500",
-    },
-    normal: {
-      label: "通常",
-      bg: "bg-gray-50 border-gray-200 hover:bg-gray-100",
-      badge: "bg-gray-500 text-white",
-      dot: "bg-gray-400",
-    },
-  };
-  const pc = priorityConfig[task.priority] || priorityConfig.normal;
-
-  return (
-    <Link
-      href={task.href}
-      className={`flex items-center gap-4 border rounded-xl px-5 py-3.5 transition-colors ${pc.bg}`}
-    >
-      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${pc.dot}`} />
-      <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${pc.badge} shrink-0`}>
-        {pc.label}
-      </span>
-      <span className="text-sm font-bold text-gray-800 flex-1">{task.label}</span>
-      <span className="text-xs text-gray-500 shrink-0">{task.category}</span>
-      <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-      </svg>
-    </Link>
-  );
-}
-
-function KpiCard({ label, value, icon, alert, href }) {
-  const Wrapper = href ? Link : "div";
-  const wrapperProps = href ? { href } : {};
-  return (
-    <Wrapper
-      {...wrapperProps}
-      className={`bg-white rounded-xl border p-4 transition-shadow hover:shadow-md ${
-        alert ? "border-red-300 bg-red-50" : "border-gray-200"
-      } ${href ? "cursor-pointer" : ""}`}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xl">{icon}</span>
-        {alert && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
-      </div>
-      <p className={`text-2xl font-extrabold ${alert ? "text-red-700" : "text-gray-900"}`}>
-        {typeof value === "number" ? value.toLocaleString() : value}
-      </p>
-      <p className="text-xs text-gray-500 mt-1 font-medium">{label}</p>
-    </Wrapper>
-  );
-}
-
-function AlertBanner({ alert }) {
-  const styles = {
-    danger: "bg-red-50 border-red-200 text-red-800",
-    warning: "bg-yellow-50 border-yellow-200 text-yellow-800",
-    info: "bg-blue-50 border-blue-200 text-blue-800",
-  };
-  const icons = { danger: "🚨", warning: "⚠️", info: "ℹ️" };
-
-  return (
-    <Link
-      href={alert.href || "#"}
-      className={`block border rounded-xl px-5 py-3.5 ${styles[alert.level]} hover:shadow-sm transition-shadow`}
-    >
-      <div className="flex items-start gap-3">
-        <span className="text-lg mt-0.5">{icons[alert.level]}</span>
-        <div>
-          <p className="font-extrabold text-sm">{alert.message}</p>
-          {alert.detail && <p className="text-xs mt-0.5 opacity-80">{alert.detail}</p>}
+      {/* ===== 3. 問い合わせ ===== */}
+      <section className="mb-10">
+        <div className="flex items-center justify-between mb-3">
+          <SectionHeader
+            title="問い合わせ"
+            description="ユーザーからの問い合わせ状況です"
+          />
+          <Link href="/admin/ops/inquiries" className="text-xs text-blue-600 hover:text-blue-800 font-bold">
+            すべて見る &rarr;
+          </Link>
         </div>
-      </div>
-    </Link>
-  );
-}
 
-function PatrolItem({ label, count, level }) {
-  const dot = level === "danger" ? "bg-red-500" : level === "warning" ? "bg-yellow-500" : level === "info" ? "bg-blue-400" : "bg-green-500";
-  return (
-    <div className="flex items-center gap-3">
-      <span className={`w-2.5 h-2.5 rounded-full ${dot}`} />
-      <span className="text-sm text-gray-700 flex-1">{label}</span>
-      <span className="text-sm font-bold text-gray-900">{count}</span>
+        {inquiries ? (
+          <div className="bg-white rounded-xl border border-gray-200">
+            {/* ステータス別件数 */}
+            {inquiries.summary && (
+              <div className="flex gap-4 px-5 py-3 border-b border-gray-100">
+                {[
+                  { key: "open", label: "未対応", color: "text-red-600" },
+                  { key: "in_progress", label: "対応中", color: "text-yellow-600" },
+                  { key: "on_hold", label: "保留", color: "text-gray-500" },
+                  { key: "resolved", label: "解決済み", color: "text-green-600" },
+                ].map(s => (
+                  <div key={s.key} className="text-center">
+                    <p className={`text-lg font-extrabold ${s.color}`}>{inquiries.summary[s.key] || 0}</p>
+                    <p className="text-[10px] text-gray-500">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 最新の問い合わせ */}
+            <div className="p-4">
+              {inquiries.inquiries?.length > 0 ? (
+                <div className="space-y-2">
+                  {inquiries.inquiries.slice(0, 5).map(inq => (
+                    <Link key={inq.id} href={`/admin/ops/inquiries?id=${inq.id}`}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
+                        inq.status === "open" ? "bg-red-100 text-red-800" :
+                        inq.status === "in_progress" ? "bg-yellow-100 text-yellow-800" :
+                        inq.status === "resolved" ? "bg-green-100 text-green-800" :
+                        "bg-gray-100 text-gray-600"
+                      }`}>
+                        {inq.status === "open" ? "未対応" : inq.status === "in_progress" ? "対応中" : inq.status === "resolved" ? "解決" : inq.status}
+                      </span>
+                      <span className="text-[10px] text-gray-400 shrink-0">{INQUIRY_TYPE[inq.inquiry_type] || inq.inquiry_type}</span>
+                      <span className="text-xs text-gray-800 font-bold truncate flex-1">{inq.subject}</span>
+                      <span className="text-[10px] text-gray-400 shrink-0">{inq.name}</span>
+                      <span className="text-[10px] text-gray-400 shrink-0">{formatDate(inq.created_at)}</span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 text-center py-4">問い合わせはありません</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-gray-400 text-sm">
+            問い合わせデータを取得できませんでした
+          </div>
+        )}
+      </section>
+
+      {/* ===== 4. データ同期状況 ===== */}
+      <section className="mb-10">
+        <div className="flex items-center justify-between mb-3">
+          <SectionHeader
+            title="データ同期状況"
+            description="各カテゴリの自動データ取得の設定と最終実行結果です"
+          />
+          <Link href="/admin/ops/cron-settings" className="text-xs text-blue-600 hover:text-blue-800 font-bold">
+            設定変更 &rarr;
+          </Link>
+        </div>
+
+        {cronSettings?.settings ? (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left px-4 py-2.5 text-xs font-bold text-gray-500">カテゴリ</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-bold text-gray-500">状態</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-bold text-gray-500">最終実行</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-bold text-gray-500">結果</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-bold text-gray-500">取得件数</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cronSettings.settings.map(s => (
+                  <tr key={s.domain_id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="px-4 py-2.5 text-xs font-bold text-gray-800">{s.label}</td>
+                    <td className="px-4 py-2.5">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        s.enabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                      }`}>
+                        {s.enabled ? "有効" : "無効"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-gray-500">
+                      {s.last_run_at ? formatDate(s.last_run_at) : "未実行"}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {s.last_run_result ? (
+                        <span className={`text-[10px] font-bold ${
+                          s.last_run_result === "success" ? "text-green-600" : "text-red-600"
+                        }`}>
+                          {s.last_run_result === "success" ? "成功" : "失敗"}
+                        </span>
+                      ) : <span className="text-[10px] text-gray-400">--</span>}
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-gray-700 font-bold">
+                      {s.last_run_items != null ? `${s.last_run_items}件` : "--"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-gray-400 text-sm">
+            同期設定データを取得できませんでした
+          </div>
+        )}
+      </section>
+
+      {/* ===== 5. 今日の活動サマリー ===== */}
+      {analytics?.actionCounts?.length > 0 && (
+        <section className="mb-6">
+          <SectionHeader
+            title="アクション別内訳"
+            description="期間中のユーザー行動を種類別に集計したものです"
+          />
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex flex-wrap gap-2">
+              {analytics.actionCounts.map(a => (
+                <div key={a.action_type} className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5">
+                  <span className="text-xs text-gray-600">{ACTION_LABELS[a.action_type] || a.action_type}</span>
+                  <span className="text-xs font-bold text-gray-900">{a.cnt.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
 
-function EmptyState({ message }) {
+function SectionHeader({ title, description }) {
   return (
-    <div className="text-center py-6">
-      <p className="text-gray-400 text-sm">{message}</p>
+    <div>
+      <h2 className="text-sm font-extrabold text-gray-900">{title}</h2>
+      <p className="text-[11px] text-gray-500 mt-0.5">{description}</p>
     </div>
   );
 }
 
-function ErrorState({ message }) {
+function RankNumber({ rank }) {
+  const bg = rank <= 3 ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-500";
   return (
-    <div className="p-8 text-center">
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6 max-w-md mx-auto">
-        <p className="text-red-800 font-extrabold mb-1">データの取得に失敗しました</p>
-        <p className="text-red-600 text-sm">{message}</p>
-      </div>
-    </div>
+    <span className={`w-4 h-4 flex items-center justify-center rounded text-[9px] font-bold shrink-0 ${bg}`}>
+      {rank}
+    </span>
   );
 }
 
 function DashboardSkeleton() {
   return (
     <div className="p-6 lg:p-8 max-w-7xl animate-pulse">
-      <div className="h-8 bg-gray-200 rounded w-48 mb-8" />
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-        {Array(10).fill(0).map((_, i) => (
-          <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 h-24" />
-        ))}
+      <div className="h-8 bg-gray-200 rounded w-56 mb-8" />
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-8">
+        {Array(6).fill(0).map((_, i) => <div key={i} className="bg-white rounded-xl border h-20" />)}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {Array(3).fill(0).map((_, i) => (
-          <div key={i} className="bg-white rounded-xl border border-gray-200 h-64" />
-        ))}
+      <div className="h-48 bg-white rounded-xl border mb-8" />
+      <div className="grid grid-cols-4 lg:grid-cols-7 gap-3 mb-8">
+        {Array(7).fill(0).map((_, i) => <div key={i} className="bg-white rounded-xl border h-24" />)}
       </div>
+      <div className="h-48 bg-white rounded-xl border mb-8" />
+      <div className="h-48 bg-white rounded-xl border" />
     </div>
   );
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
+function formatDate(str) {
+  if (!str) return "";
+  const d = new Date(str);
   return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function formatActionType(type) {
-  const map = {
-    detail_view: "詳細閲覧",
-    favorite_add: "お気に入り追加",
-    favorite_remove: "お気に入り解除",
-    entry_click: "エントリークリック",
-    external_click: "外部リンク",
-    search: "検索",
-    filter_change: "フィルター変更",
-    compare_add: "比較追加",
-  };
-  return map[type] || type;
 }
