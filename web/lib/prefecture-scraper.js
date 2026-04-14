@@ -644,16 +644,38 @@ export async function runPrefectureFetch({ prefectures, maxPrefectures = MAX_PRE
   const log = [];
   const results = [];
 
-  // 対象県の決定
+  // 対象県の決定（ローテーション対応）
   let targets;
   if (prefectures && prefectures.length > 0) {
     targets = prefectures
       .map((k) => [k, PREFECTURE_PARSERS[k]])
       .filter(([, v]) => v && v.url && v.parse);
   } else {
-    targets = Object.entries(PREFECTURE_PARSERS)
-      .filter(([, v]) => v.url && v.parse)
-      .slice(0, maxPrefectures);
+    // 全対応県をローテーションで巡回
+    const allTargets = Object.entries(PREFECTURE_PARSERS)
+      .filter(([, v]) => v.url && v.parse);
+
+    // 前回の巡回位置をDBから取得
+    let offset = 0;
+    try {
+      const db = getDb();
+      const lastRun = db.prepare(
+        "SELECT stats_json FROM sync_runs WHERE source_key = 'prefecture-scraper' ORDER BY finished_at DESC LIMIT 1"
+      ).get();
+      if (lastRun?.stats_json) {
+        const stats = JSON.parse(lastRun.stats_json);
+        const lastKeys = (stats.results || []).map(r => r.key);
+        if (lastKeys.length > 0) {
+          const lastKey = lastKeys[lastKeys.length - 1];
+          const idx = allTargets.findIndex(([k]) => k === lastKey);
+          if (idx >= 0) offset = (idx + 1) % allTargets.length;
+        }
+      }
+    } catch { /* ignore */ }
+
+    // offset位置から開始してmaxPrefectures件取得（循環）
+    const rotated = [...allTargets.slice(offset), ...allTargets.slice(0, offset)];
+    targets = rotated.slice(0, maxPrefectures);
   }
 
   log.push(`[prefecture-scraper] Start: ${targets.length} prefectures, dryRun=${dryRun}`);
