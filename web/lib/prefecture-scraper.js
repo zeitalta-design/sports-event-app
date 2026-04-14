@@ -37,7 +37,7 @@ const PREFECTURE_PARSERS = {
     url: "https://www.pref.osaka.lg.jp/o130200/kenshin/kantoku/index.html",
     industry: "real_estate",
     sector: "takken",
-    parse: parseGenericTable,
+    parse: parseWithSubpages,
   },
   saitama: {
     prefecture: "埼玉県",
@@ -51,7 +51,7 @@ const PREFECTURE_PARSERS = {
     url: "https://www.pref.kanagawa.jp/docs/u2h/cnt/f531871/p870145.html",
     industry: "real_estate",
     sector: "takken",
-    parse: parseGenericTable,
+    parse: parseWithSubpages,
   },
   aichi: {
     prefecture: "愛知県",
@@ -71,14 +71,14 @@ const PREFECTURE_PARSERS = {
   // --- 宅建業 confirmed 25県 ---
   miyagi_takken: { prefecture: "宮城県", url: "https://www.pref.miyagi.jp/soshiki/kentaku/takken-syobun.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
   fukushima_takken: { prefecture: "福島県", url: "https://www.pref.fukushima.lg.jp/sec/41065b/takken-top.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
-  ibaraki_takken: { prefecture: "茨城県", url: "https://www.pref.ibaraki.jp/doboku/kenshi/kansatsu/kansatsumennkyohp/takkenn/syobunmenu260612syusei.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
+  ibaraki_takken: { prefecture: "茨城県", url: "https://www.pref.ibaraki.jp/doboku/kenshi/kansatsu/kansatsumennkyohp/takkenn/syobunmenu260612syusei.html", industry: "real_estate", sector: "takken", parse: parseWithSubpages },
   tochigi_takken: { prefecture: "栃木県", url: "https://www.pref.tochigi.lg.jp/h11/town/jyuutaku/jyuutaku/1259653272116.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
   gunma_takken: { prefecture: "群馬県", url: "https://www.pref.gunma.jp/page/10878.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
-  chiba_takken: { prefecture: "千葉県", url: "https://www.pref.chiba.lg.jp/kenfudou/gyouseishobun/takuchi/index.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
-  niigata_takken: { prefecture: "新潟県", url: "https://www.pref.niigata.lg.jp/sec/jutaku/1303250453579.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
+  chiba_takken: { prefecture: "千葉県", url: "https://www.pref.chiba.lg.jp/kenfudou/gyouseishobun/takuchi/index.html", industry: "real_estate", sector: "takken", parse: parseWithSubpages },
+  niigata_takken: { prefecture: "新潟県", url: "https://www.pref.niigata.lg.jp/sec/jutaku/1303250453579.html", industry: "real_estate", sector: "takken", parse: parseWithSubpages },
   toyama_takken: { prefecture: "富山県", url: "https://www.pref.toyama.jp/1507/kendodukuri/toshikeikaku/keikaku-tochi/kj00003448/kj00003448-010-01.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
   fukui_takken: { prefecture: "福井県", url: "https://www.pref.fukui.lg.jp/doc/kenchikujyuutakuka/takkenn/kantokusyobun.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
-  nagano_takken: { prefecture: "長野県", url: "https://www.pref.nagano.lg.jp/kenchiku/infra/kensetsu/takken/shobun.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
+  nagano_takken: { prefecture: "長野県", url: "https://www.pref.nagano.lg.jp/kenchiku/infra/kensetsu/takken/shobun.html", industry: "real_estate", sector: "takken", parse: parseWithSubpages },
   gifu_takken: { prefecture: "岐阜県", url: "https://www.pref.gifu.lg.jp/page/625.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
   shizuoka_takken: { prefecture: "静岡県", url: "https://www.pref.shizuoka.jp/kurashikankyo/kenchiku/takuchitatemono/1015904.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
   shiga_takken: { prefecture: "滋賀県", url: "https://www.pref.shiga.lg.jp/ippan/kendoseibi/zyuutaku/19133.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
@@ -212,6 +212,55 @@ function parseGenericTable(html, config) {
   return items;
 }
 
+/**
+ * リンク追従型パーサー
+ * トップページからサブページURLを抽出し、各サブページのHTMLテーブルをパースする。
+ * 大阪府（月別リンク）、神奈川県（年度別リンク）、茨城県等に対応。
+ */
+async function parseWithSubpages(html, config) {
+  const baseUrl = new URL(config.url);
+  const items = [];
+
+  // サブページへのリンクを抽出（処分・syobun・kantoku・監督を含むリンク）
+  const linkPattern = /<a[^>]*href=["']([^"']+)["'][^>]*>[^<]*(?:処分|syobun|kantoku|監督|令和|平成)[^<]*<\/a>/gi;
+  const links = new Set();
+  let match;
+  while ((match = linkPattern.exec(html)) !== null) {
+    let href = match[1];
+    if (href.startsWith("/")) {
+      href = `${baseUrl.protocol}//${baseUrl.host}${href}`;
+    } else if (!href.startsWith("http")) {
+      const dir = config.url.substring(0, config.url.lastIndexOf("/") + 1);
+      href = dir + href;
+    }
+    // PDF除外、同一ドメインのみ
+    if (!href.endsWith(".pdf") && href.includes(baseUrl.host)) {
+      links.add(href);
+    }
+  }
+
+  // 最大5サブページまで取得（Vercel制限考慮）
+  const subpageUrls = [...links].slice(0, 5);
+
+  for (const url of subpageUrls) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "RiskMonitor/1.0 (administrative-data-collection)" },
+      });
+      if (!res.ok) continue;
+      const subHtml = await res.text();
+      const subItems = parseGenericTable(subHtml, config);
+      items.push(...subItems);
+      // リクエスト間隔
+      await new Promise(r => setTimeout(r, 1000));
+    } catch {
+      // サブページ取得失敗は無視
+    }
+  }
+
+  return items;
+}
+
 function normalizeActionType(raw) {
   if (!raw) return "other";
   if (raw.includes("取消")) return "license_revocation";
@@ -270,7 +319,7 @@ export async function runPrefectureFetch({ prefectures, maxPrefectures = MAX_PRE
       }
 
       const html = await res.text();
-      const items = config.parse(html, config);
+      const items = await Promise.resolve(config.parse(html, config));
       log.push(`    → ${items.length} items parsed`);
 
       if (!dryRun && items.length > 0) {
