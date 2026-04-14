@@ -1,0 +1,96 @@
+name: "Fetch: Prefecture PDF (行政処分)"
+
+# ============================================================
+# PDF型都道府県（宅建業）の行政処分を自動取得する。
+#
+# 対象: 富山・岐阜・静岡・奈良・徳島・香川・愛媛（全て宅建業）
+#
+# Vercel Hobbyプランの10秒タイムアウトと、pdf-parseライブラリの
+# サーバーレス非互換により、これらの県は Vercel 上で動かない。
+# GitHub Actions の Ubuntu ランナーで毎日定期実行する。
+#
+# スケジュール: 毎日 JST 4:07（Vercel cron の JST 3:00 と重ならない時刻）
+# 手動実行: workflow_dispatch で任意タイミング実行可
+#
+# 必要な GitHub Secrets:
+#   TURSO_DATABASE_URL
+#   TURSO_AUTH_TOKEN
+# ============================================================
+
+on:
+  schedule:
+    # 毎日 JST 04:07 = UTC 19:07 (前日)
+    # :00/:30を避け、行政処分Vercel cron（JST 3:00）の後に実行
+    - cron: "7 19 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: fetch-prefecture-pdf
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    name: "PDF型都道府県7県の行政処分取得"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: "Info: 実行情報"
+        run: |
+          echo "Trigger:   ${{ github.event_name }}"
+          echo "Actor:     ${{ github.actor }}"
+          echo "Run ID:    ${{ github.run_id }}"
+          echo "Time UTC:  $(date -u '+%Y-%m-%d %H:%M:%S')"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: "Install dependencies"
+        working-directory: web
+        run: npm ci --prefer-offline --no-audit
+
+      - name: "Run: fetch-prefecture-pdf"
+        id: fetch
+        working-directory: web
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: node scripts/fetch-prefecture-pdf.mjs
+
+      - name: "Alert: 失敗時 Issue 作成"
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE="[Prefecture PDF] 定期実行失敗 $(date -u '+%Y-%m-%d')"
+          BODY=$(printf '%s\n' \
+            "## PDF型都道府県取得の定期実行失敗" \
+            "" \
+            "| 項目 | 値 |" \
+            "|------|----|" \
+            "| Run | [詳細](${RUN_URL}) |" \
+            "| Time (UTC) | $(date -u '+%Y-%m-%d %H:%M:%S') |" \
+            "" \
+            "### 確認事項" \
+            "1. Run リンクからログを確認" \
+            "2. Turso 接続情報（TURSO_DATABASE_URL / TURSO_AUTH_TOKEN）が有効か" \
+            "3. pdf-parse の version 変更の影響がないか" \
+            "4. 対象県のURL変更がないか")
+
+          EXISTING=$(gh issue list --state open --search "in:title [Prefecture PDF]" --limit 1 --json number --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY" --label "ops" 2>/dev/null \
+              || gh issue create --title "$TITLE" --body "$BODY"
+          fi

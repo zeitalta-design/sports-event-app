@@ -545,14 +545,15 @@ async function parseWithPdf(html, config) {
       if (!res.ok) continue;
 
       const buffer = await res.arrayBuffer();
-      let pdfParse;
+      let PDFParse;
       try {
-        pdfParse = (await import("pdf-parse")).default;
+        ({ PDFParse } = await import("pdf-parse"));
       } catch {
         console.log("[prefecture-scraper] pdf-parse not available, skipping PDF");
         continue;
       }
-      const pdf = await pdfParse(Buffer.from(buffer));
+      const parser = new PDFParse({ data: Buffer.from(buffer) });
+      const pdf = await parser.getText();
       const text = pdf.text || "";
 
       // PDFテキストから処分情報を抽出

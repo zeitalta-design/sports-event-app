@@ -39,7 +39,8 @@
     "imports:run": "node scripts/run-imports.js",
     "imports:source": "node scripts/run-imports.js --all --source primary",
     "imports:source:dry": "node scripts/run-imports.js --all --source primary --dry-run",
-    "imports:source:verbose": "node scripts/run-imports.js --all --source primary --verbose"
+    "imports:source:verbose": "node scripts/run-imports.js --all --source primary --verbose",
+    "fetch:prefecture-pdf": "node scripts/fetch-prefecture-pdf.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
