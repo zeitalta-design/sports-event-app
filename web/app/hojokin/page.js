@@ -7,6 +7,7 @@ import CategoryPageHeader from "@/components/CategoryPageHeader";
 import DomainCompareBar from "@/components/core/DomainCompareBar";
 import DomainCompareButton from "@/components/core/DomainCompareButton";
 import DomainFavoriteButton from "@/components/core/DomainFavoriteButton";
+import StatsDashboard from "@/components/StatsDashboard";
 import "@/lib/domains";
 import { getDomain } from "@/lib/core/domain-registry";
 import {
@@ -59,6 +60,7 @@ export default function HojokinListPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -67,11 +69,21 @@ export default function HojokinListPage() {
       if (keyword) params.set("keyword", keyword);
       if (category) params.set("category", category);
       params.set("page", String(page));
-      const res = await fetch(`/api/hojokin?${params}`);
-      const data = await res.json();
+
+      const statsParams = new URLSearchParams();
+      if (keyword) statsParams.set("keyword", keyword);
+      if (category) statsParams.set("category", category);
+
+      const [listRes, statsRes] = await Promise.all([
+        fetch(`/api/hojokin?${params}`),
+        fetch(`/api/hojokin/stats?${statsParams}`),
+      ]);
+      const data = await listRes.json();
+      const statsData = await statsRes.json();
       setItems(data.items || []);
       setTotal(data.total || 0);
       setTotalPages(data.totalPages || 1);
+      setStats(statsData.error ? null : statsData);
     } catch (err) {
       console.error("Failed to fetch hojokin items:", err);
     } finally {
@@ -95,7 +107,7 @@ export default function HojokinListPage() {
       onPageChange={setPage}
       renderItem={(item) => <HojokinCard key={item.id} item={item} />}
       renderFilters={() => (
-        <div className="card p-4 mb-4">
+        <div className="card p-4 mb-4 space-y-3">
           <div className="flex flex-col sm:flex-row gap-3">
             <input type="text" value={keyword} onChange={(e) => { setKeyword(e.target.value); setPage(1); }} placeholder="制度名・キーワードで検索..." className="flex-1 border rounded-lg px-4 py-2.5 text-sm" />
             <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }} className="border rounded-lg px-3 py-2.5 text-sm">
@@ -105,6 +117,48 @@ export default function HojokinListPage() {
               ))}
             </select>
           </div>
+
+          {/* 統計ダッシュボード */}
+          {stats && stats.totalCount > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <StatsDashboard
+                totalCount={stats.totalCount}
+                hasFilters={!!(keyword || category)}
+                filters={{ category }}
+                onFilterChange={(k, v) => {
+                  setPage(1);
+                  if (k === "category") setCategory(v);
+                }}
+                accent="#D97706"
+                sections={[
+                  {
+                    title: "年別件数（締切年）",
+                    type: "bar",
+                    filterKey: "year",
+                    rows: (stats.countsByYear || []).map((r) => ({ value: r.year, label: r.year, count: r.count })),
+                  },
+                  {
+                    title: "実施機関 TOP10",
+                    type: "ranking",
+                    filterKey: "provider",
+                    rows: (stats.countsByProvider || []).map((r) => ({ value: r.name, label: r.name, count: r.count })),
+                  },
+                  {
+                    title: "カテゴリ別",
+                    type: "ranking",
+                    filterKey: "category",
+                    rows: (stats.countsByCategory || []).map((r) => ({ value: r.category, label: getCategoryLabel(r.category), count: r.count })),
+                  },
+                  {
+                    title: "ステータス別",
+                    type: "ranking",
+                    filterKey: "status",
+                    rows: (stats.countsByStatus || []).map((r) => ({ value: r.status, label: getStatusLabel(r.status), count: r.count })),
+                  },
+                ]}
+              />
+            </div>
+          )}
         </div>
       )}
       emptyState={

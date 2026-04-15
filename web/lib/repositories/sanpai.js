@@ -71,6 +71,56 @@ export function listSanpaiItems({
   return { items, total, totalPages };
 }
 
+/** 統計ダッシュボード用の集計データを取得 */
+export function getSanpaiStats({
+  keyword = "",
+  prefecture = "",
+  license_type = "",
+  risk_level = "",
+  status = "",
+} = {}) {
+  const db = getDb();
+  const where = ["is_published = 1"];
+  const params = {};
+  if (keyword) { where.push("(company_name LIKE @kw OR business_area LIKE @kw OR notes LIKE @kw)"); params.kw = `%${keyword}%`; }
+  if (prefecture) { where.push("prefecture = @prefecture"); params.prefecture = prefecture; }
+  if (license_type) { where.push("license_type = @license_type"); params.license_type = license_type; }
+  if (risk_level) { where.push("risk_level = @risk_level"); params.risk_level = risk_level; }
+  if (status) { where.push("status = @status"); params.status = status; }
+  const whereClause = `WHERE ${where.join(" AND ")}`;
+
+  const totalCount = db.prepare(`SELECT COUNT(*) c FROM sanpai_items ${whereClause}`).get(params).c;
+
+  const countsByYear = db.prepare(`
+    SELECT SUBSTR(latest_penalty_date, 1, 4) AS year, COUNT(*) AS count
+    FROM sanpai_items ${whereClause}
+      AND latest_penalty_date IS NOT NULL AND SUBSTR(latest_penalty_date, 1, 4) != ''
+    GROUP BY year ORDER BY year DESC
+  `).all(params);
+
+  const countsByCompany = db.prepare(`
+    SELECT company_name AS name, COUNT(*) AS count
+    FROM sanpai_items ${whereClause}
+      AND company_name IS NOT NULL AND company_name != ''
+    GROUP BY company_name ORDER BY count DESC, company_name ASC LIMIT 10
+  `).all(params);
+
+  const countsByLicenseType = db.prepare(`
+    SELECT COALESCE(NULLIF(TRIM(license_type), ''), 'other') AS licenseType, COUNT(*) AS count
+    FROM sanpai_items ${whereClause}
+    GROUP BY licenseType ORDER BY count DESC
+  `).all(params);
+
+  const countsByPrefecture = db.prepare(`
+    SELECT TRIM(prefecture) AS prefecture, COUNT(*) AS count
+    FROM sanpai_items ${whereClause}
+      AND prefecture IS NOT NULL AND TRIM(prefecture) != ''
+    GROUP BY prefecture ORDER BY count DESC, prefecture ASC LIMIT 10
+  `).all(params);
+
+  return { totalCount, countsByYear, countsByCompany, countsByLicenseType, countsByPrefecture };
+}
+
 export function getSanpaiBySlug(slug) {
   const db = getDb();
   return db.prepare("SELECT * FROM sanpai_items WHERE slug = ? AND is_published = 1").get(slug) || null;

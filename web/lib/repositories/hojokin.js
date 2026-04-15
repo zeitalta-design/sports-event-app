@@ -60,6 +60,46 @@ export function listHojokinItems({
   return { items, total, totalPages };
 }
 
+/** 統計ダッシュボード用の集計データ */
+export function getHojokinStats({ keyword = "", category = "" } = {}) {
+  const db = getDb();
+  const where = ["is_published = 1"];
+  const params = {};
+  if (keyword) { where.push("(title LIKE @kw OR summary LIKE @kw OR provider_name LIKE @kw)"); params.kw = `%${keyword}%`; }
+  if (category) { where.push("category = @category"); params.category = category; }
+  const whereClause = `WHERE ${where.join(" AND ")}`;
+
+  const totalCount = db.prepare(`SELECT COUNT(*) c FROM hojokin_items ${whereClause}`).get(params).c;
+
+  const countsByYear = db.prepare(`
+    SELECT SUBSTR(deadline, 1, 4) AS year, COUNT(*) AS count
+    FROM hojokin_items ${whereClause}
+      AND deadline IS NOT NULL AND SUBSTR(deadline, 1, 4) != ''
+    GROUP BY year ORDER BY year DESC
+  `).all(params);
+
+  const countsByProvider = db.prepare(`
+    SELECT provider_name AS name, COUNT(*) AS count
+    FROM hojokin_items ${whereClause}
+      AND provider_name IS NOT NULL AND provider_name != ''
+    GROUP BY provider_name ORDER BY count DESC, provider_name ASC LIMIT 10
+  `).all(params);
+
+  const countsByCategory = db.prepare(`
+    SELECT COALESCE(NULLIF(TRIM(category), ''), 'other') AS category, COUNT(*) AS count
+    FROM hojokin_items ${whereClause}
+    GROUP BY category ORDER BY count DESC
+  `).all(params);
+
+  const countsByStatus = db.prepare(`
+    SELECT COALESCE(NULLIF(TRIM(status), ''), 'unknown') AS status, COUNT(*) AS count
+    FROM hojokin_items ${whereClause}
+    GROUP BY status ORDER BY count DESC
+  `).all(params);
+
+  return { totalCount, countsByYear, countsByProvider, countsByCategory, countsByStatus };
+}
+
 /**
  * slug で1件取得
  */

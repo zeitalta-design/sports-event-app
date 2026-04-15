@@ -71,6 +71,53 @@ export function listShiteiItems({
   return { items, total, totalPages };
 }
 
+/** 統計ダッシュボード用の集計データ */
+export function getShiteiStats({
+  keyword = "", prefecture = "", facility_category = "",
+  recruitment_status = "", municipality = "",
+} = {}) {
+  const db = getDb();
+  const where = ["is_published = 1"];
+  const params = {};
+  if (keyword) { where.push("(title LIKE @kw OR municipality_name LIKE @kw OR facility_name LIKE @kw OR summary LIKE @kw)"); params.kw = `%${keyword}%`; }
+  if (prefecture) { where.push("prefecture = @prefecture"); params.prefecture = prefecture; }
+  if (facility_category) { where.push("facility_category = @facility_category"); params.facility_category = facility_category; }
+  if (recruitment_status) { where.push("recruitment_status = @recruitment_status"); params.recruitment_status = recruitment_status; }
+  if (municipality) { where.push("municipality_name = @municipality"); params.municipality = municipality; }
+  const whereClause = `WHERE ${where.join(" AND ")}`;
+
+  const totalCount = db.prepare(`SELECT COUNT(*) c FROM shitei_items ${whereClause}`).get(params).c;
+
+  const countsByYear = db.prepare(`
+    SELECT SUBSTR(contract_start_date, 1, 4) AS year, COUNT(*) AS count
+    FROM shitei_items ${whereClause}
+      AND contract_start_date IS NOT NULL AND SUBSTR(contract_start_date, 1, 4) != ''
+    GROUP BY year ORDER BY year DESC
+  `).all(params);
+
+  const countsByMunicipality = db.prepare(`
+    SELECT municipality_name AS name, COUNT(*) AS count
+    FROM shitei_items ${whereClause}
+      AND municipality_name IS NOT NULL AND municipality_name != ''
+    GROUP BY municipality_name ORDER BY count DESC, municipality_name ASC LIMIT 10
+  `).all(params);
+
+  const countsByFacilityCategory = db.prepare(`
+    SELECT COALESCE(NULLIF(TRIM(facility_category), ''), 'other') AS facilityCategory, COUNT(*) AS count
+    FROM shitei_items ${whereClause}
+    GROUP BY facilityCategory ORDER BY count DESC
+  `).all(params);
+
+  const countsByPrefecture = db.prepare(`
+    SELECT TRIM(prefecture) AS prefecture, COUNT(*) AS count
+    FROM shitei_items ${whereClause}
+      AND prefecture IS NOT NULL AND TRIM(prefecture) != ''
+    GROUP BY prefecture ORDER BY count DESC, prefecture ASC LIMIT 10
+  `).all(params);
+
+  return { totalCount, countsByYear, countsByMunicipality, countsByFacilityCategory, countsByPrefecture };
+}
+
 export function getShiteiBySlug(slug) {
   const db = getDb();
   return db.prepare("SELECT * FROM shitei_items WHERE slug = ? AND is_published = 1").get(slug) || null;

@@ -5,6 +5,7 @@ import Link from "next/link";
 import DomainListPage from "@/components/core/DomainListPage";
 import CategoryPageHeader from "@/components/CategoryPageHeader";
 import DomainFavoriteButton from "@/components/core/DomainFavoriteButton";
+import StatsDashboard from "@/components/StatsDashboard";
 import "@/lib/domains";
 import { getDomain } from "@/lib/core/domain-registry";
 import {
@@ -87,6 +88,7 @@ export default function ShiteiListPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -98,11 +100,23 @@ export default function ShiteiListPage() {
       if (recruitmentStatus) params.set("recruitment_status", recruitmentStatus);
       if (sort) params.set("sort", sort);
       params.set("page", String(page));
-      const res = await fetch(`/api/shitei?${params}`);
-      const data = await res.json();
+
+      const statsParams = new URLSearchParams();
+      if (keyword) statsParams.set("keyword", keyword);
+      if (prefecture) statsParams.set("prefecture", prefecture);
+      if (facilityCategory) statsParams.set("facility_category", facilityCategory);
+      if (recruitmentStatus) statsParams.set("recruitment_status", recruitmentStatus);
+
+      const [listRes, statsRes] = await Promise.all([
+        fetch(`/api/shitei?${params}`),
+        fetch(`/api/shitei/stats?${statsParams}`),
+      ]);
+      const data = await listRes.json();
+      const statsData = await statsRes.json();
       setItems(data.items || []);
       setTotal(data.total || 0);
       setTotalPages(data.totalPages || 1);
+      setStats(statsData.error ? null : statsData);
     } catch (err) {
       console.error("Failed to fetch shitei items:", err);
     } finally {
@@ -180,6 +194,49 @@ export default function ShiteiListPage() {
             <button onClick={resetFilters} className="text-xs text-gray-500 hover:text-blue-600">
               条件をリセット
             </button>
+          )}
+
+          {/* 統計ダッシュボード */}
+          {stats && stats.totalCount > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <StatsDashboard
+                totalCount={stats.totalCount}
+                hasFilters={!!(keyword || prefecture || facilityCategory || recruitmentStatus)}
+                filters={{ prefecture, facility_category: facilityCategory }}
+                onFilterChange={(k, v) => {
+                  setPage(1);
+                  if (k === "prefecture") setPrefecture(v);
+                  else if (k === "facility_category") setFacilityCategory(v);
+                }}
+                accent="#DC2626"
+                sections={[
+                  {
+                    title: "年別件数（契約開始日）",
+                    type: "bar",
+                    filterKey: "year",
+                    rows: (stats.countsByYear || []).map((r) => ({ value: r.year, label: r.year, count: r.count })),
+                  },
+                  {
+                    title: "自治体別 TOP10",
+                    type: "ranking",
+                    filterKey: "municipality",
+                    rows: (stats.countsByMunicipality || []).map((r) => ({ value: r.name, label: r.name, count: r.count })),
+                  },
+                  {
+                    title: "施設種別",
+                    type: "ranking",
+                    filterKey: "facility_category",
+                    rows: (stats.countsByFacilityCategory || []).map((r) => ({ value: r.facilityCategory, label: getFacilityCategoryLabel(r.facilityCategory), count: r.count })),
+                  },
+                  {
+                    title: "都道府県別 TOP10",
+                    type: "ranking",
+                    filterKey: "prefecture",
+                    rows: (stats.countsByPrefecture || []).map((r) => ({ value: r.prefecture, label: r.prefecture, count: r.count })),
+                  },
+                ]}
+              />
+            </div>
           )}
         </div>
       )}

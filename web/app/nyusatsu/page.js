@@ -7,6 +7,7 @@ import CategoryPageHeader from "@/components/CategoryPageHeader";
 import DomainCompareBar from "@/components/core/DomainCompareBar";
 import DomainCompareButton from "@/components/core/DomainCompareButton";
 import DomainFavoriteButton from "@/components/core/DomainFavoriteButton";
+import StatsDashboard from "@/components/StatsDashboard";
 import "@/lib/domains";
 import { getDomain } from "@/lib/core/domain-registry";
 import {
@@ -87,6 +88,7 @@ export default function NyusatsuListPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -101,11 +103,26 @@ export default function NyusatsuListPage() {
       if (status) params.set("status", status);
       if (sort) params.set("sort", sort);
       params.set("page", String(page));
-      const res = await fetch(`/api/nyusatsu?${params}`);
-      const data = await res.json();
+
+      const statsParams = new URLSearchParams();
+      if (keyword) statsParams.set("keyword", keyword);
+      if (category) statsParams.set("category", category);
+      if (area) statsParams.set("area", area);
+      if (biddingMethod) statsParams.set("bidding_method", biddingMethod);
+      if (budgetRange) statsParams.set("budget_range", budgetRange);
+      if (deadlineWithin) statsParams.set("deadline_within", deadlineWithin);
+      if (status) statsParams.set("status", status);
+
+      const [listRes, statsRes] = await Promise.all([
+        fetch(`/api/nyusatsu?${params}`),
+        fetch(`/api/nyusatsu/stats?${statsParams}`),
+      ]);
+      const data = await listRes.json();
+      const statsData = await statsRes.json();
       setItems(data.items || []);
       setTotal(data.total || 0);
       setTotalPages(data.totalPages || 1);
+      setStats(statsData.error ? null : statsData);
     } catch (err) {
       console.error("Failed to fetch nyusatsu items:", err);
     } finally {
@@ -213,6 +230,49 @@ export default function NyusatsuListPage() {
             <button onClick={resetFilters} className="text-xs text-gray-500 hover:text-blue-600">
               条件をリセット
             </button>
+          )}
+
+          {/* 統計ダッシュボード */}
+          {stats && stats.totalCount > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <StatsDashboard
+                totalCount={stats.totalCount}
+                hasFilters={!!(keyword || category || area || biddingMethod || budgetRange || deadlineWithin || status)}
+                filters={{ category, status }}
+                onFilterChange={(k, v) => {
+                  setPage(1);
+                  if (k === "category") setCategory(v);
+                  else if (k === "status") setStatus(v);
+                }}
+                accent="#7C3AED"
+                sections={[
+                  {
+                    title: "年別件数（公告/締切）",
+                    type: "bar",
+                    filterKey: "year",
+                    rows: (stats.countsByYear || []).map((r) => ({ value: r.year, label: r.year, count: r.count })),
+                  },
+                  {
+                    title: "発注機関 TOP10",
+                    type: "ranking",
+                    filterKey: "issuer",
+                    rows: (stats.countsByIssuer || []).map((r) => ({ value: r.name, label: r.name, count: r.count })),
+                  },
+                  {
+                    title: "カテゴリ別",
+                    type: "ranking",
+                    filterKey: "category",
+                    rows: (stats.countsByCategory || []).map((r) => ({ value: r.category, label: getCategoryLabel(r.category), count: r.count })),
+                  },
+                  {
+                    title: "ステータス別",
+                    type: "ranking",
+                    filterKey: "status",
+                    rows: (stats.countsByStatus || []).map((r) => ({ value: r.status, label: r.status, count: r.count })),
+                  },
+                ]}
+              />
+            </div>
           )}
         </div>
       )}

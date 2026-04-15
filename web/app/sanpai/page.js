@@ -5,6 +5,7 @@ import Link from "next/link";
 import DomainListPage from "@/components/core/DomainListPage";
 import CategoryPageHeader from "@/components/CategoryPageHeader";
 import DomainFavoriteButton from "@/components/core/DomainFavoriteButton";
+import StatsDashboard from "@/components/StatsDashboard";
 import "@/lib/domains";
 import { getDomain } from "@/lib/core/domain-registry";
 import {
@@ -90,6 +91,7 @@ export default function SanpaiListPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -102,11 +104,24 @@ export default function SanpaiListPage() {
       if (status) params.set("status", status);
       if (sort) params.set("sort", sort);
       params.set("page", String(page));
-      const res = await fetch(`/api/sanpai?${params}`);
-      const data = await res.json();
+
+      const statsParams = new URLSearchParams();
+      if (keyword) statsParams.set("keyword", keyword);
+      if (prefecture) statsParams.set("prefecture", prefecture);
+      if (licenseType) statsParams.set("license_type", licenseType);
+      if (riskLevel) statsParams.set("risk_level", riskLevel);
+      if (status) statsParams.set("status", status);
+
+      const [listRes, statsRes] = await Promise.all([
+        fetch(`/api/sanpai?${params}`),
+        fetch(`/api/sanpai/stats?${statsParams}`),
+      ]);
+      const data = await listRes.json();
+      const statsData = await statsRes.json();
       setItems(data.items || []);
       setTotal(data.total || 0);
       setTotalPages(data.totalPages || 1);
+      setStats(statsData.error ? null : statsData);
     } catch (err) {
       console.error("Failed to fetch sanpai items:", err);
     } finally {
@@ -115,6 +130,13 @@ export default function SanpaiListPage() {
   }, [keyword, prefecture, licenseType, riskLevel, status, sort, page]);
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
+
+  const hasFilters = !!(keyword || prefecture || licenseType || riskLevel || status);
+  const onStatsToggle = (key, value) => {
+    setPage(1);
+    if (key === "prefecture") setPrefecture(value);
+    else if (key === "license_type") setLicenseType(value);
+  };
 
   function resetFilters() {
     setKeyword(""); setPrefecture(""); setLicenseType("");
@@ -193,6 +215,45 @@ export default function SanpaiListPage() {
             <button onClick={resetFilters} className="text-xs text-gray-500 hover:text-blue-600">
               条件をリセット
             </button>
+          )}
+
+          {/* 統計ダッシュボード */}
+          {stats && stats.totalCount > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <StatsDashboard
+                totalCount={stats.totalCount}
+                hasFilters={hasFilters}
+                filters={{ prefecture, license_type: licenseType }}
+                onFilterChange={onStatsToggle}
+                accent="#059669"
+                sections={[
+                  {
+                    title: "年別件数（処分日）",
+                    type: "bar",
+                    filterKey: "year",
+                    rows: (stats.countsByYear || []).map((r) => ({ value: r.year, label: r.year, count: r.count })),
+                  },
+                  {
+                    title: "事業者別 TOP10",
+                    type: "ranking",
+                    filterKey: "company",
+                    rows: (stats.countsByCompany || []).map((r) => ({ value: r.name, label: r.name, count: r.count })),
+                  },
+                  {
+                    title: "許可種別",
+                    type: "ranking",
+                    filterKey: "license_type",
+                    rows: (stats.countsByLicenseType || []).map((r) => ({ value: r.licenseType, label: getLicenseTypeLabel(r.licenseType), count: r.count })),
+                  },
+                  {
+                    title: "都道府県別 TOP10",
+                    type: "ranking",
+                    filterKey: "prefecture",
+                    rows: (stats.countsByPrefecture || []).map((r) => ({ value: r.prefecture, label: r.prefecture, count: r.count })),
+                  },
+                ]}
+              />
+            </div>
           )}
         </div>
       )}

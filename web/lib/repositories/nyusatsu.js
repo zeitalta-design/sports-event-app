@@ -98,6 +98,52 @@ export function listNyusatsuItems({
   return { items, total, totalPages };
 }
 
+/** 統計ダッシュボード用の集計データ */
+export function getNyusatsuStats({
+  keyword = "", category = "", area = "", bidding_method = "",
+  budget_range = "", deadline_within = "", status = "",
+} = {}) {
+  const db = getDb();
+  const where = ["is_published = 1"];
+  const params = {};
+  if (keyword) { where.push("(title LIKE @kw OR summary LIKE @kw OR issuer_name LIKE @kw)"); params.kw = `%${keyword}%`; }
+  if (category) { where.push("category = @category"); params.category = category; }
+  if (area) { where.push("target_area = @area"); params.area = area; }
+  if (status) { where.push("status = @status"); params.status = status; }
+  const whereClause = `WHERE ${where.join(" AND ")}`;
+
+  const totalCount = db.prepare(`SELECT COUNT(*) c FROM nyusatsu_items ${whereClause}`).get(params).c;
+
+  const countsByYear = db.prepare(`
+    SELECT SUBSTR(COALESCE(announcement_date, deadline), 1, 4) AS year, COUNT(*) AS count
+    FROM nyusatsu_items ${whereClause}
+      AND COALESCE(announcement_date, deadline) IS NOT NULL
+      AND SUBSTR(COALESCE(announcement_date, deadline), 1, 4) != ''
+    GROUP BY year ORDER BY year DESC
+  `).all(params);
+
+  const countsByIssuer = db.prepare(`
+    SELECT issuer_name AS name, COUNT(*) AS count
+    FROM nyusatsu_items ${whereClause}
+      AND issuer_name IS NOT NULL AND issuer_name != ''
+    GROUP BY issuer_name ORDER BY count DESC, issuer_name ASC LIMIT 10
+  `).all(params);
+
+  const countsByCategory = db.prepare(`
+    SELECT COALESCE(NULLIF(TRIM(category), ''), 'other') AS category, COUNT(*) AS count
+    FROM nyusatsu_items ${whereClause}
+    GROUP BY category ORDER BY count DESC
+  `).all(params);
+
+  const countsByStatus = db.prepare(`
+    SELECT COALESCE(NULLIF(TRIM(status), ''), 'unknown') AS status, COUNT(*) AS count
+    FROM nyusatsu_items ${whereClause}
+    GROUP BY status ORDER BY count DESC
+  `).all(params);
+
+  return { totalCount, countsByYear, countsByIssuer, countsByCategory, countsByStatus };
+}
+
 export function getNyusatsuBySlug(slug) {
   const db = getDb();
   return db.prepare("SELECT * FROM nyusatsu_items WHERE slug = ? AND is_published = 1").get(slug) || null;

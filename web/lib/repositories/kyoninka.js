@@ -73,6 +73,54 @@ export function listKyoninkaEntities({
   return { items, total, totalPages };
 }
 
+/** 統計ダッシュボード用の集計データ */
+export function getKyoninkaStats({
+  keyword = "", prefecture = "", license_family = "",
+  entity_status = "", has_corporate_number = "", has_disciplinary = "",
+} = {}) {
+  const db = getDb();
+  const where = ["is_published = 1"];
+  const params = {};
+  if (keyword) { where.push("(entity_name LIKE @kw OR normalized_name LIKE @kw OR corporate_number LIKE @kw OR address LIKE @kw OR notes LIKE @kw)"); params.kw = `%${keyword}%`; }
+  if (prefecture) { where.push("prefecture = @prefecture"); params.prefecture = prefecture; }
+  if (license_family) { where.push("primary_license_family = @license_family"); params.license_family = license_family; }
+  if (entity_status) { where.push("entity_status = @entity_status"); params.entity_status = entity_status; }
+  if (has_corporate_number === "yes") { where.push("corporate_number IS NOT NULL AND corporate_number != ''"); }
+  if (has_corporate_number === "no") { where.push("(corporate_number IS NULL OR corporate_number = '')"); }
+  const whereClause = `WHERE ${where.join(" AND ")}`;
+
+  const totalCount = db.prepare(`SELECT COUNT(*) c FROM kyoninka_entities ${whereClause}`).get(params).c;
+
+  const countsByYear = db.prepare(`
+    SELECT SUBSTR(latest_update_date, 1, 4) AS year, COUNT(*) AS count
+    FROM kyoninka_entities ${whereClause}
+      AND latest_update_date IS NOT NULL AND SUBSTR(latest_update_date, 1, 4) != ''
+    GROUP BY year ORDER BY year DESC
+  `).all(params);
+
+  const countsByEntity = db.prepare(`
+    SELECT entity_name AS name, COUNT(*) AS count
+    FROM kyoninka_entities ${whereClause}
+      AND entity_name IS NOT NULL AND entity_name != ''
+    GROUP BY entity_name ORDER BY count DESC, entity_name ASC LIMIT 10
+  `).all(params);
+
+  const countsByLicenseFamily = db.prepare(`
+    SELECT COALESCE(NULLIF(TRIM(primary_license_family), ''), 'other') AS licenseFamily, COUNT(*) AS count
+    FROM kyoninka_entities ${whereClause}
+    GROUP BY licenseFamily ORDER BY count DESC
+  `).all(params);
+
+  const countsByPrefecture = db.prepare(`
+    SELECT TRIM(prefecture) AS prefecture, COUNT(*) AS count
+    FROM kyoninka_entities ${whereClause}
+      AND prefecture IS NOT NULL AND TRIM(prefecture) != ''
+    GROUP BY prefecture ORDER BY count DESC, prefecture ASC LIMIT 10
+  `).all(params);
+
+  return { totalCount, countsByYear, countsByEntity, countsByLicenseFamily, countsByPrefecture };
+}
+
 export function getKyoninkaBySlug(slug) {
   const db = getDb();
   return db.prepare("SELECT * FROM kyoninka_entities WHERE slug = ? AND is_published = 1").get(slug) || null;
