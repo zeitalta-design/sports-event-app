@@ -63,6 +63,14 @@ export async function fetchAndUpsertSanpai({ dryRun = false, logger = console.lo
     sources.push({ name: "kanagawa", error: e.message, inserted: 0, updated: 0, skipped: 0 });
   }
 
+  try {
+    const r3 = await ingestTokyo({ db, upsertStmt, dryRun, log });
+    sources.push({ name: "tokyo", ...r3 });
+  } catch (e) {
+    log(`tokyo failed: ${e.message}`);
+    sources.push({ name: "tokyo", error: e.message, inserted: 0, updated: 0, skipped: 0 });
+  }
+
   const totalInserted = sources.reduce((s, r) => s + (r.inserted || 0), 0);
   const totalUpdated = sources.reduce((s, r) => s + (r.updated || 0), 0);
   const totalSkipped = sources.reduce((s, r) => s + (r.skipped || 0), 0);
@@ -294,6 +302,137 @@ async function ingestKanagawa({ db, upsertStmt, dryRun, log }) {
     }
   }
   log(`  kanagawa: inserted=${inserted} updated=${updated} skipped=${skipped}`);
+  return { inserted, updated, skipped };
+}
+
+// ─── ソース3: 東京都 プレスリリース（h3+本文型） ────────────────────────────
+
+async function ingestTokyo({ db, upsertStmt, dryRun, log }) {
+  const INDEX_URL = "https://www.kankyo.metro.tokyo.lg.jp/resource/industrial_waste/improper_handling/disposal_information";
+  log("東京都 産廃行政処分（プレスリリース）");
+
+  const indexRes = await fetch(INDEX_URL, {
+    headers: { "User-Agent": UA },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+  if (!indexRes.ok) throw new Error(`Tokyo index HTTP ${indexRes.status}`);
+  const indexHtml = await indexRes.text();
+
+  // プレスリリースURLを抽出: /information/press/YYYY/... または /tosei/hodohappyo/press/YYYY/...
+  const pressPattern = /href="(https?:\/\/www\.metro\.tokyo\.lg\.jp\/(?:information\/press|tosei\/hodohappyo\/press)\/\d{4}\/[^"]+)"/gi;
+  const pressLinks = new Set();
+  let m;
+  while ((m = pressPattern.exec(indexHtml)) !== null) {
+    const url = m[1];
+    // 関連性チェック: リンクテキストに「産業廃棄物」「行政処分」があるもの優先
+    // 既に重複除去されているため、とりあえずすべて追加
+    pressLinks.add(url);
+  }
+  // 最新のリリース5件まで処理（負荷軽減）
+  const targets = [...pressLinks].slice(0, 5);
+  log(`  対象プレスリリース: ${targets.length}件`);
+
+  let inserted = 0, updated = 0, skipped = 0;
+  const seenCompanies = new Set();
+
+  for (const pressUrl of targets) {
+    try {
+      const res = await fetch(pressUrl, {
+        headers: { "User-Agent": UA },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      if (!res.ok) continue;
+      const html = await res.text();
+
+      // ページタイトル（公表日推定用）から日付を取得
+      let pressDate = null;
+      const dateMatch = pressUrl.match(/\/(\d{4})\/(\d{2})\/(\d{8})/);
+      if (dateMatch) {
+        pressDate = `${dateMatch[3].slice(0, 4)}-${dateMatch[3].slice(4, 6)}-${dateMatch[3].slice(6, 8)}`;
+      } else {
+        const dm2 = pressUrl.match(/\/(\d{4})\/(\d{2})\/(\d{2})\//);
+        if (dm2) pressDate = `${dm2[1]}-${dm2[2]}-${dm2[3]}`;
+      }
+
+      // h3 セクションを抽出（名称/代表者氏名/住所/許可の種類/処分内容）
+      const sections = html.split(/<h3[^>]*>/);
+      let current = null;
+      const entries = [];
+      for (const s of sections.slice(1)) {
+        const titleEnd = s.indexOf("</h3>");
+        if (titleEnd < 0) continue;
+        const label = s.slice(0, titleEnd).replace(/<[^>]+>/g, "").trim();
+        let body = s.slice(titleEnd + 5);
+        const nextH = body.search(/<h[123][^>]*>/);
+        if (nextH >= 0) body = body.slice(0, nextH);
+        const value = body
+          .replace(/<[^>]+>/g, " ")
+          .replace(/&nbsp;/g, " ")
+          .replace(/&amp;/g, "&")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        if (label === "名称") {
+          if (current && current.name) entries.push(current);
+          current = { name: value, representative: "", address: "", license_info: "", action: "" };
+        } else if (current) {
+          if (label === "代表者氏名") current.representative = value;
+          else if (label === "住所") current.address = value;
+          else if (label === "許可の種類") current.license_info = value;
+          else if (label === "処分内容") current.action = value;
+        }
+      }
+      if (current && current.name) entries.push(current);
+
+      for (const e of entries) {
+        // 名称の読み仮名（かっこ内）を除去
+        const cleanName = String(e.name).replace(/[（(][^）)]*[）)]$/, "").trim();
+        if (!cleanName || cleanName.length < 2) { skipped++; continue; }
+        if (seenCompanies.has(cleanName)) { skipped++; continue; }
+        seenCompanies.add(cleanName);
+
+        const licNumMatch = e.license_info.match(/第?\s*(\d{2}-\d{2}-\d{6})\s*号/);
+        const licNum = licNumMatch ? licNumMatch[1] : "";
+        const slug = toSlug("tokyo-sanpai", cleanName, licNum);
+
+        const item = {
+          slug,
+          company_name: cleanName,
+          corporate_number: null,
+          prefecture: "東京都",
+          city: extractCity(e.address),
+          license_type: normalizeLicenseType(e.license_info),
+          waste_category: "industrial",
+          business_area: "東京都",
+          status: /取消/.test(e.action) ? "revoked" : /停止/.test(e.action) ? "suspended" : "active",
+          risk_level: /取消/.test(e.action) ? "critical" : "high",
+          penalty_count: 1,
+          latest_penalty_date: pressDate,
+          source_name: "東京都産業廃棄物行政処分",
+          source_url: INDEX_URL,
+          detail_url: pressUrl,
+          notes: e.action ? e.action.slice(0, 200) : null,
+        };
+
+        if (dryRun) { inserted++; continue; }
+        try {
+          const before = db.prepare("SELECT id FROM sanpai_items WHERE slug = ?").get(slug);
+          upsertStmt.run(item);
+          before ? updated++ : inserted++;
+        } catch (err) {
+          log(`  ! ${cleanName}: ${err.message}`);
+          skipped++;
+        }
+      }
+
+      // プレスリリース間に小さな待機（負荷配慮）
+      await new Promise((r) => setTimeout(r, 500));
+    } catch (e) {
+      log(`  ! ${pressUrl}: ${e.message}`);
+    }
+  }
+
+  log(`  tokyo: inserted=${inserted} updated=${updated} skipped=${skipped}`);
   return { inserted, updated, skipped };
 }
 

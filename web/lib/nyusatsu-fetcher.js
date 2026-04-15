@@ -11,6 +11,7 @@
  * 旧 scripts/ingest-nyusatsu.mjs の Python 依存を除去し、Node.js 単独で動作。
  */
 import { getDb } from "@/lib/db";
+import * as XLSX from "xlsx";
 
 const UA = "Mozilla/5.0 (compatible; RiskMonitor/1.0)";
 const FETCH_TIMEOUT_MS = 20000;
@@ -231,38 +232,121 @@ async function scrapeSoumu() {
 }
 
 async function scrapeMhlw() {
-  // 厚生労働省: 入札公告
-  const base = "https://www.mhlw.go.jp";
-  const candidates = [
-    `${base}/sinsei/chotatsu/chotatsu/nyuusatsu/index.html`,
-    `${base}/sinsei/chotatsu/chotatsu/choutatsujouhou/index.html`,
-  ];
-  for (const url of candidates) {
+  // 厚生労働省: 地方厚生（支）局の入札公告（実案件PDFへのリンク）
+  // 本省のページは「調達ポータル」に集約されておりAPI/RSSも無いため、
+  // 地方厚生局の年度別サブページから PDF タイトルを案件として抽出する。
+  const base = "https://kouseikyoku.mhlw.go.jp";
+  const indexUrl = `${base}/kantoshinetsu/chotatsu/nyusatsu/index.html`;
+
+  let indexHtml;
+  try {
+    indexHtml = await fetchTextFlexible(indexUrl);
+  } catch {
+    return [];
+  }
+
+  // 年度別ページ（令和X年度）のリンクを抽出
+  const yearLinks = [];
+  const yearPattern = /<a[^>]*href="([^"]+nyusatsur3[^"]*\.html)"[^>]*>[^<]*令和\d+年度[^<]*<\/a>/gi;
+  let m;
+  while ((m = yearPattern.exec(indexHtml)) !== null) {
+    let href = m[1];
+    if (href.startsWith("/")) href = `${base}${href}`;
+    else if (!href.startsWith("http")) href = new URL(href, indexUrl).href;
+    if (!yearLinks.includes(href)) yearLinks.push(href);
+  }
+  // 最新年度から2つだけ処理（件数制限）
+  const targets = yearLinks.slice(-2);
+
+  const results = [];
+  const seen = new Set();
+  for (const url of targets) {
     try {
       const html = await fetchTextFlexible(url);
-      const results = extractAnnouncementLinks(html, base);
-      if (results.length > 0) return results.slice(0, 60);
+      // PDFリンクのテキストを案件名として扱う
+      const pdfPattern = /<a[^>]*href="([^"]+\.pdf)"[^>]*>([^<]{10,200})<\/a>/gi;
+      let pm;
+      while ((pm = pdfPattern.exec(html)) !== null) {
+        const href = pm[1];
+        const title = clean(pm[2]).replace(/[［\[][\d.,A-Z]+[］\]]$/, "").trim();
+        if (!title || title.length < 10 || seen.has(title)) continue;
+        seen.add(title);
+        let detail = href;
+        if (!detail.startsWith("http")) detail = new URL(href, url).href;
+        results.push({
+          announce_date: "",
+          deadline: "",
+          title,
+          detail_url: detail,
+        });
+      }
     } catch { /* next */ }
   }
-  return [];
+  return results.slice(0, 60);
 }
 
 async function scrapeMlit() {
-  // 国土交通省: 調達情報ポータル
+  // 国土交通省: 官庁営繕の発注見通し（Excel）を案件リストとして取得
+  // 旧 /page/chotatsu.html は GEPS に集約されてしまったため、
+  // 官庁営繕部の Excel（発注見通し）をパースする代替手段を採用。
   const base = "https://www.mlit.go.jp";
-  const candidates = [
-    `${base}/page/chotatsu.html`,
-    `${base}/page/choutatsu.html`,
-    `${base}/chotatsu/index.html`,
-  ];
-  for (const url of candidates) {
+  const indexUrl = `${base}/gobuild/gobuild_tk1_000007.html`;
+
+  let indexHtml;
+  try {
+    indexHtml = await fetchTextFlexible(indexUrl);
+  } catch {
+    return [];
+  }
+
+  const xlsxPattern = /<a[^>]*href="([^"]+\.xlsx)"[^>]*>([^<]{5,150})<\/a>/gi;
+  const xlsxLinks = [];
+  let xm;
+  while ((xm = xlsxPattern.exec(indexHtml)) !== null) {
+    let href = xm[1];
+    if (href.startsWith("/")) href = `${base}${href}`;
+    else if (!href.startsWith("http")) href = new URL(href, indexUrl).href;
+    xlsxLinks.push({ url: href, label: clean(xm[2]) });
+  }
+
+  const results = [];
+  const seen = new Set();
+  for (const { url, label } of xlsxLinks.slice(0, 3)) {
     try {
-      const html = await fetchTextFlexible(url);
-      const results = extractAnnouncementLinks(html, base);
-      if (results.length > 0) return results.slice(0, 50);
+      const res = await fetch(url, {
+        headers: { "User-Agent": UA },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      if (!res.ok) continue;
+      const buf = Buffer.from(await res.arrayBuffer());
+      const workbook = XLSX.read(buf, { type: "buffer", cellDates: true });
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+        // 案件名らしいセル（長い文字列）を抽出
+        for (const row of aoa) {
+          if (!Array.isArray(row)) continue;
+          for (const cell of row) {
+            const text = String(cell || "").trim().replace(/\s+/g, " ");
+            if (text.length < 10 || text.length > 100) continue;
+            if (seen.has(text)) continue;
+            // ヘッダー／案内文を除外
+            if (/発注見通し|工事名|業務名|件数|備考|工事区分|No\.?$|件名$/.test(text)) continue;
+            if (!/工事|業務|補修|改修|整備|新築|改築|設計|監理|清掃|保守|調査/.test(text)) continue;
+            seen.add(text);
+            results.push({
+              announce_date: "",
+              deadline: "",
+              title: text,
+              detail_url: url,
+              _source_excel: label,
+            });
+          }
+        }
+      }
     } catch { /* next */ }
   }
-  return [];
+  return results.slice(0, 50);
 }
 
 /** Shift_JIS等にも対応した fetch（meta charset 検出） */
