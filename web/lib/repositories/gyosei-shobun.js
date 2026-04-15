@@ -188,13 +188,18 @@ export function getAdministrativeActionStats({
     .all(params);
 
   // 都道府県別件数 TOP 10
+  // 注: prefecture が NULL/空 のレコードは「authority_level='national' の
+  //     国レベル処分」（金融庁・消費者庁・公取委・個情委・国税庁・MLIT運送等）
+  //     で、都道府県が原理的に存在しないため、ランキングから除外する。
   const countsByPrefecture = db
     .prepare(`
       SELECT
-        COALESCE(NULLIF(TRIM(prefecture), ''), '都道府県不明') AS prefecture,
+        TRIM(prefecture) AS prefecture,
         COUNT(*) AS count
       FROM administrative_actions
       ${whereClause}
+        AND prefecture IS NOT NULL
+        AND TRIM(prefecture) != ''
       GROUP BY prefecture
       ORDER BY count DESC, prefecture ASC
       LIMIT 10
