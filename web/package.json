@@ -54,7 +54,9 @@
     "fetch:fsa-jirei": "node scripts/fetch-gyosei-shobun-fsa.mjs",
     "fetch:jftc": "node scripts/fetch-gyosei-shobun-jftc.mjs",
     "fetch:caa": "node scripts/fetch-gyosei-shobun-caa.mjs",
-    "fetch:mlit-transport": "node scripts/fetch-gyosei-shobun-mlit-transport.mjs"
+    "fetch:mlit-transport": "node scripts/fetch-gyosei-shobun-mlit-transport.mjs",
+    "fetch:ppc": "node scripts/fetch-gyosei-shobun-ppc.mjs",
+    "fetch:nta": "node scripts/fetch-gyosei-shobun-nta.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
