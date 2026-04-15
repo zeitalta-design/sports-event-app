@@ -58,6 +58,21 @@ export function shouldSkipAsCompanyName(name) {
   // 長文の典型: 「令和X年Y月Z日, ...」で始まる文章
   if (/令和\d+年\d+月\d+日/.test(s) && s.length > 30) return "description-text";
 
+  // 地域名のみの行（福島県・北海道の支庁一覧が誤抽出されるケース）
+  // 「白河市、西白河郡 東白川郡」のような区域列挙は法人格を含まない場合 skip。
+  // 「植村建設」のような企業名を誤マッチしないよう、各トークンが
+  // 「行政区分で終わる完全な単語」であることを確認（split でチェック）。
+  const hasLegalForm = /(株式会社|有限会社|合同会社|合資会社|合名会社|一般財団法人|公益財団法人|社団法人|協同組合|協会|事務所|法人)/.test(s);
+  if (!hasLegalForm) {
+    const tokens = s.split(/[、,\s・\u3000／\/]+/).filter(Boolean);
+    if (tokens.length >= 1 && tokens.every((t) => /^[一-龥]{1,8}(?:市|区|町|村|郡|振興局|支庁|総合振興局)$/.test(t))) {
+      return "region-only";
+    }
+    // 北海道の振興局名単体
+    const hokkaidoRegions = ["空知", "石狩", "後志", "胆振", "日高", "渡島", "檜山", "上川", "留萌", "宗谷", "オホーツク", "網走", "十勝", "釧路", "根室"];
+    if (hokkaidoRegions.includes(s)) return "hokkaido-region";
+  }
+
   // 法人格や企業名らしい語尾
   const looksLikeCompany = /(株式会社|有限会社|合同会社|合資会社|合名会社|一般財団法人|公益財団法人|社団法人|協同組合|協会|事務所|[(（][株有合]{1}[)）])/.test(s)
     || /(建設|工業|商事|商会|興業|運輸|開発|不動産|設備|電気|住宅|ホーム|宅建|リース|サービス|プランニング|コーポレーション|ホールディングス|グループ|工務店|建築|産業|物産|総業|商店)$/.test(s);

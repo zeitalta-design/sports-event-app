@@ -168,7 +168,8 @@ function parseGenericTable(html, config) {
       for (const cell of cells) {
         // 日付パターン
         if (!actionDate) {
-          const dateMatch = cell.match(/(\d{4})[年/.-](\d{1,2})[月/.-](\d{1,2})/);
+          // 年は1990〜2099に限定（電話番号 0126-20-00 等との誤認防止）
+          const dateMatch = cell.match(/((?:19|20)\d{2})[年/.-](\d{1,2})[月/.-](\d{1,2})/);
           if (dateMatch) {
             actionDate = `${dateMatch[1]}-${dateMatch[2].padStart(2, "0")}-${dateMatch[3].padStart(2, "0")}`;
             continue;
@@ -388,7 +389,8 @@ function parseH3Sections(html, config) {
 /** 日付文字列から YYYY-MM-DD を抽出 */
 function extractDate(text) {
   if (!text) return null;
-  const western = text.match(/(\d{4})[年/.-](\d{1,2})[月/.-](\d{1,2})/);
+  // 年は1990〜2099に限定（電話番号との誤認防止）
+  const western = text.match(/((?:19|20)\d{2})[年/.-](\d{1,2})[月/.-](\d{1,2})/);
   if (western) return `${western[1]}-${western[2].padStart(2, "0")}-${western[3].padStart(2, "0")}`;
   const jp = text.match(/(令和|平成)\s*(\d+)\s*年\s*(\d+)\s*月\s*(\d+)/);
   if (jp) {
