@@ -61,6 +61,13 @@ export async function fetchAndUpsertKyoninka({
     const displayName = row.display_name || row.name_raw;
     let corporateNumber = row.corporate_number;
 
+    // 企業名として明らかに不適切なデータをスキップ（スクレイパー誤抽出対策）
+    const skip = shouldSkipAsCompanyName(displayName);
+    if (skip) {
+      log(`  ⊘ skip (${skip}): ${displayName.slice(0, 40)}`);
+      continue;
+    }
+
     try {
       // 法人番号が未解決なら gBizINFO 名前検索で解決
       if (!corporateNumber) {
@@ -92,12 +99,8 @@ export async function fetchAndUpsertKyoninka({
       const certs = await getCertification(corporateNumber);
       certFetched++;
 
-      if (certs.length === 0) {
-        log(`  - ${displayName}: 許認可情報なし`);
-        continue;
-      }
-
       if (!dryRun) {
+        // certs が空でも法人番号解決済みなので entity 自体は登録（基本情報として価値あり）
         const r = upsertKyoninkaForCorporate(db, {
           corporateNumber,
           displayName,
@@ -106,7 +109,9 @@ export async function fetchAndUpsertKyoninka({
         });
         created += r.created;
         updated += r.updated;
-        log(`  ✓ ${displayName}: ${certs.length}件の許認可 (+${r.created} / ~${r.updated})`);
+        const certNote = certs.length > 0 ? `${certs.length}件の許認可` : "許認可情報なし";
+        const opNote = r.created ? `+${r.created}` : `~${r.updated}`;
+        log(`  ${certs.length > 0 ? "✓" : "·"} ${displayName}: ${certNote} (${opNote})`);
       } else {
         log(`  (dry) ${displayName}: ${certs.length}件の許認可`);
       }
@@ -205,6 +210,40 @@ function getTargetsBySource({ db, source, onlyMissing, limit }) {
   }
 
   return db.prepare(sql).all(limit);
+}
+
+/**
+ * 企業名として不適切なデータを検出（スクレイパー誤抽出等）。
+ * 理由を返し、スキップ対象なら文字列、正常なら null。
+ */
+function shouldSkipAsCompanyName(name) {
+  if (!name || typeof name !== "string") return "empty";
+  const s = name.trim();
+  if (s.length < 2) return "too-short";
+  if (s.length > 60) return "too-long"; // 長文は処分理由の本文が混入している
+  // 年月日だけのパターン
+  if (/^令和\d+年\d+月?$/.test(s) || /^平成\d+年\d+月?$/.test(s)) return "date-only";
+  if (/^\d+年\d+月/.test(s)) return "date-only";
+  // 明らかに非企業名の典型ワード
+  const nonCompanyKeywords = [
+    "基準", "処分内容", "商号又は名称", "主たる事務所", "主たる営業所",
+    "登録申請書", "誓約書", "身分証明書", "登記されていないことの証明",
+    "住民票", "個人番号カード", "合格証書", "登録資格を証する書面",
+    "土木事務所", "県土マネジメント部", "建設事務所", "建築課",
+    "間の日数", "提出期限", "事業所名", "営業所の所在",
+    "〇（", "行政処分一覧", "監督処分簿", "処分年月日", "処分情報",
+  ];
+  for (const kw of nonCompanyKeywords) {
+    if (s.includes(kw)) return `non-company-keyword(${kw})`;
+  }
+  // 「令和X年Y月Z日から」等の文章っぽい書き出し
+  if (/令和\d+年\d+月\d+日/.test(s) && s.length > 30) return "description-text";
+  // 株式会社/有限会社/合同会社/合資会社/合名会社/一般財団/公益財団/社団/組合/個人事業主
+  // または 企業名らしい語尾（建設/工業/商事/商会/興業/運輸/開発/不動産/設備/電気/住宅/ホーム/宅建/リース/サービス/プランニング 等）
+  const looksLikeCompany = /(株式会社|有限会社|合同会社|合資会社|合名会社|一般財団法人|公益財団法人|社団法人|組合|協会|事務所|[(（][株有合]{1}[)）])/.test(s)
+    || /(建設|工業|商事|商会|興業|運輸|開発|不動産|設備|電気|住宅|ホーム|宅建|リース|サービス|プランニング|コーポレーション|ホールディングス|グループ|工務店|建築|産業|物産)$/.test(s);
+  if (!looksLikeCompany && s.length > 30) return "not-company-like";
+  return null;
 }
 
 /**
