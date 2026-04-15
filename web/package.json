@@ -45,7 +45,9 @@
     "fetch:kyoninka": "node scripts/fetch-kyoninka.mjs",
     "fetch:kyoninka:preview": "node scripts/fetch-kyoninka.mjs --preview",
     "fetch:sanpai": "node scripts/fetch-sanpai.mjs",
-    "fetch:sanpai:dry": "node scripts/fetch-sanpai.mjs --dry-run"
+    "fetch:sanpai:dry": "node scripts/fetch-sanpai.mjs --dry-run",
+    "fetch:nyusatsu": "node scripts/fetch-nyusatsu.mjs",
+    "fetch:nyusatsu:dry": "node scripts/fetch-nyusatsu.mjs --dry-run"
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
