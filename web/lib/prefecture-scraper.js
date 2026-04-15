@@ -95,37 +95,34 @@ const PREFECTURE_PARSERS = {
   saga_takken: { prefecture: "佐賀県", url: "https://www.pref.saga.lg.jp/kiji003106819/index.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
   nagasaki_takken: { prefecture: "長崎県", url: "https://www.pref.nagasaki.lg.jp/doc/page-435819.html", industry: "real_estate", sector: "takken", parse: parseGenericTable },
 
-  // --- 建設業 confirmed 全30県（Web調査で正しいURL確認済み） ---
+  // --- 建設業 confirmed ---
+  // 注: 以下の7県は建設業者への個別監督処分リストを県独自に公表せず、
+  //     国交省「建設業者不正行為情報交換連携システム」(MLIT) に集約されている。
+  //     MLITデータは fetch-gyosei-shobun で取得済みのため、本定義からは除外。
+  //     tokyo / saitama / aichi / shiga / tottori / tokushima / fukuoka
   hokkaido_kensetsu: { prefecture: "北海道", url: "https://www.pref.hokkaido.lg.jp/kn/ksk/kenjohp/sinsa/kantoku.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  saitama_kensetsu: { prefecture: "埼玉県", url: "https://www.pref.saitama.lg.jp/a1002/kantoku.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  tokyo_kensetsu: { prefecture: "東京都", url: "https://www.toshiseibi.metro.tokyo.lg.jp/kenchiku_kaihatsu/kenchiku_shidou/gyosya_shido/kensetsu/kensetsu04", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
   kanagawa_kensetsu: { prefecture: "神奈川県", url: "https://www.pref.kanagawa.jp/docs/u2h/cnt/f531856/p870268.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  aichi_kensetsu: { prefecture: "愛知県", url: "https://www.pref.aichi.jp/soshiki/toshi-somu/kantoku.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  osaka_kensetsu: { prefecture: "大阪府", url: "https://www.pref.osaka.lg.jp/o130200/kenshin/syobunitiran-top/index.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  fukuoka_kensetsu: { prefecture: "福岡県", url: "https://www.pref.fukuoka.lg.jp/contents/kennsetukanntokushobunn.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  miyagi_kensetsu: { prefecture: "宮城県", url: "https://www.pref.miyagi.jp/soshiki/jigyokanri/syobun.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
+  osaka_kensetsu: { prefecture: "大阪府", url: "https://www.pref.osaka.lg.jp/o130200/kenshin/syobunitiran-top/index.html", industry: "construction", sector: "kensetsu", parse: parseWithSubpages },
+  miyagi_kensetsu: { prefecture: "宮城県", url: "https://www.pref.miyagi.jp/soshiki/jigyokanri/syobun.html", industry: "construction", sector: "kensetsu", parse: parseWithPdf },
   fukushima_kensetsu: { prefecture: "福島県", url: "https://www.pref.fukushima.lg.jp/sec/41025c/kyokasyobun.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  chiba_kensetsu: { prefecture: "千葉県", url: "https://www.pref.chiba.lg.jp/kenfudou/haigyou-kennsetugyo.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
+  chiba_kensetsu: { prefecture: "千葉県", url: "https://www.pref.chiba.lg.jp/kenfudou/haigyou-kennsetugyo.html", industry: "construction", sector: "kensetsu", parse: parseWithPdf },
   niigata_kensetsu: { prefecture: "新潟県", url: "https://www.pref.niigata.lg.jp/sec/dobokukanri/1191256251816.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
   nagano_kensetsu: { prefecture: "長野県", url: "https://www.pref.nagano.lg.jp/kensetsu/infra/kensetsu/kyoka/shobun.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
   gifu_kensetsu: { prefecture: "岐阜県", url: "https://www.pref.gifu.lg.jp/page/24156.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  shizuoka_kensetsu: { prefecture: "静岡県", url: "https://www.pref.shizuoka.jp/machizukuri/kokyokoji/kensetsu/1003479/1028885.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
+  shizuoka_kensetsu: { prefecture: "静岡県", url: "https://www.pref.shizuoka.jp/machizukuri/kokyokoji/kensetsu/1003479/1028885.html", industry: "construction", sector: "kensetsu", parse: parseWithPdf },
   mie_kensetsu: { prefecture: "三重県", url: "https://www.pref.mie.lg.jp/GYOHSEI/000070977.htm", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  shiga_kensetsu: { prefecture: "滋賀県", url: "https://www.pref.shiga.lg.jp/ippan/shigotosangyou/kensetsu/300353.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  kyoto_kensetsu: { prefecture: "京都府", url: "https://www.pref.kyoto.jp/kensetugyo/kensetugyoukyoka/kantokuzyobun.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
+  kyoto_kensetsu: { prefecture: "京都府", url: "https://www.pref.kyoto.jp/kensetugyo/kensetugyoukyoka/kantokuzyobun.html", industry: "construction", sector: "kensetsu", parse: parseWithPdf },
   hyogo_kensetsu: { prefecture: "兵庫県", url: "https://web.pref.hyogo.lg.jp/ks02/kantokusyobun2020.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
   nara_kensetsu: { prefecture: "奈良県", url: "https://www.pref.nara.lg.jp/n155/11701.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  tottori_kensetsu: { prefecture: "鳥取県", url: "https://www.pref.tottori.lg.jp/228168.htm", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
   okayama_kensetsu: { prefecture: "岡山県", url: "https://www.pref.okayama.jp/page/detail-46609.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
   hiroshima_kensetsu: { prefecture: "広島県", url: "https://www.pref.hiroshima.lg.jp/soshiki/93/1206083718262.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  tokushima_kensetsu: { prefecture: "徳島県", url: "https://www.pref.tokushima.lg.jp/jigyoshanokata/kendozukuri/kensetsu/7303004/", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
   kagawa_kensetsu: { prefecture: "香川県", url: "https://www.pref.kagawa.lg.jp/dobokukanri/nyusatu/koji/kantokusyobun.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
   ehime_kensetsu: { prefecture: "愛媛県", url: "https://www.pref.ehime.jp/page/2120.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
   kochi_kensetsu: { prefecture: "高知県", url: "https://www.pref.kochi.lg.jp/doc/kantokushobun_list/", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
   saga_kensetsu: { prefecture: "佐賀県", url: "https://www.pref.saga.lg.jp/kiji003112004/index.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  oita_kensetsu: { prefecture: "大分県", url: "https://www.pref.oita.jp/site/n-kennsetsugyou/n-kantokushobunntokushobun.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  kagoshima_kensetsu: { prefecture: "鹿児島県", url: "http://www.pref.kagoshima.jp/ah01/infra/tochi-kensetu/kensetu/sidoukantoku.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
-  okinawa_kensetsu: { prefecture: "沖縄県", url: "https://www.pref.okinawa.jp/machizukuri/kenchiku/1023167/1013358/1028170.html", industry: "construction", sector: "kensetsu", parse: parseGenericTable },
+  oita_kensetsu: { prefecture: "大分県", url: "https://www.pref.oita.jp/site/n-kennsetsugyou/n-kantokushobunntokushobun.html", industry: "construction", sector: "kensetsu", parse: parseWithPdf },
+  kagoshima_kensetsu: { prefecture: "鹿児島県", url: "https://www.pref.kagoshima.jp/ah01/infra/tochi-kensetu/kensetu/sidoukantoku.html", industry: "construction", sector: "kensetsu", parse: parseWithPdf },
+  okinawa_kensetsu: { prefecture: "沖縄県", url: "https://www.pref.okinawa.jp/machizukuri/kenchiku/1023167/1013358/1028170.html", industry: "construction", sector: "kensetsu", parse: parseSubpagesWithText },
 };
 
 /** 対応済み都道府県の一覧 */
