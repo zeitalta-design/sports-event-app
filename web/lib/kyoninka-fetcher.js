@@ -25,19 +25,21 @@ const DEFAULT_LIMIT = 50;
 const DELAY_MS = 700; // gBizINFO のrate limit考慮
 
 /**
- * 行政処分対象企業を起点に許認可情報を取得し DB に upsert する
+ * 行政処分/産廃処分対象企業を起点に許認可情報を取得し DB に upsert する
  *
  * @param {object} opts
  * @param {number} [opts.limit=50] 1回に処理する企業数
  * @param {boolean} [opts.onlyMissing=true] corporate_number 未解決の企業のみ対象
  * @param {boolean} [opts.dryRun=false]
+ * @param {"actions"|"sanpai"|"all"} [opts.source="actions"] 対象企業のソース
  * @param {function} [opts.logger]
- * @returns {Promise<{ok,processed,resolved,certFetched,created,updated,errors,elapsed}>}
+ * @returns {Promise<{ok,processed,resolved,certFetched,created,updated,errors,elapsed,source}>}
  */
 export async function fetchAndUpsertKyoninka({
   limit = DEFAULT_LIMIT,
   onlyMissing = true,
   dryRun = false,
+  source = "actions",
   logger = console.log,
 } = {}) {
   const db = getDb();
@@ -51,41 +53,8 @@ export async function fetchAndUpsertKyoninka({
   let updated = 0;
   const errors = [];
 
-  // 対象企業を取得: administrative_actions × organizations の JOIN
-  // organizations 経由で corporate_number を持つ/持たない企業を取れる
-  const query = onlyMissing
-    ? `
-      SELECT DISTINCT
-        a.organization_name_raw AS name_raw,
-        a.prefecture AS prefecture,
-        a.industry AS industry,
-        o.id AS org_id,
-        o.corporate_number AS corporate_number,
-        o.display_name AS display_name
-      FROM administrative_actions a
-      LEFT JOIN organizations o ON o.id = a.organization_id
-      WHERE a.is_published = 1
-        AND (o.corporate_number IS NULL OR o.corporate_number = '')
-      ORDER BY a.action_date DESC
-      LIMIT ?
-    `
-    : `
-      SELECT DISTINCT
-        a.organization_name_raw AS name_raw,
-        a.prefecture AS prefecture,
-        a.industry AS industry,
-        o.id AS org_id,
-        o.corporate_number AS corporate_number,
-        o.display_name AS display_name
-      FROM administrative_actions a
-      LEFT JOIN organizations o ON o.id = a.organization_id
-      WHERE a.is_published = 1
-      ORDER BY a.action_date DESC
-      LIMIT ?
-    `;
-
-  const targets = db.prepare(query).all(limit);
-  log(`Start: ${targets.length} targets, dryRun=${dryRun}, onlyMissing=${onlyMissing}`);
+  const targets = getTargetsBySource({ db, source, onlyMissing, limit });
+  log(`Start: ${targets.length} targets from source=${source}, dryRun=${dryRun}, onlyMissing=${onlyMissing}`);
 
   for (const row of targets) {
     processed++;
@@ -166,6 +135,7 @@ export async function fetchAndUpsertKyoninka({
 
   return {
     ok: true,
+    source,
     processed,
     resolved,
     certFetched,
@@ -174,6 +144,67 @@ export async function fetchAndUpsertKyoninka({
     errors,
     elapsed,
   };
+}
+
+/**
+ * ソース別の対象企業取得
+ * - actions: administrative_actions（行政処分対象）を起点
+ * - sanpai:  sanpai_items（産廃許可取消対象）を起点
+ * - all:     両方をUNIONし、企業名で重複除去
+ */
+function getTargetsBySource({ db, source, onlyMissing, limit }) {
+  const actionsQuery = `
+    SELECT
+      a.organization_name_raw AS name_raw,
+      a.prefecture AS prefecture,
+      a.industry AS industry,
+      o.id AS org_id,
+      o.corporate_number AS corporate_number,
+      o.display_name AS display_name,
+      'actions' AS source_tag,
+      COALESCE(a.action_date, a.created_at) AS sort_key
+    FROM administrative_actions a
+    LEFT JOIN organizations o ON o.id = a.organization_id
+    WHERE a.is_published = 1
+      ${onlyMissing ? "AND (o.corporate_number IS NULL OR o.corporate_number = '')" : ""}
+  `;
+
+  const sanpaiQuery = `
+    SELECT
+      s.company_name AS name_raw,
+      s.prefecture AS prefecture,
+      'waste_disposal' AS industry,
+      NULL AS org_id,
+      s.corporate_number AS corporate_number,
+      s.company_name AS display_name,
+      'sanpai' AS source_tag,
+      COALESCE(s.latest_penalty_date, s.created_at) AS sort_key
+    FROM sanpai_items s
+    WHERE s.is_published = 1
+      ${onlyMissing ? "AND (s.corporate_number IS NULL OR s.corporate_number = '')" : ""}
+  `;
+
+  let sql;
+  if (source === "sanpai") {
+    sql = `${sanpaiQuery} ORDER BY sort_key DESC LIMIT ?`;
+  } else if (source === "all") {
+    // UNION で両方を対象にし、名前で重複除去
+    sql = `
+      SELECT * FROM (
+        ${actionsQuery}
+        UNION ALL
+        ${sanpaiQuery}
+      ) t
+      GROUP BY t.name_raw
+      ORDER BY MAX(t.sort_key) DESC
+      LIMIT ?
+    `;
+  } else {
+    // default: actions
+    sql = `${actionsQuery} ORDER BY sort_key DESC LIMIT ?`;
+  }
+
+  return db.prepare(sql).all(limit);
 }
 
 /**
@@ -373,28 +404,7 @@ function sleep(ms) {
 /**
  * トークン不要なドライランヘルパー: 対象候補だけをログに出す
  */
-export function previewTargets({ limit = 50, onlyMissing = true } = {}) {
+export function previewTargets({ limit = 50, onlyMissing = true, source = "actions" } = {}) {
   const db = getDb();
-  const query = onlyMissing
-    ? `
-      SELECT a.organization_name_raw AS name_raw, a.prefecture, a.industry,
-             o.corporate_number, o.display_name
-      FROM administrative_actions a
-      LEFT JOIN organizations o ON o.id = a.organization_id
-      WHERE a.is_published = 1 AND (o.corporate_number IS NULL OR o.corporate_number = '')
-      GROUP BY a.organization_name_raw
-      ORDER BY MAX(a.action_date) DESC
-      LIMIT ?
-    `
-    : `
-      SELECT a.organization_name_raw AS name_raw, a.prefecture, a.industry,
-             o.corporate_number, o.display_name
-      FROM administrative_actions a
-      LEFT JOIN organizations o ON o.id = a.organization_id
-      WHERE a.is_published = 1
-      GROUP BY a.organization_name_raw
-      ORDER BY MAX(a.action_date) DESC
-      LIMIT ?
-    `;
-  return db.prepare(query).all(limit);
+  return getTargetsBySource({ db, source, onlyMissing, limit });
 }

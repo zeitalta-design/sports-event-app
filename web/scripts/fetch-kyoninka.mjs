@@ -41,6 +41,8 @@ register("./_alias-loader.mjs", pathToFileURL(import.meta.filename).href);
 const args = process.argv.slice(2);
 const limitArg = args.find((a) => a.startsWith("--limit="));
 const limit = limitArg ? parseInt(limitArg.split("=")[1], 10) : 50;
+const sourceArg = args.find((a) => a.startsWith("--source="));
+const source = sourceArg ? sourceArg.split("=")[1] : "actions"; // actions | sanpai | all
 const onlyMissing = !args.includes("--all");
 const dryRun = args.includes("--dry-run");
 const preview = args.includes("--preview");
@@ -61,18 +63,19 @@ if (!preview && !process.env.GBIZINFO_API_TOKEN) {
 const start = Date.now();
 
 if (preview) {
-  console.log("[fetch-kyoninka] Preview mode: 対象候補の列挙のみ（トークン不要）");
+  console.log(`[fetch-kyoninka] Preview mode: 対象候補の列挙のみ（source=${source}）`);
   const { previewTargets } = await import("../lib/kyoninka-fetcher.js");
-  const rows = previewTargets({ limit, onlyMissing });
-  console.log(`\n=== 対象候補 ${rows.length} 件（onlyMissing=${onlyMissing}）===`);
+  const rows = previewTargets({ limit, onlyMissing, source });
+  console.log(`\n=== 対象候補 ${rows.length} 件 ===`);
   for (const r of rows) {
     const status = r.corporate_number ? `✓ ${r.corporate_number}` : "? 未解決";
-    console.log(`  ${status} | ${r.name_raw} | ${r.prefecture || "-"} | ${r.industry || "-"}`);
+    const tag = r.source_tag ? `[${r.source_tag}]` : "";
+    console.log(`  ${status} ${tag} | ${r.name_raw} | ${r.prefecture || "-"} | ${r.industry || "-"}`);
   }
   process.exit(0);
 }
 
-console.log(`[fetch-kyoninka] Start: limit=${limit} onlyMissing=${onlyMissing} dryRun=${dryRun}`);
+console.log(`[fetch-kyoninka] Start: limit=${limit} source=${source} onlyMissing=${onlyMissing} dryRun=${dryRun}`);
 
 const { fetchAndUpsertKyoninka } = await import("../lib/kyoninka-fetcher.js");
 
@@ -80,6 +83,7 @@ const result = await fetchAndUpsertKyoninka({
   limit,
   onlyMissing,
   dryRun,
+  source,
 });
 
 const elapsed = ((Date.now() - start) / 1000).toFixed(1);
