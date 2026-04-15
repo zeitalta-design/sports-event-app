@@ -16,7 +16,15 @@ import {
 // ─── カテゴリ定義 ─────────────────────
 
 const CATEGORIES = [
-  { id: "gyosei-shobun", label: "行政処分", registrySectors: ["takken", "kensetsu", "architect_office"], description: "宅建業・建設業・建築士事務所の行政処分情報源" },
+  {
+    id: "gyosei-shobun",
+    label: "行政処分",
+    registrySectors: [
+      "takken", "kensetsu", "architect_office",
+      "finance", "consumer", "competition", "privacy", "tax_agent", "labor", "transport_jidosha",
+    ],
+    description: "宅建・建設・建築士・金融・消費者・独禁・個情・税理士・労基・運送 の行政処分情報源",
+  },
   { id: "sanpai", label: "産廃処分", registrySectors: ["sanpai"], description: "産業廃棄物処理業の行政処分情報源" },
   { id: "nyusatsu", label: "入札", dbDomain: "nyusatsu", description: "官公庁・自治体の入札・公募情報源" },
   { id: "shitei", label: "指定管理", dbDomain: "shitei", description: "自治体の指定管理者公募情報源" },
@@ -27,10 +35,10 @@ const CATEGORIES = [
 // ─── バッジ ─────────────────────
 
 const COVERAGE_CELL = {
-  confirmed: { bg: "bg-green-100", text: "text-green-700", label: "確認済" },
-  candidate: { bg: "bg-blue-100", text: "text-blue-700", label: "候補" },
-  complemented: { bg: "bg-sky-50", text: "text-sky-600", label: "補完" },
-  manual_review: { bg: "bg-amber-50", text: "text-amber-600", label: "要確認" },
+  confirmed: { bg: "bg-green-100", text: "text-green-700", label: "巡回中" },
+  candidate: { bg: "bg-blue-100", text: "text-blue-700", label: "要対応" },
+  complemented: { bg: "bg-sky-50", text: "text-sky-600", label: "国集約" },
+  manual_review: { bg: "bg-amber-50", text: "text-amber-600", label: "手動運用" },
   missing: { bg: "bg-red-50", text: "text-red-600", label: "未登録" },
 };
 
@@ -40,8 +48,8 @@ function StatusBadge({ status }) {
     error: "bg-red-50 text-red-700 border-red-200", unknown: "bg-gray-50 text-gray-500 border-gray-200",
     active: "bg-green-50 text-green-700 border-green-200", inactive: "bg-gray-50 text-gray-400 border-gray-200",
   };
-  const labels = { ok: "正常", warn: "警告", error: "エラー", unknown: "未確認", active: "有効", inactive: "無効" };
-  return <span className={`text-[11px] px-2 py-0.5 rounded border font-medium ${styles[status] || styles.unknown}`}>{labels[status] || "未確認"}</span>;
+  const labels = { ok: "到達OK", warn: "警告", error: "エラー", unknown: "監査未実施", active: "有効", inactive: "無効" };
+  return <span className={`text-[11px] px-2 py-0.5 rounded border font-medium ${styles[status] || styles.unknown}`}>{labels[status] || "監査未実施"}</span>;
 }
 
 function DiscoveryBadge({ status }) {
@@ -177,9 +185,9 @@ export default function DataSourceAuditPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-4">
             <Card label="情報源数" value={totalSummary.total} />
             <Card label="有効" value={totalSummary.active} />
-            <Card label="確認済" value={totalSummary.confirmed} accent="green" />
-            <Card label="候補" value={totalSummary.candidate} accent="blue" />
-            <Card label="要確認" value={totalSummary.manualReview} accent="amber" />
+            <Card label="確認済（巡回中）" value={totalSummary.confirmed} accent="green" />
+            <Card label="要対応（調査中）" value={totalSummary.candidate} accent="blue" />
+            <Card label="手動運用" value={totalSummary.manualReview} accent="amber" />
             <Card label="都道府県カバー" value={`${totalSummary.prefCovered}/47`} accent="green" />
             <Card label="未登録" value={totalSummary.prefMissing} accent={totalSummary.prefMissing > 0 ? "red" : "green"} />
           </div>
@@ -208,9 +216,9 @@ export default function DataSourceAuditPage() {
           <div className="flex items-center gap-3 flex-wrap mb-6">
             <select value={discoveryFilter} onChange={(e) => setDiscoveryFilter(e.target.value)} className="text-xs border rounded-lg px-3 py-2">
               <option value="">全登録状態</option>
-              <option value="confirmed">確認済</option>
-              <option value="candidate">候補</option>
-              <option value="manual_review">要確認</option>
+              <option value="confirmed">確認済（巡回中）</option>
+              <option value="candidate">要対応（調査中）</option>
+              <option value="manual_review">手動運用</option>
             </select>
             <button onClick={runAudit} disabled={auditing} className={`text-xs px-4 py-2 rounded-lg font-medium transition-colors ${auditing ? "bg-gray-100 text-gray-400" : "bg-gray-900 text-white hover:bg-gray-800"}`}>
               {auditing ? "監査中..." : "到達性監査"}
@@ -248,12 +256,17 @@ export default function DataSourceAuditPage() {
 
 function Legend() {
   return (
-    <div className="flex flex-wrap gap-4 mb-6 p-3 bg-gray-50 rounded-lg border border-gray-100 text-xs text-gray-600">
-      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500" /> 確認済</span>
-      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500" /> 候補</span>
-      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-sky-400" /> 補完</span>
-      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-400" /> 要確認</span>
-      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500" /> 未登録</span>
+    <div className="mb-6 p-3 bg-gray-50 rounded-lg border border-gray-100 text-xs text-gray-600">
+      <div className="flex flex-wrap gap-x-5 gap-y-1.5 mb-2">
+        <span className="flex items-center gap-1.5" title="自動巡回に組み込み済み・データ投入中"><span className="w-3 h-3 rounded-full bg-green-500" /> <strong>確認済（巡回中）</strong></span>
+        <span className="flex items-center gap-1.5" title="要対応（調査中）。URL登録済だが自動取得未実装または公表実績未確認。バックログ。"><span className="w-3 h-3 rounded-full bg-blue-500" /> <strong>要対応（調査中）</strong></span>
+        <span className="flex items-center gap-1.5" title="国の集約（MLIT等）で補完される見込み"><span className="w-3 h-3 rounded-full bg-sky-400" /> <strong>国集約で補完</strong></span>
+        <span className="flex items-center gap-1.5" title="公式Web一覧がなく自動取得不可。国集約で補完する前提で固定運用。"><span className="w-3 h-3 rounded-full bg-amber-400" /> <strong>手動運用</strong></span>
+        <span className="flex items-center gap-1.5" title="情報源の登録がない"><span className="w-3 h-3 rounded-full bg-red-500" /> <strong>未登録</strong></span>
+      </div>
+      <p className="text-[10px] text-gray-400 pt-2 border-t border-gray-200">
+        ※ 監査バッジ（到達OK / 警告 / エラー / 監査未実施）は URL の HTTP 到達性を示す別軸の指標です。
+      </p>
     </div>
   );
 }
