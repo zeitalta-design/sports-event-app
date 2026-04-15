@@ -17,19 +17,38 @@ export function shouldSkipAsCompanyName(name) {
   if (s.length < 2) return "too-short";
   if (s.length > 100) return "too-long-extreme";
 
+  // HTML エンティティが名前全体の大部分を占める場合のみノイズ扱い。
+  // 「株式会社M&#39;sGROUP」のようにアポストロフィだけのエスケープは正当なのでOK。
+  // 文字列の大半が &xxx; だけで構成されているなら削除。
+  const entityStripped = s.replace(/&(?:amp|lt|gt|nbsp|times|quot|#\d+);/g, "");
+  if (entityStripped.replace(/\s/g, "").length < 2) return "html-entity-only";
+
   // 短くてあいまいな単語（処分理由の見出し語等の誤抽出）
   const ambiguousShort = new Set([
     "公告", "公示", "事案", "概要", "詳細", "本文", "別紙", "添付", "様式",
     "備考", "頁", "項", "号", "目次", "前項", "後項", "本項", "条文",
     "適用", "留意", "解説", "趣旨", "目的", "上記", "下記", "以上", "以下",
+    "本庁", "支庁", "本社", "支社", "本店", "支店",
   ]);
   if (s.length <= 4 && ambiguousShort.has(s)) return `ambiguous-short(${s})`;
 
-  // 年月日のみのパターン
-  if (/^令和\d+年\d+月?\d*日?$/.test(s)) return "date-only";
-  if (/^平成\d+年\d+月?\d*日?$/.test(s)) return "date-only";
+  // 年月日のみのパターン（和暦・西暦）
+  if (/^(?:令和|平成|昭和)\s*[\d０-９元]+\s*年(?:\s*[\d０-９]+\s*月)?(?:\s*[\d０-９]+\s*日)?$/.test(s)) return "date-only";
   if (/^\d{4}年\d+月\d*日?$/.test(s)) return "date-only";
   if (/^\d+年\d+月$/.test(s)) return "date-only";
+  if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(s)) return "date-only";
+
+  // 法条文のみのパターン
+  if (/^法第\s*\d+条/.test(s) && s.length < 40) return "law-article-only";
+  if (/^第\s*\d+条/.test(s) && s.length < 30) return "law-article-only";
+
+  // ラベル/項目名っぽい文字列（末尾に「：」や「番号」等）
+  if (/^[^（(]{2,20}[：:]$/.test(s)) return "label";
+  if (/^[^（(]{2,15}番号$/.test(s) && !/(株式|有限|合同|法人)/.test(s)) return "label";
+  if (/^免許[証番号]*$/.test(s)) return "label";
+  if (/^電話[番号：:：]*$/.test(s)) return "label";
+  if (/^宅地建物取引業者名$/.test(s)) return "label";
+  if (/^(?:氏名|名称|商号|代表者|所在地|住所)(?:又は[^、]*)?$/.test(s)) return "label";
 
   // 明らかに非企業名のキーワード
   const nonCompanyKeywords = [
@@ -50,6 +69,12 @@ export function shouldSkipAsCompanyName(name) {
     "〇（", "□（",
     // 年度・期間系
     "年度", "期間", "次回", "前回", "今回",
+    // 違反事由・行為類型（東京都のページで違反事由がそのまま抽出されるケース対策）
+    "義務違反", "制限違反", "違反行為", "禁止違反",
+    "名義貸し", "誇大広告", "取引態様", "業務処理の原則",
+    "変更の届出", "設置義務", "明示義務", "重要事項",
+    "の禁止", "の原則", "の制限", "の義務",
+    "供託等", "営業保証金",
   ];
   for (const kw of nonCompanyKeywords) {
     if (s.includes(kw)) return `non-company-keyword(${kw})`;
@@ -57,6 +82,24 @@ export function shouldSkipAsCompanyName(name) {
 
   // 長文の典型: 「令和X年Y月Z日, ...」で始まる文章
   if (/令和\d+年\d+月\d+日/.test(s) && s.length > 30) return "description-text";
+
+  // 違反類型リスト（東京都ページの処分事由目録等が事業者扱いされるケース対策）
+  // 事業者格を含まず、かつ以下の特徴語が複数含まれる場合は「違反類型」と判定
+  const hasLegalFormForViolation = /(株式会社|有限会社|合同会社|合資会社|合名会社|一般財団法人|公益財団法人|社団法人|協同組合)/.test(s);
+  if (!hasLegalFormForViolation) {
+    const violationIndicators = [
+      "契約", "勧誘", "相手方", "従業者", "従業員", "宅地建物取引士",
+      "広告", "報酬", "届出", "説明", "申込", "クーリングオフ",
+      "業務", "手付", "威迫", "誘引", "提供", "不告知", "記名",
+      "供託所", "名簿", "迷惑", "平穏", "遅延", "履行", "証明書",
+    ];
+    const hitCount = violationIndicators.filter((kw) => s.includes(kw)).length;
+    // 2個以上ヒット or 1個でも「違反/等/拒否/要求/制限」語尾のフレーズ
+    if (hitCount >= 2) return "violation-type";
+    if (hitCount >= 1 && /(違反|等|拒否|要求|制限|平穏|遅延|受領|提示|表示|記名|説明|誘引|提供|不告知|開始時期)$/.test(s)) {
+      return "violation-type";
+    }
+  }
 
   // 地域名のみの行（福島県・北海道の支庁一覧が誤抽出されるケース）
   // 「白河市、西白河郡 東白川郡」のような区域列挙は法人格を含まない場合 skip。

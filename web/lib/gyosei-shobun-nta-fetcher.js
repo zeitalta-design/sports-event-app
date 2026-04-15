@@ -115,8 +115,9 @@ async function processSource({ src, db, upsertStmt, dryRun, log }) {
       org = cells[1];
       registrationNo = cells[2];
       address = cells[3];
-      // 公告日付は content 内に記載
-      const dateMatch = content.match(/令和(\d+)年(\d+)月(\d+)日.*?公告/);
+      // 公告日付は content 内に記載（全角数字を半角に正規化してからマッチ）
+      const contentNorm = toHalfWidthDigits(content);
+      const dateMatch = contentNorm.match(/令和(\d+)年(\d+)月(\d+)日.*?公告/);
       if (dateMatch) {
         const y = 2018 + parseInt(dateMatch[1]);
         koukokuDate = `${y}-${dateMatch[2].padStart(2, "0")}-${dateMatch[3].padStart(2, "0")}`;
@@ -126,8 +127,9 @@ async function processSource({ src, db, upsertStmt, dryRun, log }) {
     if (!org || org.length < 2) continue;
     if (shouldSkipAsCompanyName(org)) continue;
 
-    // 処分発効日を抽出（content内から）
-    const effMatch = content.match(/令和(\d+)年(\d+)月(\d+)日から/);
+    // 処分発効日を抽出（content内から、全角数字も対応）
+    const contentNorm = toHalfWidthDigits(content);
+    const effMatch = contentNorm.match(/令和(\d+)年(\d+)月(\d+)日から/);
     let action_date;
     if (effMatch) {
       const y = 2018 + parseInt(effMatch[1]);
@@ -177,12 +179,17 @@ function inferActionType(content) {
 
 function parseJaDate(s) {
   if (!s) return null;
-  const m = String(s).match(/令和(\d+)年(\d+)月(\d+)日/);
+  const normalized = toHalfWidthDigits(String(s));
+  const m = normalized.match(/令和(\d+)年(\d+)月(\d+)日/);
   if (m) {
     const y = 2018 + parseInt(m[1]);
     return `${y}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
   }
   return null;
+}
+
+function toHalfWidthDigits(s) {
+  return String(s || "").replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
 }
 
 function extractPrefecture(address) {
