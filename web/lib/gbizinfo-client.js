@@ -19,7 +19,8 @@
  * 企業名からの検索（searchByName）も可能だが、法人番号検索より遅い。
  */
 
-const BASE_URL = "https://info.gbiz.go.jp/hojin/v1/hojin";
+// 正しいエンドポイント prefix: /api/v1/hojin （/hojin/v1/hojin ではない）
+const BASE_URL = "https://info.gbiz.go.jp/api/v1/hojin";
 const DEFAULT_TIMEOUT_MS = 15000;
 
 function getToken() {
