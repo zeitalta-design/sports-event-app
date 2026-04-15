@@ -49,7 +49,8 @@
     "fetch:nyusatsu": "node scripts/fetch-nyusatsu.mjs",
     "fetch:nyusatsu:dry": "node scripts/fetch-nyusatsu.mjs --dry-run",
     "fetch:shitei": "node scripts/fetch-shitei.mjs",
-    "fetch:shitei:dry": "node scripts/fetch-shitei.mjs --dry-run"
+    "fetch:shitei:dry": "node scripts/fetch-shitei.mjs --dry-run",
+    "fetch:mhlw-black": "node scripts/fetch-gyosei-shobun-mhlw.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",

@@ -1,0 +1,43 @@
+name: "Fetch: 行政処分 厚労省ブラック企業リスト"
+
+on:
+  schedule:
+    - cron: "13 19 * * 0"  # 毎週日曜 JST 04:13
+  workflow_dispatch:
+    inputs:
+      max:
+        description: "1回に処理する労働局数"
+        required: false
+        default: "10"
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: fetch-gyosei-shobun-mhlw
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+      - name: Install
+        working-directory: web
+        run: npm ci --prefer-offline --no-audit
+      - name: Run
+        working-directory: web
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: |
+          MAX="${{ inputs.max || '10' }}"
+          node scripts/fetch-gyosei-shobun-mhlw.mjs --max=${MAX}
