@@ -92,8 +92,10 @@ console.log(`[fetch-kyoninka] Done (${elapsed}s)`);
 console.log(`  processed:    ${result.processed}`);
 console.log(`  resolved:     ${result.resolved} (gBizINFO名前検索)`);
 console.log(`  certFetched:  ${result.certFetched}`);
-console.log(`  created:      ${result.created}`);
-console.log(`  updated:      ${result.updated}`);
+console.log(`  entity 新規:  ${result.entityCreated || 0} (法人マスター)`);
+console.log(`  entity 更新:  ${result.entityUpdated || 0}`);
+console.log(`  reg 新規:     ${result.created} (許認可1件1件)`);
+console.log(`  reg 更新:     ${result.updated}`);
 if (result.errors.length > 0) {
   console.log(`  errors (${result.errors.length}):`);
   for (const e of result.errors.slice(0, 5)) console.log(`    - ${e}`);
@@ -109,9 +111,11 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     "|------|----|",
     `| 処理件数 | ${result.processed} |`,
     `| 法人番号解決 | ${result.resolved} |`,
-    `| 許認可取得成功 | ${result.certFetched} |`,
-    `| 新規登録 | ${result.created} |`,
-    `| 更新 | ${result.updated} |`,
+    `| certification 取得 | ${result.certFetched} |`,
+    `| 法人マスター 新規 | ${result.entityCreated || 0} |`,
+    `| 法人マスター 更新 | ${result.entityUpdated || 0} |`,
+    `| 許認可レコード 新規 | ${result.created} |`,
+    `| 許認可レコード 更新 | ${result.updated} |`,
     `| エラー | ${result.errors.length} |`,
     `| 所要時間 | ${elapsed}s |`,
   ].join("\n");

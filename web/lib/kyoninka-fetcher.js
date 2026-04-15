@@ -49,8 +49,10 @@ export async function fetchAndUpsertKyoninka({
   let processed = 0;
   let resolved = 0; // gBizINFOで法人番号解決できた数
   let certFetched = 0; // certification取得成功数
-  let created = 0;
-  let updated = 0;
+  let entityCreated = 0; // kyoninka_entities 新規作成
+  let entityUpdated = 0; // kyoninka_entities 更新
+  let created = 0; // kyoninka_registrations 新規（許認可1件1件）
+  let updated = 0; // kyoninka_registrations 更新
   const errors = [];
 
   const targets = getTargetsBySource({ db, source, onlyMissing, limit });
@@ -109,9 +111,11 @@ export async function fetchAndUpsertKyoninka({
         });
         created += r.created;
         updated += r.updated;
+        if (r.entityCreated) entityCreated++;
+        else entityUpdated++;
         const certNote = certs.length > 0 ? `${certs.length}件の許認可` : "許認可情報なし";
-        const opNote = r.created ? `+${r.created}` : `~${r.updated}`;
-        log(`  ${certs.length > 0 ? "✓" : "·"} ${displayName}: ${certNote} (${opNote})`);
+        const entityNote = r.entityCreated ? "+entity" : "~entity";
+        log(`  ${certs.length > 0 ? "✓" : "·"} ${displayName}: ${certNote} [${entityNote} +${r.created}reg]`);
       } else {
         log(`  (dry) ${displayName}: ${certs.length}件の許認可`);
       }
@@ -136,7 +140,7 @@ export async function fetchAndUpsertKyoninka({
     }
   }
 
-  log(`Done: processed=${processed} resolved=${resolved} certFetched=${certFetched} created=${created} updated=${updated} (${elapsed}s)`);
+  log(`Done: processed=${processed} resolved=${resolved} certFetched=${certFetched} entityNew=${entityCreated} entityUpd=${entityUpdated} regNew=${created} regUpd=${updated} (${elapsed}s)`);
 
   return {
     ok: true,
@@ -144,6 +148,8 @@ export async function fetchAndUpsertKyoninka({
     processed,
     resolved,
     certFetched,
+    entityCreated,
+    entityUpdated,
     created,
     updated,
     errors,
@@ -449,7 +455,7 @@ function upsertKyoninkaForCorporate(db, { corporateNumber, displayName, row, cer
     }
   }
 
-  return { created, updated: existing ? 1 : 0 };
+  return { created, updated: existing ? 1 : 0, entityCreated: !existing };
 }
 
 function inferPrimaryFamily(certs) {
