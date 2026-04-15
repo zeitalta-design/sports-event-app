@@ -47,6 +47,7 @@ export async function fetchAndUpsertNyusatsu({ dryRun = false, logger = console.
     { name: "soumu", fn: scrapeSoumu, label: "総務省" },
     { name: "mhlw",  fn: scrapeMhlw,  label: "厚生労働省" },
     { name: "mlit",  fn: scrapeMlit,  label: "国土交通省" },
+    { name: "env",   fn: scrapeEnv,   label: "環境省" },
   ];
 
   let allRows = [];
@@ -283,6 +284,47 @@ async function scrapeMhlw() {
     } catch { /* next */ }
   }
   return results.slice(0, 60);
+}
+
+async function scrapeEnv() {
+  // 環境省: 物品/役務/工事/公募 のサブページに案件リンクが豊富
+  const base = "https://www.env.go.jp";
+  const subPages = [
+    `${base}/kanbo/chotatsu/index_buppin.html`,    // 物品
+    `${base}/kanbo/chotatsu/index_ekimu.html`,     // 役務
+    `${base}/kanbo/chotatsu/index_koji.html`,      // 工事・建設コンサル
+    `${base}/kanbo/chotatsu/index_sanka.html`,     // 参加者確認公募
+  ];
+  const all = [];
+  const seen = new Set();
+  for (const url of subPages) {
+    try {
+      const html = await fetchTextFlexible(url);
+      // 環境省独自パターン: chotatsu_NNNNN.html へのリンクで案件名
+      const pattern = /<a[^>]*href="([^"]*\/kanbo\/chotatsu\/[^"]+\.html)"[^>]*>([^<]{10,200})<\/a>/gi;
+      let m;
+      while ((m = pattern.exec(html)) !== null) {
+        const href = m[1];
+        const text = clean(m[2]);
+        if (!text || text.length < 10 || seen.has(text)) continue;
+        // ナビゲーション排除
+        if (/^(調達情報|入札等情報|入札公告|公募情報|参加者確認公募|発注見通し)$/.test(text)) continue;
+        // 「令和X年度...」「...業務」「...購入」「...製造」等の案件
+        if (!/(令和\d+年度|業務|購入|製造|工事|調査|測定|調達|印刷|サービス|コンサル|改修|納入)/.test(text)) continue;
+        seen.add(text);
+        let detail = href;
+        if (!detail.startsWith("http")) detail = new URL(href, url).href;
+        const dateMatch = text.match(/令和\d+年度?/);
+        all.push({
+          announce_date: dateMatch ? dateMatch[0] : "",
+          deadline: "",
+          title: text,
+          detail_url: detail,
+        });
+      }
+    } catch { /* next */ }
+  }
+  return all.slice(0, 100);
 }
 
 async function scrapeMlit() {

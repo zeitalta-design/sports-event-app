@@ -9,6 +9,7 @@
  */
 
 import { getDb } from "@/lib/db";
+import { shouldSkipAsCompanyName } from "@/lib/company-name-validator";
 
 const PAGE_DELAY_MS = 2000;
 const MAX_PREFECTURES_PER_RUN = 10;
@@ -707,8 +708,20 @@ export async function runPrefectureFetch({ prefectures, maxPrefectures = MAX_PRE
       }
 
       const html = await res.text();
-      const items = await Promise.resolve(config.parse(html, config));
-      log.push(`    → ${items.length} items parsed`);
+      const rawItems = await Promise.resolve(config.parse(html, config));
+      // 企業名バリデーション: 明らかに事業者名でないものをフィルタ
+      const items = [];
+      let nameSkipped = 0;
+      for (const it of rawItems) {
+        const reason = shouldSkipAsCompanyName(it.company_name);
+        if (reason) {
+          nameSkipped++;
+          continue;
+        }
+        items.push(it);
+      }
+      const filterNote = nameSkipped > 0 ? ` (filtered ${nameSkipped} non-company)` : "";
+      log.push(`    → ${items.length} items parsed${filterNote}`);
 
       if (!dryRun && items.length > 0) {
         const dbResult = upsertPrefectureItems(items, key, config);

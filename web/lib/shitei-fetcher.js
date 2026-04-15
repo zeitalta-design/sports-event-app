@@ -52,6 +52,7 @@ export async function fetchAndUpsertShitei({ dryRun = false, logger = console.lo
   for (const src of [
     { name: "tokyo_seikatsu", label: "東京都 生活文化スポーツ局", fn: ingestTokyoSeikatsu },
     { name: "tokyo_park",     label: "東京都 都立公園",         fn: ingestTokyoPark },
+    { name: "kanagawa",       label: "神奈川県 指定管理導入施設",  fn: ingestKanagawa },
   ]) {
     try {
       const r = await src.fn({ db, upsertStmt, dryRun, log });
@@ -174,6 +175,60 @@ async function ingestTokyoPark({ db, upsertStmt, dryRun, log }) {
 
   log(`  tokyo_park: inserted=${inserted} updated=${updated} skipped=${skipped}`);
   return { inserted, updated, skipped };
+}
+
+// ─── ソース3: 神奈川県 指定管理導入施設一覧 ─────────────────────────
+
+async function ingestKanagawa({ db, upsertStmt, dryRun, log }) {
+  const url = "https://www.pref.kanagawa.jp/docs/hy8/cnt/f5586/p1200074.html";
+  log("神奈川県 指定管理導入施設一覧");
+
+  const res = await fetch(url, {
+    headers: { "User-Agent": UA },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const html = await res.text();
+
+  // テーブルから行を抽出: 各行は「施設名 | 指定管理者名 | 期間」のような構成が多い
+  // ただし神奈川県の構造は施設行と事業者行が交互の形式（h2/h3 ベースじゃない）
+  // 各 <td> の中身を取り、事業者名らしきものを抽出する
+  const rows = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)];
+  const entries = [];
+  const seen = new Set();
+  for (const r of rows) {
+    const cells = [...r[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)]
+      .map((m) => clean(m[1]));
+    if (cells.length < 2) continue;
+    // 各 cell から法人名らしいものを選ぶ
+    for (const cell of cells) {
+      if (!cell || cell.length < 4 || cell.length > 80) continue;
+      // 事業者名らしい
+      if (!/(株式会社|有限会社|合同会社|公益財団法人|公益社団法人|一般財団法人|一般社団法人|協会|組合|グループ|協議会)/.test(cell)) continue;
+      if (seen.has(cell)) continue;
+      seen.add(cell);
+      entries.push({
+        facility_group_title: cell, // 事業者名を title に
+        operator_name: cell,
+      });
+    }
+  }
+  log(`  抽出件数: ${entries.length}`);
+
+  return upsertEntries({
+    entries,
+    db,
+    upsertStmt,
+    dryRun,
+    log,
+    sourceName: "神奈川県指定管理者制度",
+    sourceUrl: url,
+    detailUrl: url,
+    prefecture: "神奈川県",
+    municipality: "神奈川県",
+    facilityCategory: "other",
+    slugPrefix: "kanagawa-shitei",
+  });
 }
 
 // ─── 共通: h2+h3 型ページから施設エントリを抽出 ─────────────────────────
