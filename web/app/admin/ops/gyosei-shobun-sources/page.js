@@ -38,7 +38,7 @@ const COVERAGE_CELL = {
   confirmed: { bg: "bg-green-100", text: "text-green-700", label: "巡回中" },
   candidate: { bg: "bg-blue-100", text: "text-blue-700", label: "要対応" },
   complemented: { bg: "bg-sky-50", text: "text-sky-600", label: "国集約" },
-  manual_review: { bg: "bg-amber-50", text: "text-amber-600", label: "手動運用" },
+  manual_review: { bg: "bg-amber-50", text: "text-amber-600", label: "補完対象" },
   missing: { bg: "bg-red-50", text: "text-red-600", label: "未登録" },
 };
 
@@ -187,7 +187,7 @@ export default function DataSourceAuditPage() {
             <Card label="有効" value={totalSummary.active} />
             <Card label="確認済（巡回中）" value={totalSummary.confirmed} accent="green" />
             <Card label="要対応（調査中）" value={totalSummary.candidate} accent="blue" />
-            <Card label="手動運用" value={totalSummary.manualReview} accent="amber" />
+            <Card label="補完対象（国集約で充当）" value={totalSummary.manualReview} accent="amber" />
             <Card label="都道府県カバー" value={`${totalSummary.prefCovered}/47`} accent="green" />
             <Card label="未登録" value={totalSummary.prefMissing} accent={totalSummary.prefMissing > 0 ? "red" : "green"} />
           </div>
@@ -218,7 +218,7 @@ export default function DataSourceAuditPage() {
               <option value="">全登録状態</option>
               <option value="confirmed">確認済（巡回中）</option>
               <option value="candidate">要対応（調査中）</option>
-              <option value="manual_review">手動運用</option>
+              <option value="manual_review">補完対象（国集約で充当）</option>
             </select>
             <button onClick={runAudit} disabled={auditing} className={`text-xs px-4 py-2 rounded-lg font-medium transition-colors ${auditing ? "bg-gray-100 text-gray-400" : "bg-gray-900 text-white hover:bg-gray-800"}`}>
               {auditing ? "監査中..." : "到達性監査"}
@@ -261,7 +261,7 @@ function Legend() {
         <span className="flex items-center gap-1.5" title="自動巡回に組み込み済み・データ投入中"><span className="w-3 h-3 rounded-full bg-green-500" /> <strong>確認済（巡回中）</strong></span>
         <span className="flex items-center gap-1.5" title="要対応（調査中）。URL登録済だが自動取得未実装または公表実績未確認。バックログ。"><span className="w-3 h-3 rounded-full bg-blue-500" /> <strong>要対応（調査中）</strong></span>
         <span className="flex items-center gap-1.5" title="国の集約（MLIT等）で補完される見込み"><span className="w-3 h-3 rounded-full bg-sky-400" /> <strong>国集約で補完</strong></span>
-        <span className="flex items-center gap-1.5" title="公式Web一覧がなく自動取得不可。国集約で補完する前提で固定運用。"><span className="w-3 h-3 rounded-full bg-amber-400" /> <strong>手動運用</strong></span>
+        <span className="flex items-center gap-1.5" title="公式Web一覧なし・自動取得不可。MLIT/sanpainet 等の国集約ソースが代替取得。四半期ごとの URL 生死監査のみ実施。"><span className="w-3 h-3 rounded-full bg-amber-400" /> <strong>補完対象（国集約で充当）</strong></span>
         <span className="flex items-center gap-1.5" title="情報源の登録がない"><span className="w-3 h-3 rounded-full bg-red-500" /> <strong>未登録</strong></span>
       </div>
       <p className="text-[10px] text-gray-400 pt-2 border-t border-gray-200">

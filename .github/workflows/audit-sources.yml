@@ -1,0 +1,83 @@
+name: "Audit: Source Registry 到達性監査"
+
+# ============================================================
+# 情報源台帳（205件）の全URL到達性をチェック。
+#   - 週1回（月曜 JST 08:43）
+#   - エラー（HTTP 4xx/5xx/タイムアウト）があれば Issue 起票
+#   - 補完対象（manual_review）の URL も監査対象
+#     → URL が復活していれば candidate に戻す判断材料
+# ============================================================
+
+on:
+  schedule:
+    # 毎週月曜 JST 08:43 = UTC 日曜 23:43
+    - cron: "43 23 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: audit-sources
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: "情報源台帳 到達性監査"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: "Info: 実行情報"
+        run: |
+          echo "Trigger:  ${{ github.event_name }}"
+          echo "Actor:    ${{ github.actor }}"
+          echo "Run ID:   ${{ github.run_id }}"
+          echo "Time UTC: $(date -u '+%Y-%m-%d %H:%M:%S')"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: "Install dependencies"
+        working-directory: web
+        run: npm ci --prefer-offline --no-audit
+
+      - name: "Run: audit-sources"
+        id: audit
+        working-directory: web
+        run: node scripts/audit-sources.mjs
+
+      - name: "Alert: エラー時に Issue 作成/更新"
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE="[Audit] 情報源到達性監査でエラー $(date -u '+%Y-%m-%d')"
+          BODY=$(printf '%s\n' \
+            "## 情報源台帳の到達性監査で 404/403/タイムアウト 検出" \
+            "" \
+            "| 項目 | 値 |" \
+            "|------|----|" \
+            "| Run | [詳細](${RUN_URL}) |" \
+            "| Time (UTC) | $(date -u '+%Y-%m-%d %H:%M:%S') |" \
+            "" \
+            "### 対応方法" \
+            "1. Run の Step Summary でエラー詳細を確認" \
+            "2. **補完対象（国集約で充当）** の URL が復活していたら → 要対応（candidate）に戻す" \
+            "3. **確認済（巡回中）** の URL が壊れていたら → fetcher 側の対応も要検討" \
+            "4. URL が恒久的に無効なら registry のエントリ更新")
+
+          EXISTING=$(gh issue list --state open --search "in:title [Audit]" --limit 1 --json number --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY" --label "ops" 2>/dev/null \
+              || gh issue create --title "$TITLE" --body "$BODY"
+          fi

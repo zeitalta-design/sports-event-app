@@ -52,12 +52,12 @@ export const COVERAGE_LABELS = {
  * 情報源の登録状態。
  * - confirmed    : 自動巡回に組み込み済み・データ投入中（正常稼働）
  * - candidate    : 要対応（調査中）。URL登録済だが自動取得未実装または公表実績が未確認。順次 confirmed/manual_review に昇格させるバックログ。
- * - manual_review: 手動運用。公式Web一覧がなく自動取得不可。国の集約（MLIT等）で補完する前提で固定運用。
+ * - manual_review: 補完対象。公式Web一覧がなく自動取得不可。国の集約（MLIT / sanpainet 等）で代替取得される前提で、四半期ごとの URL 生死監査のみ実施。
  */
 export const DISCOVERY_STATUS_LABELS = {
   confirmed: { label: "確認済（巡回中）", color: "green" },
   candidate: { label: "要対応（調査中）", color: "blue" },
-  manual_review: { label: "手動運用", color: "amber" },
+  manual_review: { label: "補完対象（国集約で充当）", color: "amber" },
 };
 
 // ─── expectedCoverage ─────────────────────
