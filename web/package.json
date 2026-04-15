@@ -53,7 +53,8 @@
     "fetch:mhlw-black": "node scripts/fetch-gyosei-shobun-mhlw.mjs",
     "fetch:fsa-jirei": "node scripts/fetch-gyosei-shobun-fsa.mjs",
     "fetch:jftc": "node scripts/fetch-gyosei-shobun-jftc.mjs",
-    "fetch:caa": "node scripts/fetch-gyosei-shobun-caa.mjs"
+    "fetch:caa": "node scripts/fetch-gyosei-shobun-caa.mjs",
+    "fetch:mlit-transport": "node scripts/fetch-gyosei-shobun-mlit-transport.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
