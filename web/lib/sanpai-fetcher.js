@@ -2,9 +2,16 @@
  * 産廃（sanpai）取得ロジック
  *
  * ソース1: 大阪府 産廃許可取消一覧（Excel）
- *   https://www.pref.osaka.lg.jp/o120060/sangyohaiki/sanpai/torikeshishobun.html
  * ソース2: 神奈川県 産廃許可取消一覧（HTML テーブル）
- *   https://www.pref.kanagawa.jp/docs/p3k/cnt/f91/index.html
+ * ソース3: 東京都 産業廃棄物行政処分 プレスリリース
+ * ソース4: 北海道 廃棄物処理法行政処分公表
+ * ソース5: 千葉県 廃棄物処理法関係の行政処分
+ * ソース6: 埼玉県 産業廃棄物処理業者等行政処分
+ * ソース7: 福岡県 産業廃棄物処理業者行政処分
+ * ソース8: 愛知県 産業廃棄物処理業者行政処分
+ * ソース9: さんぱいくん（環境省）— 全国許可取消 CSV
+ *   https://www2.sanpainet.or.jp/shobun/all_search.php
+ *   POST で Shift_JIS CSV を一括取得。都道府県横断の中核ソース。
  *
  * 旧 scripts/ingest-sanpai.mjs の Python/better-sqlite3 依存を排除し、
  * Node.js/libsql 単独で動作するよう刷新。
@@ -109,6 +116,14 @@ export async function fetchAndUpsertSanpai({ dryRun = false, logger = console.lo
   } catch (e) {
     log(`aichi failed: ${e.message}`);
     sources.push({ name: "aichi", error: e.message, inserted: 0, updated: 0, skipped: 0 });
+  }
+
+  try {
+    const r9 = await ingestSanpainet({ db, upsertStmt, dryRun, log });
+    sources.push({ name: "sanpainet", ...r9 });
+  } catch (e) {
+    log(`sanpainet failed: ${e.message}`);
+    sources.push({ name: "sanpainet", error: e.message, inserted: 0, updated: 0, skipped: 0 });
   }
 
   const totalInserted = sources.reduce((s, r) => s + (r.inserted || 0), 0);
@@ -1054,4 +1069,174 @@ function extractCity(address) {
   if (!address) return null;
   const m = String(address).match(/^(?:東京都|北海道|(?:\S+?)府|(?:\S+?)県)(.+?(?:市|区|町|村))/);
   return m ? m[1].trim() : null;
+}
+
+// ─── ソース9: さんぱいくん（環境省） 全国許可取消CSV ────────────────────────────
+// 公益財団法人 日本産業廃棄物処理振興センター
+// https://www2.sanpainet.or.jp/shobun/all_search.php
+// POST で Shift_JIS CSV を一括取得（全国約1,400件＋毎日更新）
+
+/**
+ * 保健所設置市・政令指定市 → 都道府県 ルックアップ
+ * さんぱいくん CSV の「処分した都道府県市」欄で市名のみが来る場合に使用。
+ * さんぱいくん 実データに出現した市のみ網羅。
+ */
+const SANPAINET_CITY_TO_PREFECTURE = {
+  "一宮市": "愛知県",
+  "下関市": "山口県",
+  "仙台市": "宮城県",
+  "倉敷市": "岡山県",
+  "八戸市": "青森県",
+  "八王子市": "東京都",
+  "前橋市": "群馬県",
+  "名古屋市": "愛知県",
+  "大分市": "大分県",
+  "姫路市": "兵庫県",
+  "富山市": "富山県",
+  "広島市": "広島県",
+  "旭川市": "北海道",
+  "水戸市": "茨城県",
+  "浜松市": "静岡県",
+  "相模原市": "神奈川県",
+  "福井市": "福井県",
+  "福山市": "広島県",
+  "豊田市": "愛知県",
+  "高松市": "香川県",
+  "鹿児島市": "鹿児島県",
+};
+
+async function ingestSanpainet({ db, upsertStmt, dryRun, log }) {
+  const CSV_URL = "https://www2.sanpainet.or.jp/shobun/csv_download.php";
+  const TOP_URL = "https://www2.sanpainet.or.jp/shobun/all_search.php";
+  log("さんぱいくん（環境省）全国許可取消CSV");
+
+  const res = await fetch(CSV_URL, {
+    method: "POST",
+    headers: {
+      "User-Agent": UA,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "csv_type=all&all_search=CSV%E5%87%BA%E5%8A%9B",
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+  if (!res.ok) throw new Error(`Sanpainet CSV HTTP ${res.status}`);
+
+  const buf = Buffer.from(await res.arrayBuffer());
+  // さんぱいくん CSV は Shift_JIS
+  const text = new TextDecoder("shift_jis").decode(buf);
+  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) throw new Error(`CSV行数が不足 (${lines.length})`);
+  lines.shift(); // ヘッダー除去
+  log(`  CSV取得: ${lines.length}件`);
+
+  let inserted = 0, updated = 0, skipped = 0;
+
+  for (const line of lines) {
+    const fields = parseSanpainetCsvLine(line);
+    if (fields.length < 4) { skipped++; continue; }
+    const [dateStr, prefCity, companyName, licenseNumber] = fields.map((s) => s.trim());
+    if (!companyName) { skipped++; continue; }
+
+    const date = parseSanpainetDate(dateStr);
+    const { prefecture, city } = splitSanpainetPrefCity(prefCity);
+    const yyyymmdd = date ? date.replace(/-/g, "") : "nodate";
+
+    // 許可番号があればそれをキーに。無ければ事業者名ハッシュ＋都道府県市で代替
+    const keyPart = licenseNumber
+      ? licenseNumber
+      : `noid-${sanpainetHash(companyName + "|" + prefCity)}`;
+    const slug = `sanpainet-${keyPart}-${yyyymmdd}`;
+
+    const notesParts = [];
+    if (licenseNumber) notesParts.push(`許可番号: ${licenseNumber}`);
+    notesParts.push(`${prefCity}による取消`);
+
+    const item = {
+      slug,
+      company_name: companyName,
+      corporate_number: null,
+      prefecture,
+      city,
+      license_type: "産廃処理業許可取消",
+      waste_category: null,
+      business_area: null,
+      status: "許可取消",
+      risk_level: "high",
+      penalty_count: 1,
+      latest_penalty_date: date,
+      source_name: "さんぱいくん（環境省）",
+      source_url: TOP_URL,
+      detail_url: null,
+      notes: notesParts.join("／"),
+    };
+
+    if (dryRun) { inserted++; continue; }
+    try {
+      const existing = db.prepare("SELECT id FROM sanpai_items WHERE slug = ?").get(slug);
+      upsertStmt.run(item);
+      existing ? updated++ : inserted++;
+    } catch (e) {
+      log(`  ! ${companyName.slice(0, 30)}: ${e.message}`);
+      skipped++;
+    }
+  }
+
+  return { fetched: lines.length, inserted, updated, skipped };
+}
+
+/**
+ * さんぱいくん CSV の 1 行をフィールド配列にパース
+ * （クォート対応の簡易実装）
+ */
+function parseSanpainetCsvLine(line) {
+  const fields = [];
+  let cur = "";
+  let inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') {
+      if (inQuote && line[i + 1] === '"') { cur += '"'; i++; }
+      else { inQuote = !inQuote; }
+    } else if (c === "," && !inQuote) {
+      fields.push(cur);
+      cur = "";
+    } else {
+      cur += c;
+    }
+  }
+  fields.push(cur);
+  return fields;
+}
+
+/**
+ * "2026(令和8)年4月14日" → "2026-04-14"
+ */
+function parseSanpainetDate(str) {
+  if (!str) return null;
+  const m = String(str).match(/(\d{4})\s*\([^)]+\)\s*年\s*(\d+)\s*月\s*(\d+)\s*日/);
+  if (!m) return null;
+  const [, y, mo, d] = m;
+  return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+}
+
+/**
+ * "広島県" → { prefecture: "広島県", city: null }
+ * "福山市" → { prefecture: "広島県", city: "福山市" }  （ルックアップ使用）
+ * 不明な市 → { prefecture: null, city: "XXX市" }
+ */
+function splitSanpainetPrefCity(value) {
+  if (!value) return { prefecture: null, city: null };
+  const v = String(value).trim();
+  if (/[都道府県]$/.test(v)) return { prefecture: v, city: null };
+  const prefecture = SANPAINET_CITY_TO_PREFECTURE[v] || null;
+  return { prefecture, city: v };
+}
+
+/**
+ * 許可番号欠損時に slug を安定化するための簡易ハッシュ（16進短縮）
+ */
+function sanpainetHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  return Math.abs(h).toString(16);
 }
