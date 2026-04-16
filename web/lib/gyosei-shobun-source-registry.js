@@ -1779,12 +1779,12 @@ const NYUSATSU_BACKLOG_SOURCES = [
     id: "nyusatsu_kankouju", sector: "nyusatsu", authorityLevel: "national",
     authorityName: "中小企業庁（官公需情報ポータル）", prefecture: null,
     sourceName: "官公需情報ポータル",
-    url: "https://kankouju.go.jp/",
+    url: "https://www.kkj.go.jp/",
     sourceType: "aggregated_search", coverageScope: "full",
-    discoveryStatus: "candidate", expectedCoverage: "national_full",
-    complements: "中小企業向け官公需情報を全国集約。",
-    publicationWindow: "current", updateFrequency: "daily", acquisitionMethod: "html",
-    active: true, notes: "実装優先度: 高。",
+    discoveryStatus: "confirmed", expectedCoverage: "national_full",
+    complements: "国+都道府県+市区町村を全国横断。XML検索API（無認証）経由で47LG×日付スライス取得。",
+    publicationWindow: "current", updateFrequency: "daily", acquisitionMethod: "api",
+    active: true, notes: "fetchKkjAnnouncements() で日次巡回中。SearchHits 1000/回上限あり。",
   },
 
   // ─ 中央省庁追加（残り8省庁） ─

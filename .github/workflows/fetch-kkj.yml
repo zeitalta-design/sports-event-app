@@ -1,0 +1,81 @@
+name: "Fetch: 官公需情報ポータル（KKJ）入札公告"
+
+# ============================================================
+# 中小企業庁 官公需情報ポータル（www.kkj.go.jp）の公式検索APIから
+# 全47都道府県の入札公告を取得し nyusatsu_items に upsert する。
+#
+# スケジュール: 毎日 JST 06:43
+# 日次モード: 昨日〜今日の2日間を 47LG × 1回 = 47リクエストで取得
+# ============================================================
+
+on:
+  schedule:
+    - cron: "43 21 * * *"   # JST 06:43 = UTC 21:43 (前日)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "取得モード (daily=昨日〜今日 / range=期間指定)"
+        required: false
+        default: "daily"
+      from:
+        description: "range モードの開始日 YYYY-MM-DD"
+        required: false
+      to:
+        description: "range モードの終了日 YYYY-MM-DD (省略時は from と同日)"
+        required: false
+      lg:
+        description: "都道府県コード絞り込み (例: 13,14,23) 省略時は全47"
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: fetch-kkj
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    name: "KKJ 入札公告取得"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: "Install dependencies"
+        working-directory: web
+        run: npm ci --prefer-offline --no-audit
+
+      - name: "Fetch KKJ announcements"
+        working-directory: web
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: |
+          MODE="${{ github.event.inputs.mode || 'daily' }}"
+          FROM="${{ github.event.inputs.from || '' }}"
+          TO="${{ github.event.inputs.to || '' }}"
+          LG="${{ github.event.inputs.lg || '' }}"
+          ARGS="--mode $MODE"
+          if [ -n "$FROM" ]; then ARGS="$ARGS --from $FROM"; fi
+          if [ -n "$TO" ];   then ARGS="$ARGS --to $TO"; fi
+          if [ -n "$LG" ];   then ARGS="$ARGS --lg $LG"; fi
+          node scripts/fetch-kkj.mjs $ARGS
+
+      - name: "Alert on failure"
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE="[KKJ] 官公需情報ポータル取得失敗 $(date -u '+%Y-%m-%d')"
+          BODY="## KKJ APIからの入札公告取得に失敗\n\n[詳細](${RUN_URL})"
+          EXISTING=$(gh issue list --state open --search "in:title [KKJ]" --limit 1 --json number --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then gh issue comment "$EXISTING" --body "$BODY"; else gh issue create --title "$TITLE" --body "$BODY" --label "ops" 2>/dev/null || gh issue create --title "$TITLE" --body "$BODY"; fi
