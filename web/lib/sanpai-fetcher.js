@@ -706,8 +706,24 @@ async function ingestSaitama({ db, upsertStmt, dryRun, log }) {
       const h = await r.text();
 
       // press の URL から日付を抽出
-      const dm = url.match(/(\d{4})(\d{2})(\d{2})\d{0,2}\.html/);
-      const dateStr = dm ? `${dm[1]}-${dm[2]}-${dm[3]}` : null;
+      // 10桁: YYYYMMDDnn / 9桁: YYYYMMDDn / 8桁: YYYYMMDD (年 20xx 時) or YYMMDDnn (年 24 等の西暦下2桁)
+      const dm = url.match(/\/(\d+)\.html$/);
+      let dateStr = null;
+      if (dm) {
+        const digits = dm[1];
+        if (digits.length >= 9) {
+          dateStr = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+        } else if (digits.length === 8) {
+          const first4 = parseInt(digits.slice(0, 4), 10);
+          if (first4 >= 2000 && first4 <= 2099) {
+            // YYYYMMDD
+            dateStr = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+          } else {
+            // YYMMDDnn (西暦下2桁) 例: 24020101 → 2024-02-01
+            dateStr = `20${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4, 6)}`;
+          }
+        }
+      }
 
       // タイトル例: 「産業廃棄物処理業者の許可の取消しについて（株式会社ユウキ） - 埼玉県」
       const titleM = h.match(/<title>([^<]+)<\/title>/);
