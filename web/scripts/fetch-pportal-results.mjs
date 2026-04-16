@@ -31,6 +31,12 @@ if (fs.existsSync(envPath)) {
   }
 }
 
+if (useLocal) {
+  // --local 指定時は Turso 環境変数を一時的に解除（getDb() が local sqlite を使うように）
+  delete process.env.TURSO_DATABASE_URL;
+  delete process.env.TURSO_AUTH_TOKEN;
+}
+
 if (!useLocal && (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN)) {
   console.error("[fetch-pportal] ERROR: TURSO_DATABASE_URL / TURSO_AUTH_TOKEN が未設定。--local を指定するか環境変数を設定してください。");
   process.exit(1);
