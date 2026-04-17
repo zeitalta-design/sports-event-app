@@ -1,4 +1,4 @@
-# Analyzer Layer — 【未実装・Stub】
+# Analyzer Layer — 最小実装（Phase 1 Step 4）
 
 **責務**: **Resolver 済みデータ**に対する集計・分析。UI への供給元。
 
@@ -30,12 +30,35 @@ export async function getWinnerRanking({ period, limit = 50, sortBy = "count" })
 export async function getAwardRateDistribution({ category, period }) { /* ... */ }
 ```
 
-## やること（次セッション以降）
+## 実装済み（Step 4）
 
-1. 現 `repositories/nyusatsu.js` の集計系関数から抽出して移設
-2. Resolver 依存の canonicalId 対応
-3. ダッシュボード用 API エンドポイント新設（`/api/nyusatsu/analytics/...`）
-4. キャッシュ戦略（Turso への集計テーブル or メモリキャッシュ）
+`lib/agents/analyzer/nyusatsu/` 配下:
+
+| ファイル | 役割 |
+|---------|------|
+| `resolved.js`        | 共通 JOIN: nyusatsu_results × resolved_entities × entity_clusters の副問合せ SQL と filter ビルダ |
+| `ranking.js`         | getAwardRanking — entity/cluster/issuer × count/amount |
+| `timeline.js`        | getAwardTimeline — month/year 粒度、entity/cluster/issuer フィルタ |
+| `buyer-relations.js` | getBuyerRelations — 発注機関内訳 + concentration_score (HHI) |
+| `index.js`           | エントリ再 export |
+
+CLI: `node scripts/analyze-nyusatsu.mjs ranking|timeline|buyers [options]`
+
+## 結合戦略
+
+nyusatsu_results を Resolver 結果に紐付ける OR 条件:
+1. `winner_corporate_number = resolved_entities.corporate_number`（Layer 1 ヒット分）
+2. `resolution_aliases.raw_name = winner_name`（alias 経由）
+
+LEFT JOIN で未解決は `entity_id = NULL`。`resolvedOnly: true`（既定）で除外。
+
+## 初期指標
+
+- `total_awards`  件数
+- `total_amount`  金額合計
+- `unique_buyers` 発注機関の種類数（entity 視点）
+- `active_months` 初受注〜最終受注の月数
+- `concentration_score` HHI（0=均等、1=完全1機関依存）
 
 ## 禁止事項
 
