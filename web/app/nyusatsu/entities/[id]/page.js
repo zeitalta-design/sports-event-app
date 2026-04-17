@@ -120,6 +120,20 @@ export default function EntityDetailPage({ params }) {
         skipDomain="nyusatsu"
       />
 
+      {/* 共通企業詳細（cross-domain hub）への導線 */}
+      {(entity.organization_id || entity.corporate_number) && (
+        <div className="mb-6 text-xs">
+          <Link
+            href={entity.organization_id
+              ? `/organizations/${entity.organization_id}`
+              : `/organizations?corp=${encodeURIComponent(entity.corporate_number)}`}
+            className="inline-flex items-center gap-1 text-[#2F9FD3] hover:underline"
+          >
+            企業詳細ページを開く（cross-domain ハブ） →
+          </Link>
+        </div>
+      )}
+
       {/* ================= 主要発注機関 ================= */}
       <section className="mb-8 bg-white border border-[#DCEAF2] rounded-xl p-5">
         <h2 className="text-lg font-bold text-[#2F9FD3] mb-3">主要発注機関 TOP10</h2>

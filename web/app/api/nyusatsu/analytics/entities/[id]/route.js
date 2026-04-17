@@ -34,10 +34,17 @@ export async function GET(request, { params }) {
     // 2) timeline / buyers / cluster_mates を並列実行
     //    libsql compat layer は SQL 実行ごとに HTTP round-trip があるため、
     //    await Promise.all で発火タイミングを重ねる意味がある。
-    const [timeline, buyers, clusterMates] = await Promise.all([
+    const [timeline, buyers, clusterMates, organizationId] = await Promise.all([
       Promise.resolve().then(() => fetchEntityTimeline({ db, granularity: "month", targetedWhere, targetedParams })),
       Promise.resolve().then(() => fetchEntityBuyerRelations({ db, targetedWhere, targetedParams, limit: 10 })),
       Promise.resolve().then(() => fetchClusterMates({ db, entity })),
+      // entity_links 経由で対応する organization.id を引く（cross-domain hub 遷移用）
+      Promise.resolve().then(() => {
+        const r = db.prepare(
+          "SELECT organization_id FROM entity_links WHERE resolved_entity_id = ? LIMIT 1"
+        ).get(entity.id);
+        return r?.organization_id || null;
+      }),
     ]);
 
     // 3) summary は timeline + buyers から組み立て（追加クエリなし）
@@ -59,6 +66,7 @@ export async function GET(request, { params }) {
         cluster_canonical_name: entity.cluster_canonical_name,
         cluster_signal: entity.cluster_signal,
         cluster_size: entity.cluster_size,
+        organization_id: organizationId,
       },
       summary: {
         total_awards,

@@ -294,6 +294,20 @@ export default function KyoninkaDetailPage() {
         skipDomain="kyoninka"
       />
 
+      {/* 共通企業詳細（cross-domain hub）への導線 */}
+      {(item.organization_id || item.corporate_number) && (
+        <div className="mb-6 text-xs">
+          <Link
+            href={item.organization_id
+              ? `/organizations/${item.organization_id}`
+              : `/organizations?corp=${encodeURIComponent(item.corporate_number)}`}
+            className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+          >
+            企業詳細ページを開く（cross-domain ハブ） →
+          </Link>
+        </div>
+      )}
+
       {/* 基本情報 */}
       <section className="card p-6 mb-6">
         <h2 className="text-sm font-bold text-gray-900 mb-3">基本情報</h2>
