@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 /**
- * nyusatsu_results.winner_corporate_number を起点に resolved_entities を育てる
+ * kyoninka_entities.corporate_number を起点に resolved_entities を育てる（P1）
  *
- * Phase 2 P3 で共通ヘルパー `backfillResolvedEntitiesFromCandidates` に
- * 統合済み。本スクリプトは候補 SELECT だけを担当する。
+ * 候補:
+ *   kyoninka_entities WHERE corporate_number IS NOT NULL
+ *   representative name = entity_name
  *
  * 使い方:
- *   node scripts/backfill-resolved-entities-from-nyusatsu.mjs [--local] [--dry-run]
+ *   node scripts/backfill-resolved-entities-from-kyoninka.mjs [--local] [--dry-run]
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -31,7 +32,7 @@ if (useLocal) {
   delete process.env.TURSO_AUTH_TOKEN;
 }
 if (!useLocal && (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN)) {
-  console.error("[nyusatsu-resolved-backfill] TURSO env 未設定。--local を指定してください。");
+  console.error("[kyoninka-resolved-backfill] TURSO env 未設定。--local を指定してください。");
   process.exit(1);
 }
 
@@ -42,27 +43,24 @@ const { backfillResolvedEntitiesFromCandidates } =
 
 const db = getDb();
 
-// nyusatsu_results から winner_corporate_number 単位に畳んだ候補
 const candidates = db.prepare(`
-  SELECT winner_corporate_number AS corp,
-         MIN(winner_name)         AS name
-  FROM nyusatsu_results
-  WHERE winner_corporate_number IS NOT NULL
-    AND winner_corporate_number != ''
-    AND winner_name IS NOT NULL
-    AND winner_name != ''
+  SELECT corporate_number AS corp,
+         MIN(entity_name)  AS name
+  FROM kyoninka_entities
+  WHERE corporate_number IS NOT NULL AND corporate_number != ''
+    AND entity_name IS NOT NULL AND entity_name != ''
     AND is_published = 1
-  GROUP BY winner_corporate_number
+  GROUP BY corporate_number
 `).all();
 
 const r = backfillResolvedEntitiesFromCandidates(db, {
   candidates,
-  source: "nyusatsu_backfill",
+  source: "kyoninka_backfill",
   dryRun,
 });
 
 console.log("\n========================================");
-console.log(`[nyusatsu-resolved-backfill] Done (${r.elapsedMs}ms)`);
+console.log(`[kyoninka-resolved-backfill] Done (${r.elapsedMs}ms)`);
 console.log(`  candidates:     ${r.candidates}`);
 console.log(`  already:        ${r.alreadyExisted}`);
 console.log(`  inserted:       ${r.inserted}`);

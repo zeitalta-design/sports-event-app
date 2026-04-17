@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
- * nyusatsu_results.winner_corporate_number を起点に resolved_entities を育てる
+ * gyosei-shobun 由来企業を起点に resolved_entities を育てる（P2）
  *
- * Phase 2 P3 で共通ヘルパー `backfillResolvedEntitiesFromCandidates` に
- * 統合済み。本スクリプトは候補 SELECT だけを担当する。
+ * 候補:
+ *   administrative_actions は corporate_number を直接持たないが、
+ *   organization_id 経由で organizations に紐付く。既に corp が埋まっている
+ *   org のみ対象（gBizINFO 解決済）。
  *
  * 使い方:
- *   node scripts/backfill-resolved-entities-from-nyusatsu.mjs [--local] [--dry-run]
+ *   node scripts/backfill-resolved-entities-from-gyosei-shobun.mjs [--local] [--dry-run]
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -31,7 +33,7 @@ if (useLocal) {
   delete process.env.TURSO_AUTH_TOKEN;
 }
 if (!useLocal && (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN)) {
-  console.error("[nyusatsu-resolved-backfill] TURSO env 未設定。--local を指定してください。");
+  console.error("[gyosei-shobun-resolved-backfill] TURSO env 未設定。--local を指定してください。");
   process.exit(1);
 }
 
@@ -42,27 +44,25 @@ const { backfillResolvedEntitiesFromCandidates } =
 
 const db = getDb();
 
-// nyusatsu_results から winner_corporate_number 単位に畳んだ候補
+// 行政処分を受けた企業のうち、organizations 側に corp が登録されているもの
+// （administrative_actions.organization_id → organizations.corporate_number）
 const candidates = db.prepare(`
-  SELECT winner_corporate_number AS corp,
-         MIN(winner_name)         AS name
-  FROM nyusatsu_results
-  WHERE winner_corporate_number IS NOT NULL
-    AND winner_corporate_number != ''
-    AND winner_name IS NOT NULL
-    AND winner_name != ''
-    AND is_published = 1
-  GROUP BY winner_corporate_number
+  SELECT DISTINCT o.corporate_number AS corp,
+         COALESCE(o.display_name, o.normalized_name, a.organization_name_raw) AS name
+  FROM administrative_actions a
+  INNER JOIN organizations o ON o.id = a.organization_id
+  WHERE o.corporate_number IS NOT NULL AND o.corporate_number != ''
+    AND a.is_published = 1
 `).all();
 
 const r = backfillResolvedEntitiesFromCandidates(db, {
   candidates,
-  source: "nyusatsu_backfill",
+  source: "gyosei_shobun_backfill",
   dryRun,
 });
 
 console.log("\n========================================");
-console.log(`[nyusatsu-resolved-backfill] Done (${r.elapsedMs}ms)`);
+console.log(`[gyosei-shobun-resolved-backfill] Done (${r.elapsedMs}ms)`);
 console.log(`  candidates:     ${r.candidates}`);
 console.log(`  already:        ${r.alreadyExisted}`);
 console.log(`  inserted:       ${r.inserted}`);
