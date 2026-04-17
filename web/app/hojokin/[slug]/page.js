@@ -6,6 +6,7 @@ import Link from "next/link";
 import DomainDetailPage from "@/components/core/DomainDetailPage";
 import DomainCompareButton from "@/components/core/DomainCompareButton";
 import DomainFavoriteButton from "@/components/core/DomainFavoriteButton";
+import CrossDomainLinks from "@/components/core/CrossDomainLinks";
 import "@/lib/domains";
 import { getDomain } from "@/lib/core/domain-registry";
 import {
@@ -136,6 +137,14 @@ export default function HojokinDetailPage() {
         <h2 className="text-sm font-bold text-gray-900 mb-3">制度概要</h2>
         <p className="text-sm text-gray-700 leading-relaxed">{item.summary}</p>
       </section>
+
+      {/* 他DB情報（Phase 2 P2） — 提供主体（実施機関）が他DBに出ているか */}
+      {item.provider_name && (
+        <CrossDomainLinks
+          lookupKey={item.provider_name}
+          skipDomain="hojokin"
+        />
+      )}
 
       <section className="card p-6 mb-6">
         <h2 className="text-sm font-bold text-gray-900 mb-3">基本情報</h2>

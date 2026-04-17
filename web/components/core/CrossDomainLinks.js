@@ -84,32 +84,21 @@ export default function CrossDomainLinks({ lookupKey, skipDomain }) {
       const section = data[domain] || {};
       const block = section[cfg.field] || { count: 0, ids: [] };
       return { domain, cfg, count: block.count || 0 };
-    })
-    .filter((r) => r.count > 0);
+    });
 
   const hasAnchors = !!(data.anchors?.organization_id || data.anchors?.resolved_entity_id);
-
-  if (rows.length === 0) {
-    return (
-      <section className="card p-6 mb-6">
-        <h2 className="text-sm font-bold text-gray-900 mb-3">他DB情報</h2>
-        <p className="text-xs text-gray-500">
-          {hasAnchors
-            ? "他DBには関連レコードが見つかりませんでした。"
-            : "他DBへの企業 link はまだ解決されていません（法人番号 / organizations 側が未登録）。"}
-        </p>
-      </section>
-    );
-  }
+  const totalHits = rows.reduce((s, r) => s + r.count, 0);
 
   return (
     <section className="card p-6 mb-6">
       <h2 className="text-sm font-bold text-gray-900 mb-3">他DB情報</h2>
       <p className="text-xs text-gray-500 mb-3">
-        同じ企業の関連レコードを他DBから抽出しています（件数と検索リンクのみ）。
+        {hasAnchors
+          ? "同じ企業の関連レコードを他DBから抽出しています（件数と検索リンクのみ）。"
+          : "他DBへの企業 link はまだ解決されていません（法人番号 / organizations 側が未登録）。以下は該当0件です。"}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {rows.map((r) => (
+        {rows.map((r) => r.count > 0 ? (
           <Link
             key={r.domain}
             href={r.cfg.searchPath(data.query.key, data.query.kind)}
@@ -122,8 +111,24 @@ export default function CrossDomainLinks({ lookupKey, skipDomain }) {
             </div>
             <span className="text-xs text-blue-600">→</span>
           </Link>
+        ) : (
+          <div
+            key={r.domain}
+            className="flex items-center gap-3 p-3 border border-gray-100 bg-gray-50/50 rounded-lg opacity-60"
+          >
+            <span className="text-xl grayscale">{r.cfg.icon}</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-gray-400">{r.cfg.label}</div>
+              <div className="text-sm font-medium text-gray-400">—</div>
+            </div>
+          </div>
         ))}
       </div>
+      {totalHits === 0 && (
+        <p className="text-xs text-gray-400 mt-3">
+          {hasAnchors ? "いずれのDBにも該当なし。" : "この企業の横断 link 先は未登録です。"}
+        </p>
+      )}
     </section>
   );
 }
