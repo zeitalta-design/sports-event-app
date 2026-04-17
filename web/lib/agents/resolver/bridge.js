@@ -19,12 +19,13 @@
  * @param {Object} [opts]
  * @param {boolean} [opts.dryRun=false]
  * @param {Function}[opts.logger]
+ * @param {number}  [opts.batchSize=100]
  * @returns {{
  *   ok: boolean, candidates: number, created: number, updated: number,
  *   skipped: number, dryRun: boolean, elapsedMs: number
  * }}
  */
-export function buildCorporateNumberBridge(db, { dryRun = false, logger = console.log } = {}) {
+export function buildCorporateNumberBridge(db, { dryRun = false, logger = console.log, batchSize = 100 } = {}) {
   if (!db) throw new TypeError("buildCorporateNumberBridge: db is required");
   const log = (msg) => logger(`[bridge-resolver] ${msg}`);
   const start = Date.now();
@@ -50,39 +51,62 @@ export function buildCorporateNumberBridge(db, { dryRun = false, logger = consol
     };
   }
 
-  const upsert = db.prepare(`
+  // 既存 link を一括取得し client-side diff（Turso で 22k 個別 SELECT を避ける）
+  const existingLinks = new Set(
+    db.prepare("SELECT organization_id, resolved_entity_id FROM entity_links").all()
+      .map((r) => `${r.organization_id}:${r.resolved_entity_id}`),
+  );
+  const toInsert = candidates.filter((c) => !existingLinks.has(`${c.organization_id}:${c.resolved_entity_id}`));
+  log(`既存 link: ${existingLinks.size}件  /  新規 insert 対象: ${toInsert.length}件`);
+
+  // multi-row VALUES で batch insert。衝突したバッチは1行ずつ UPSERT にフォールバック。
+  const oneUpsert = db.prepare(`
     INSERT INTO entity_links
       (organization_id, resolved_entity_id, link_type, confidence, source, created_at, updated_at)
-    VALUES (@organization_id, @resolved_entity_id, 'corporate_number', 1.0, 'bridge_resolver',
-            datetime('now'), datetime('now'))
+    VALUES (?, ?, 'corporate_number', 1.0, 'bridge_resolver', datetime('now'), datetime('now'))
     ON CONFLICT(organization_id, resolved_entity_id) DO UPDATE SET
-      link_type = excluded.link_type,
-      confidence = excluded.confidence,
-      source = excluded.source,
       updated_at = datetime('now')
   `);
 
-  const selectExisting = db.prepare(`
-    SELECT id FROM entity_links
-    WHERE organization_id = ? AND resolved_entity_id = ?
-  `);
-
-  let created = 0, updated = 0, skipped = 0;
-  for (const c of candidates) {
+  function insertBatch(batch) {
+    if (batch.length === 0) return { inserted: 0, skipped: 0 };
+    const placeholders = batch
+      .map(() => "(?, ?, 'corporate_number', 1.0, 'bridge_resolver', datetime('now'), datetime('now'))")
+      .join(", ");
+    const sql = `
+      INSERT INTO entity_links
+        (organization_id, resolved_entity_id, link_type, confidence, source, created_at, updated_at)
+      VALUES ${placeholders}
+    `;
+    const params = [];
+    for (const c of batch) params.push(c.organization_id, c.resolved_entity_id);
     try {
-      const existing = selectExisting.get(c.organization_id, c.resolved_entity_id);
-      upsert.run({
-        organization_id: c.organization_id,
-        resolved_entity_id: c.resolved_entity_id,
-      });
-      existing ? updated++ : created++;
-    } catch (e) {
-      log(`  ! org=${c.organization_id} resolved=${c.resolved_entity_id}: ${e.message}`);
-      skipped++;
+      db.prepare(sql).run(...params);
+      return { inserted: batch.length, skipped: 0 };
+    } catch {
+      let inserted = 0, skipped = 0;
+      for (const c of batch) {
+        try { oneUpsert.run(c.organization_id, c.resolved_entity_id); inserted++; }
+        catch { skipped++; }
+      }
+      return { inserted, skipped };
+    }
+  }
+
+  let created = 0, skipped = 0;
+  for (let i = 0; i < toInsert.length; i += batchSize) {
+    const batch = toInsert.slice(i, i + batchSize);
+    const r = insertBatch(batch);
+    created += r.inserted;
+    skipped += r.skipped;
+    if ((i + batchSize) % (batchSize * 10) === 0 || i + batchSize >= toInsert.length) {
+      const pct = ((i + batch.length) / Math.max(1, toInsert.length) * 100).toFixed(1);
+      log(`  [${i + batch.length}/${toInsert.length}] created=${created} skipped=${skipped} (${pct}%)`);
     }
   }
 
   const elapsedMs = Date.now() - start;
+  const updated = 0; // このパスでは UPSERT 分岐が失敗バッチ時のみのため 0 に丸める
   log(`done created=${created} updated=${updated} skipped=${skipped} (${elapsedMs}ms)`);
 
   return {
