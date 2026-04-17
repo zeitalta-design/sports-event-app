@@ -1,0 +1,167 @@
+/**
+ * Pipeline: nyusatsu ドメイン
+ *
+ * 役割: Collector が取得した生レコードを Formatter で統一スキーマに変換し、
+ *       DB（nyusatsu_items）へ書き込む。
+ *
+ * 現状（Step 2 時点）:
+ *   - KKJ の end-to-end パイプライン `processKkjRecords` のみ実装
+ *   - central-ministries / p-portal-results は Formatter までは実装済だが
+ *     pipeline 配線は Step 2.5 で実装予定（既存 fetcher が fetch+format+save を
+ *     内部完結しているため、切り出しにリファクタが必要）
+ */
+import { getDb } from "@/lib/db";
+import kkjFormat from "@/lib/agents/formatter/nyusatsu/kkj";
+
+/**
+ * KKJ 生レコード配列を受け取り、format → DB upsert までを実行。
+ *
+ * FormattedRecord + raw から nyusatsu_items 列を組み立てる。KKJ 固有の
+ * 生フィールド（prefectureName, cityName, procedureType 等）は raw から参照する
+ * （Resolver 導入後はここで束ねていた責務が Resolver に移る）。
+ *
+ * @param {Array} rawRecords   parseKkjXml の出力配列
+ * @param {Object} [opts]
+ * @param {boolean} [opts.dryRun]
+ * @param {Function} [opts.logger]
+ * @returns {{ formatted: number, inserted: number, updated: number, skipped: number }}
+ */
+export function processKkjRecords(rawRecords, { dryRun = false, logger = console.log } = {}) {
+  if (!Array.isArray(rawRecords)) {
+    throw new TypeError("processKkjRecords: rawRecords must be an array");
+  }
+  const log = (msg) => logger(`[pipeline.nyusatsu.kkj] ${msg}`);
+  const db = getDb();
+
+  const selectBySlug = db.prepare("SELECT id FROM nyusatsu_items WHERE slug = ?");
+  const insertStmt = db.prepare(`
+    INSERT INTO nyusatsu_items
+      (slug, title, category, issuer_name, target_area, deadline, budget_amount,
+       bidding_method, summary, status, is_published, created_at, updated_at,
+       qualification, announcement_url, contact_info, delivery_location,
+       has_attachment, announcement_date, contract_period,
+       lifecycle_status, source_name, source_url)
+    VALUES
+      (@slug, @title, @category, @issuer_name, @target_area, @deadline, @budget_amount,
+       @bidding_method, @summary, @status, 1, datetime('now'), datetime('now'),
+       @qualification, @announcement_url, @contact_info, @delivery_location,
+       @has_attachment, @announcement_date, @contract_period,
+       @lifecycle_status, @source_name, @source_url)
+  `);
+  const updateStmt = db.prepare(`
+    UPDATE nyusatsu_items SET
+      title = @title, category = @category, issuer_name = @issuer_name,
+      target_area = @target_area, deadline = @deadline,
+      bidding_method = @bidding_method, summary = @summary, status = @status,
+      announcement_url = @announcement_url, announcement_date = @announcement_date,
+      delivery_location = @delivery_location, has_attachment = @has_attachment,
+      contract_period = @contract_period, lifecycle_status = @lifecycle_status,
+      source_name = @source_name, source_url = @source_url,
+      updated_at = datetime('now')
+    WHERE slug = @slug
+  `);
+
+  const today = new Date().toISOString().slice(0, 10);
+  let formatted = 0, inserted = 0, updated = 0, skipped = 0;
+
+  for (const raw of rawRecords) {
+    if (!raw || !raw.projectName || String(raw.projectName).length < 3) {
+      skipped++; continue;
+    }
+    // Formatter（純粋関数）
+    let unified;
+    try {
+      unified = kkjFormat(raw);
+      formatted++;
+    } catch (e) {
+      log(`format error: ${e.message}`);
+      skipped++; continue;
+    }
+
+    // Unified → nyusatsu_items 行へ写像
+    const row = unifiedKkjToItemRow(unified, today);
+    if (dryRun) { inserted++; continue; }
+
+    try {
+      const existing = selectBySlug.get(row.slug);
+      if (existing) {
+        updateStmt.run(row);
+        updated++;
+      } else {
+        insertStmt.run(row);
+        inserted++;
+      }
+    } catch (e) {
+      log(`db error for ${row.slug}: ${e.message}`);
+      skipped++;
+    }
+  }
+
+  log(`done formatted=${formatted} inserted=${inserted} updated=${updated} skipped=${skipped}`);
+  return { formatted, inserted, updated, skipped };
+}
+
+// ─── KKJ Unified → nyusatsu_items 行へ写像 ─────────────────────
+
+function unifiedKkjToItemRow(unified, today) {
+  const raw = unified.raw || {};
+
+  const slug = buildKkjSlug(raw);
+  const deadline = unified.deadline;
+  const status = deadline && deadline < today ? "closed" : "open";
+  const lifecycleStatus = status === "closed" ? "closed" : "active";
+
+  const targetArea = [raw.prefectureName, raw.cityName].filter(Boolean).join(" ") || null;
+
+  return {
+    slug,
+    title: unified.title || "",
+    category: mapCategory(raw.category, unified.title),
+    issuer_name: unified.organization,
+    target_area: targetArea,
+    deadline,
+    budget_amount: null,
+    bidding_method: raw.procedureType || null,
+    summary: raw.description
+      ? String(raw.description).replace(/\s+/g, " ").trim().slice(0, 300)
+      : null,
+    status,
+    qualification: null,
+    announcement_url: unified.detail_url,
+    contact_info: null,
+    delivery_location: raw.location || null,
+    has_attachment: Array.isArray(raw.attachments) && raw.attachments.length > 0 ? 1 : 0,
+    announcement_date: unified.published_at,
+    contract_period: (() => {
+      // raw.periodEndTime が ISO なら日付部を返す
+      const m = String(raw.periodEndTime || "").match(/^(\d{4}-\d{2}-\d{2})/);
+      return m ? m[1] : null;
+    })(),
+    lifecycle_status: lifecycleStatus,
+    source_name: "官公需情報ポータル（中小企業庁）",
+    source_url: "https://www.kkj.go.jp/",
+  };
+}
+
+function buildKkjSlug(raw) {
+  const key = raw.key || hashFallback(String(raw.externalUri || "") + String(raw.projectName || ""));
+  return `kkj-${key}`;
+}
+
+function mapCategory(rawCategory, title) {
+  const map = { "工事": "construction", "物品": "goods", "役務": "service", "サービス": "service" };
+  if (rawCategory && map[rawCategory]) return map[rawCategory];
+  const t = String(title || "");
+  if (/工事|建設|土木|舗装/.test(t)) return "construction";
+  if (/業務委託|コンサル|調査|設計|測量/.test(t)) return "consulting";
+  if (/システム|ＩＴ|IT|ソフト|アプリ|データ/.test(t)) return "it";
+  if (/物品|什器|備品|機器|車両|購入|調達/.test(t)) return "goods";
+  if (/清掃|警備|管理|運営|保守|メンテ/.test(t)) return "service";
+  return "other";
+}
+
+function hashFallback(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h).toString(36);
+}
