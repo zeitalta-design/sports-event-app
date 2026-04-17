@@ -1,0 +1,117 @@
+name: "QA: 日次 snapshot（入札ライン監視）"
+
+# ============================================================
+# Phase 3 QA 層の日次自動実行。
+#   - scripts/qa-snapshot.mjs を Turso 本番DBに対して毎日実行
+#   - 件数 snapshot 記録 / 前日比 / freshness / resolver 増分 /
+#     analyzer API 健全性 / capacity の 6 種チェック
+#   - finding があれば GitHub Actions annotation として残る
+#       * severity=warn     → ::warning:: （run は成功扱い）
+#       * severity=critical → ::error::    （run は失敗 + Issue 起票）
+#
+# スケジュール: 毎日 JST 05:30（nyusatsu 取得 04:53 の後に動く）
+# 手動実行: workflow_dispatch で任意タイミング
+#
+# 必要な GitHub Secrets:
+#   TURSO_DATABASE_URL
+#   TURSO_AUTH_TOKEN
+# ============================================================
+
+on:
+  schedule:
+    # 毎日 JST 05:30 = UTC 20:30 (前日)
+    - cron: "30 20 * * *"
+  workflow_dispatch:
+    inputs:
+      day:
+        description: "集計対象日 (YYYY-MM-DD, 空なら本日 JST)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: qa-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    name: "QA snapshot + 全チェック"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: "Info: 実行情報"
+        run: |
+          echo "Trigger:   ${{ github.event_name }}"
+          echo "Actor:     ${{ github.actor }}"
+          echo "Run ID:    ${{ github.run_id }}"
+          echo "Time UTC:  $(date -u '+%Y-%m-%d %H:%M:%S')"
+          echo "Day input: ${{ github.event.inputs.day }}"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: "Install dependencies"
+        working-directory: web
+        run: npm ci --prefer-offline --no-audit
+
+      - name: "Run: qa-snapshot"
+        id: qa
+        working-directory: web
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: |
+          set -o pipefail
+          LOG_FILE="${{ github.workspace }}/qa-snapshot-${{ github.run_id }}.log"
+          if [ -n "${{ github.event.inputs.day }}" ]; then
+            node scripts/qa-snapshot.mjs --day "${{ github.event.inputs.day }}" 2>&1 | tee "$LOG_FILE"
+          else
+            node scripts/qa-snapshot.mjs 2>&1 | tee "$LOG_FILE"
+          fi
+
+      - name: "Upload: log artifact"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-snapshot-log-${{ github.run_id }}
+          path: qa-snapshot-*.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: "Alert: critical 検出時 Issue 作成/更新"
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE="[QA] 日次 snapshot で critical 検出 $(date -u '+%Y-%m-%d')"
+          BODY=$(printf '%s\n' \
+            "## QA 日次 snapshot で critical finding を検出" \
+            "" \
+            "| 項目 | 値 |" \
+            "|------|----|" \
+            "| Run | [詳細](${RUN_URL}) |" \
+            "| Time (UTC) | $(date -u '+%Y-%m-%d %H:%M:%S') |" \
+            "" \
+            "### 対応方法" \
+            "1. Run の Step Summary で finding 詳細を確認" \
+            "2. annotation (::error::) がついた metric を特定" \
+            "3. 原因切り分け: 対応する fetcher / resolver / analyzer を確認" \
+            "4. warn は issue 起票せず annotation のみ（運用ログで追う）")
+
+          EXISTING=$(gh issue list --state open --search "in:title [QA]" --limit 1 --json number --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY" --label "ops" 2>/dev/null \
+              || gh issue create --title "$TITLE" --body "$BODY"
+          fi

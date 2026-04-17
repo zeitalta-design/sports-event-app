@@ -62,14 +62,50 @@ const bySev = r.findings.reduce((acc, f) => { acc[f.severity] = (acc[f.severity]
 console.log(`  findings:   total=${r.findings.length} (${Object.entries(bySev).map(([k, v]) => `${k}:${v}`).join(", ") || "-"})`);
 console.log("========================================");
 
+const inCi = !!process.env.GITHUB_ACTIONS;
+
 if (r.findings.length > 0) {
   console.log("\n当日の finding:");
   for (const f of r.findings) {
     const mark = f.severity === "critical" ? "🔴" : f.severity === "warn" ? "🟡" : "🟢";
-    console.log(`  ${mark} [${f.category}] ${f.metric || "-"}: ${f.message}`);
+    const line = `[${f.category}] ${f.metric || "-"}: ${f.message}`;
+    console.log(`  ${mark} ${line}`);
+    if (inCi) {
+      // GitHub Actions annotations（critical=error, warn=warning, それ以外=notice）
+      const level = f.severity === "critical" ? "error" : f.severity === "warn" ? "warning" : "notice";
+      const title = `QA ${f.severity} / ${f.category}${f.metric ? " / " + f.metric : ""}`;
+      const msg = String(f.message || "").replace(/\r?\n/g, " ");
+      console.log(`::${level} title=${title}::${msg}`);
+    }
+  }
+}
+
+// GitHub Actions Step Summary（run ページに表示）
+if (inCi && process.env.GITHUB_STEP_SUMMARY) {
+  try {
+    const bySevSummary = Object.entries(bySev).map(([k, v]) => `${k}:${v}`).join(", ") || "-";
+    const lines = [
+      `# QA snapshot (${r.day})`,
+      "",
+      `- elapsed: ${elapsed}s`,
+      `- snapshots: ${r.snapshots}`,
+      `- findings: total=${r.findings.length} (${bySevSummary})`,
+      "",
+    ];
+    if (r.findings.length > 0) {
+      lines.push("| severity | category | metric | message |", "|---|---|---|---|");
+      for (const f of r.findings) {
+        const safe = (x) => String(x ?? "-").replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+        lines.push(`| ${safe(f.severity)} | ${safe(f.category)} | ${safe(f.metric)} | ${safe(f.message)} |`);
+      }
+    }
+    fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+  } catch (e) {
+    console.warn("[qa-snapshot] step summary 書込み失敗:", e.message);
   }
 }
 
 // critical があれば exit 1（GitHub Actions の失敗通知用）
+// warn は annotation で残すのみ（run 自体は成功扱い）
 const hasCritical = r.findings.some((f) => f.severity === "critical");
 process.exit(hasCritical ? 1 : 0);
