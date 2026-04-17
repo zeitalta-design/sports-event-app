@@ -37,6 +37,12 @@ const DOMAIN_CONFIG = {
     field: "entities",
     searchPath: (key) => `/kyoninka?keyword=${encodeURIComponent(key)}`,
   },
+  gyosei_shobun: {
+    label: "行政処分",
+    icon: "⚠️",
+    field: "actions",
+    searchPath: (key) => `/gyosei-shobun?keyword=${encodeURIComponent(key)}`,
+  },
   sanpai: {
     label: "産廃処分",
     icon: "🚛",

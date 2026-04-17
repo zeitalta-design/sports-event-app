@@ -97,9 +97,10 @@ function resolveAnchors(db, { kind, key }) {
  *   anchors: { organization_id: number|null, resolved_entity_id: number|null,
  *              corporate_number: string|null, canonical_name: string|null },
  *   nyusatsu: { results: { count: number, ids: number[] } },
- *   hojokin:  { items:   { count: number, ids: number[] } },
- *   kyoninka: { entities:{ count: number, ids: number[] } },
- *   sanpai:   { items:   { count: number, ids: number[] } },
+ *   hojokin:       { items:    { count: number, ids: number[] } },
+ *   kyoninka:      { entities: { count: number, ids: number[] } },
+ *   sanpai:        { items:    { count: number, ids: number[] } },
+ *   gyosei_shobun: { actions:  { count: number, ids: number[] } },
  * }}
  */
 export function getCompanyCrossDomain(key, { limit = 50 } = {}) {
@@ -114,6 +115,7 @@ export function getCompanyCrossDomain(key, { limit = 50 } = {}) {
   const hItems = fetchHojokinItemsByAnchors(db, anchors, limit);
   const kEntities = fetchKyoninkaEntitiesByAnchors(db, anchors, limit);
   const sItems = fetchSanpaiItemsByAnchors(db, anchors, limit);
+  const gActions = fetchGyoseiShobunByAnchors(db, anchors, limit);
 
   return {
     query: { key: String(key).trim(), kind },
@@ -122,6 +124,7 @@ export function getCompanyCrossDomain(key, { limit = 50 } = {}) {
     hojokin: { items: hItems },
     kyoninka: { entities: kEntities },
     sanpai: { items: sItems },
+    gyosei_shobun: { actions: gActions },
   };
 }
 
@@ -189,5 +192,18 @@ function fetchSanpaiItemsByAnchors(db, anchors, limit) {
   const ids = db.prepare(
     "SELECT id FROM sanpai_items WHERE corporate_number = ? AND is_published = 1 ORDER BY updated_at DESC LIMIT ?"
   ).all(corp, limit).map((r) => r.id);
+  return { count, ids };
+}
+
+function fetchGyoseiShobunByAnchors(db, anchors, limit) {
+  // administrative_actions は organization_id で紐付く。
+  const orgId = anchors.organization_id;
+  if (!orgId) return { count: 0, ids: [] };
+  const count = db.prepare(
+    "SELECT COUNT(*) n FROM administrative_actions WHERE organization_id = ? AND is_published = 1"
+  ).get(orgId)?.n || 0;
+  const ids = db.prepare(
+    "SELECT id FROM administrative_actions WHERE organization_id = ? AND is_published = 1 ORDER BY action_date DESC LIMIT ?"
+  ).all(orgId, limit).map((r) => r.id);
   return { count, ids };
 }
