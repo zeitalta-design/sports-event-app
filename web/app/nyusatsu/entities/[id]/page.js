@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import ConcentrationBadge from "@/components/nyusatsu/analytics/ConcentrationBadge";
 import MiniBarChart from "@/components/nyusatsu/analytics/MiniBarChart";
+import CrossDomainLinks from "@/components/core/CrossDomainLinks";
 
 export const dynamic = "force-dynamic";
 
@@ -112,6 +113,12 @@ export default function EntityDetailPage({ params }) {
           HHI（ハーフィンダール指数、0–1）。<strong>1.0</strong>=完全1機関依存、<strong>0</strong>=完全分散。
         </p>
       </section>
+
+      {/* ================= 他DB情報（Phase 2 Priority 1） ================= */}
+      <CrossDomainLinks
+        lookupKey={entity.corporate_number || entity.normalized_key || entity.canonical_name}
+        skipDomain="nyusatsu"
+      />
 
       {/* ================= 主要発注機関 ================= */}
       <section className="mb-8 bg-white border border-[#DCEAF2] rounded-xl p-5">
