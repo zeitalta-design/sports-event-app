@@ -1,48 +1,72 @@
-# Resolver Layer — 【未実装・Stub】最重要
+# Resolver Layer — 最小実装（Phase 1 Step 3）
 
-**責務**: 同一企業・団体を束ねる名寄せ。**Analyzer の前に必ず通す**。
+Formatter で統一された生データから、**同一企業を 1 つの canonical entity に束ねる**層。
 
-## 核となる問い
+## 4 層判定（Layer 1-3 実装済、Layer 4 は未実装）
 
-「`株式会社A工業` と `㈱A工業` と `A工業(株)` は同じ会社か？」
-「`リバーサイド建設` と `リバーサイド建設株式会社` は？」
-「宛名違いの同一許可番号は？」
+| 層 | 方式 | 実装 |
+|----|------|------|
+| 1 | 法人番号一致（入力側 or gBizINFO 経由） | ✅ resolve.js + gbizinfo.js（stub） |
+| 2 | normalized_key 完全一致 | ✅ normalize.js |
+| 3 | normalized_key の fuzzy 一致（Levenshtein） | ✅ resolve.js（既定閾値 0.90） |
+| 4 | LLM 判定（キャッシュ前提） | ⏳ 未実装。Layer 3 で拾えない曖昧ケース用 |
 
-## 戦略（優先度順）
+## データ構造
 
-1. **法人番号（13桁）一致**が最強のキー。有れば最優先で束ねる
-   - KKJ データには許可番号があるが法人番号ではない（11桁、都道府県プレフィックス入り）
-   - gBizINFO API で企業名 → 法人番号解決が可能。定期バッチで補完
-2. **許可番号の prefix 考慮一致**（産廃・建設業）— 同一都道府県発行の同一番号
-3. **正規化した名称の完全一致**
-   - 会社形態マーク除去: `㈱` `㈲` `㊒` → `株式会社` `有限会社` `合名会社`
-   - 全半角統一、スペース除去
-4. **編集距離＋属性スコア**（fuzzy）— 上記でマッチしないもの向け
-   - LLM を限定的に使ってよい領域（Resolver 層での LLM 利用は許可済み）
+3 テーブル（`scripts/migrate-resolved-entities.mjs` で作成）:
 
-## 出力形式（予定）
+| テーブル | 役割 |
+|---------|------|
+| `resolved_entities`   | canonical entity 本体（id, corporate_number, canonical_name, normalized_key, prefecture, source） |
+| `resolution_aliases`  | 表記ゆれ蓄積（raw_name → entity_id、seen_count 付き） |
+| `resolution_scores`   | 判定ログ（監査・再実行安定性の確認） |
+
+## 使い方
 
 ```js
-/** @type {ResolvedEntity} */
-{
-  canonicalId: "ent_abc123",        // 名寄せ後の統合ID
-  primaryName: "A工業株式会社",
-  corporateNumber: "1234567890123" | null,
-  aliases: ["㈱A工業", "A工業(株)", ...],
-  sources: ["nyusatsu_items#42", "sanpai_items#108", ...],
-}
+import { resolveEntity, createDataStore } from "@/lib/agents/resolver";
+
+const store = createDataStore();      // 同一プロセスで共有するとキャッシュが効く
+const r = await resolveEntity(
+  { name: "株式会社アサオ", prefecture: "兵庫県", corporateNumber: "02805143475" },
+  { store, fuzzyThreshold: 0.90 }
+);
+// → { entityId: 42, canonicalName: "(株)アサオ", layer: "corp_number", score: 1.0, created: false }
 ```
 
-## やること（次セッション以降）
+## 正規化ポリシー（normalize.js）
 
-1. スキーマ設計（`resolved_entities` テーブル候補）
-2. 名称正規化関数（`normalizeCompanyName`）を共通ライブラリへ
-3. gBizINFO 名前→法人番号解決バッチ
-4. 既存 `company-name-validator.js` の取込み
-5. 同一性判定ルール整備（編集距離閾値、属性重み、最後の砦として LLM 判定）
-6. Analyzer/UI 用の参照 API（`resolveCompany(name, prefecture?)` → canonicalId）
+```
+株式会社アサオ   ─┐
+㈱アサオ         ├─ normalizeCompanyKey() → "アサオ"
+(株)アサオ       │
+アサオ㈱         ─┘
+
+canonicalizeCompanyName() → "(株)アサオ" （表示用）
+```
+
+具体的には:
+- NFKC で全半角統一
+- 会社形態語（株式会社/有限会社/合同会社/合資会社/合名会社/一般社団法人等）を除去
+- 英字小文字化
+- 空白・装飾記号・ハイフン類を全削除
+
+## 実装ルール
+
+- Resolver 本体は「純関数＋DataStore 抽象」で構成。判定ロジックは純粋
+- gBizINFO 呼び出しは `useGbizinfo: true` 明示時のみ（デフォルトは叩かない）
+- in-memory cache は `createDataStore()` 内で管理（prefix 単位）
+- 全ての判定は `resolution_scores` にログ保存（再実行の安定性検証）
+
+## 再実行時の挙動（成功条件「再実行で結果が安定する」）
+
+1. 初回: 新規 entity 作成（layer=new）
+2. 2 回目以降の同一 raw name: layer=normalized（既存 entity へマージ）
+3. 類似度 >= 閾値の変種: layer=fuzzy（既存 entity にマージ、alias 蓄積）
+4. 法人番号が渡された場合: layer=corp_number で確定（以降のすべての変種を束ねる）
 
 ## 禁止事項
 
-- Formatter の統一 JSON を経由せずに直接生レコードを触らない
-- Analyzer レイヤーに Resolver を迂回させない（Resolver 前の集計は禁止）
+- Analyzer で Resolver を経由しないクエリを書かない
+- Formatter や Collector のスキーマを壊さない
+- LLM を fallback 層以外で使用しない
