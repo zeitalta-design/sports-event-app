@@ -208,6 +208,13 @@ export function getDb() {
       // organizations 連携
       "ALTER TABLE hojokin_items ADD COLUMN organization_id INTEGER REFERENCES organizations(id)",
       "ALTER TABLE kyoninka_entities ADD COLUMN organization_id INTEGER REFERENCES organizations(id)",
+      // Phase 2 Step D: 企業横断参照の JOIN を index 化（/api/companies/[key] 用）
+      "CREATE INDEX IF NOT EXISTS idx_nyusatsu_results_winner_corp ON nyusatsu_results(winner_corporate_number)",
+      "CREATE INDEX IF NOT EXISTS idx_nyusatsu_results_winner_corp_pub ON nyusatsu_results(winner_corporate_number, is_published)",
+      "CREATE INDEX IF NOT EXISTS idx_sanpai_items_corp ON sanpai_items(corporate_number)",
+      "CREATE INDEX IF NOT EXISTS idx_hojokin_items_org ON hojokin_items(organization_id)",
+      "CREATE INDEX IF NOT EXISTS idx_kyoninka_entities_org ON kyoninka_entities(organization_id)",
+      "CREATE INDEX IF NOT EXISTS idx_kyoninka_entities_corp ON kyoninka_entities(corporate_number)",
     ];
     for (const sql of migrations) {
       try { _db.exec(sql); } catch { /* duplicate column → ignore */ }
@@ -1305,6 +1312,26 @@ export function getDb() {
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_org_variants_org ON organization_name_variants(organization_id)`);
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_org_variants_normalized ON organization_name_variants(normalized_name)`);
     _db.exec(`CREATE INDEX IF NOT EXISTS idx_org_variants_raw ON organization_name_variants(raw_name)`);
+
+    // entity_links: organizations ↔ resolved_entities の bridge（Phase 2 Step A）
+    // organizations と resolved_entities は別系統で独立して育ってきたため、
+    // 統合せずに明示的な link で繋ぐ。初期は corporate_number 完全一致のみ。
+    _db.exec(`
+      CREATE TABLE IF NOT EXISTS entity_links (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        resolved_entity_id INTEGER NOT NULL REFERENCES resolved_entities(id) ON DELETE CASCADE,
+        link_type TEXT NOT NULL,
+        confidence REAL NOT NULL DEFAULT 1.0,
+        source TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, resolved_entity_id)
+      )
+    `);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_links_org ON entity_links(organization_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_links_resolved ON entity_links(resolved_entity_id)`);
+    _db.exec(`CREATE INDEX IF NOT EXISTS idx_entity_links_type ON entity_links(link_type)`);
 
     // ─── 行政処分DB ─────────────────────
 
