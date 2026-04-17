@@ -126,6 +126,14 @@ export async function fetchAndUpsertSanpai({ dryRun = false, logger = console.lo
     sources.push({ name: "sanpainet", error: e.message, inserted: 0, updated: 0, skipped: 0 });
   }
 
+  try {
+    const r10 = await ingestHyogo({ db, upsertStmt, dryRun, log });
+    sources.push({ name: "hyogo", ...r10 });
+  } catch (e) {
+    log(`hyogo failed: ${e.message}`);
+    sources.push({ name: "hyogo", error: e.message, inserted: 0, updated: 0, skipped: 0 });
+  }
+
   const totalInserted = sources.reduce((s, r) => s + (r.inserted || 0), 0);
   const totalUpdated = sources.reduce((s, r) => s + (r.updated || 0), 0);
   const totalSkipped = sources.reduce((s, r) => s + (r.skipped || 0), 0);
@@ -1255,4 +1263,121 @@ function sanpainetHash(str) {
   let h = 0;
   for (let i = 0; i < str.length; i++) h = ((h << 5) - h + str.charCodeAt(i)) | 0;
   return Math.abs(h).toString(16);
+}
+
+// ─── ソース10: 兵庫県 個別press seed方式 ────────────────────────────
+// 兵庫県は集約ページが存在せず、/nhk01/press/{YYYYMMDD}.html や
+// /ehk01/{code}.html など複数パスで散発公表される。probe方式が成立しない
+// ため、既知URLリストから個別取得して detail_url を付与する最小実装。
+// 新しい処分が判明したら SEED_URLS に追加していく運用。
+
+const HYOGO_SEED_URLS = [
+  "https://web.pref.hyogo.lg.jp/nhk01/press/20230919.html",  // 株式会社アサオ 2023-09-19
+  "https://web.pref.hyogo.lg.jp/ehk01/202402022.html",       // 株式会社エス＆ケイ 2024-02-02
+];
+
+async function ingestHyogo({ db, upsertStmt, dryRun, log }) {
+  log(`兵庫県 廃棄物行政処分（seed ${HYOGO_SEED_URLS.length}件）`);
+  const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+
+  let inserted = 0, updated = 0, skipped = 0;
+
+  for (const url of HYOGO_SEED_URLS) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": BROWSER_UA },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      if (!res.ok) { log(`  ! ${url}: HTTP ${res.status}`); skipped++; continue; }
+      const html = await res.text();
+      const body = stripTags(html.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<style[\s\S]*?<\/style>/gi, ""));
+
+      // タイトル check - 廃棄物関連の処分ページであることを確認
+      const titleM = html.match(/<title>([^<]+)<\/title>/);
+      const title = titleM ? titleM[1] : "";
+      if (!/廃棄物|産廃|行政処分/.test(title + body.slice(0, 500))) {
+        log(`  ! ${url}: 廃棄物処分ページではない可能性`); skipped++; continue;
+      }
+
+      // 日付: URLから YYYYMMDD / YYYYMM+seq 推定、なければ本文から「令和X年Y月Z日」
+      let dateStr = null;
+      const urlDate = url.match(/\/(20\d{6})(?:\d*)?\.html/);
+      if (urlDate) {
+        const d = urlDate[1];
+        dateStr = `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
+      } else {
+        const reiwa = body.match(/令和\s*(\d+)\s*年\s*(\d+)\s*月\s*(\d+)\s*日/);
+        if (reiwa) {
+          const y = 2018 + parseInt(reiwa[1], 10);
+          dateStr = `${y}-${reiwa[2].padStart(2, "0")}-${reiwa[3].padStart(2, "0")}`;
+        }
+      }
+
+      // 事業者名: 本文「事業者名」「商号」「法人名称」「氏名等」「被処分者」から or 本文中の会社形態語 / タイトル括弧内
+      const fromBodyLabeled = body.match(/(?:事業者名|商号(?:又は名称)?|法人(?:の)?名称|氏名(?:等)?(?:又は名称)?|被処分者(?:の)?(?:氏名|名称)?)[：:]\s*([^\s\n（(]+)/);
+      // 会社形態後の文字クラス: 漢字/かな/カナ/英数 + ＆・／(全半角アンパサンド、中黒、スラッシュ等)
+      const CORP_TAIL = "[一-龯ぁ-んァ-ヶーＡ-Ｚａ-ｚA-Za-z0-9＆&・／/\\-－]{1,40}";
+      const fromBodyCorp = body.match(new RegExp(`(株式会社${CORP_TAIL}|有限会社${CORP_TAIL}|合同会社${CORP_TAIL})`));
+      const fromTitleParen = title.match(/[（(]([^）)]+)[）)]/);
+      const rawCompany = (
+        fromBodyLabeled ? fromBodyLabeled[1]
+        : fromTitleParen ? fromTitleParen[1]
+        : fromBodyCorp ? fromBodyCorp[1]
+        : ""
+      ).trim();
+      // 末尾の括弧・句読点・スペース等を除去
+      const company = rawCompany.replace(/[）)、。，,.\s]+$/, "");
+      if (!company || company.length < 2 || company.length > 60) {
+        log(`  ! ${url}: 事業者名抽出失敗`); skipped++; continue;
+      }
+
+      const addrM = body.match(/(?:所在地|住所)[：:]\s*([^\n]{1,100})/);
+      const address = addrM ? addrM[1].trim() : "";
+      const actionM = body.match(/処分(?:の)?内容[：:]\s*([^\n]{1,100})/)
+        || body.match(/(産業廃棄物[^\n]*?業許可の?取消し?|事業停止[^\n]*?命令|改善命令)/);
+      const action = actionM ? actionM[1].trim() : "";
+      const licM = body.match(/許可(?:の)?番号[：:]\s*第?\s*([0-9]{8,12})\s*号?/);
+      const licenseNumber = licM ? licM[1] : null;
+
+      const status = /取消/.test(action) ? "revoked" : /停止/.test(action) ? "suspended" : "active";
+      const yyyymmdd = dateStr ? dateStr.replace(/-/g, "") : "nodate";
+      const slug = `hyogo-sanpai-${sanpainetHash(company)}-${yyyymmdd}`;
+
+      const item = {
+        slug,
+        company_name: company,
+        corporate_number: null,
+        prefecture: "兵庫県",
+        city: extractCity(address),
+        license_type: normalizeLicenseType(action),
+        waste_category: "industrial",
+        business_area: "兵庫県",
+        status,
+        risk_level: /取消/.test(action) ? "critical" : "high",
+        penalty_count: 1,
+        latest_penalty_date: dateStr,
+        source_name: "兵庫県 廃棄物行政処分",
+        source_url: "https://web.pref.hyogo.lg.jp/",
+        detail_url: url,
+        notes: [action, licenseNumber ? `許可番号: ${licenseNumber}` : null].filter(Boolean).join("／").slice(0, 200),
+      };
+
+      if (dryRun) { inserted++; continue; }
+      try {
+        const before = db.prepare("SELECT id FROM sanpai_items WHERE slug = ?").get(slug);
+        upsertStmt.run(item);
+        before ? updated++ : inserted++;
+      } catch (err) {
+        log(`  ! ${company}: ${err.message}`);
+        skipped++;
+      }
+      await sleep(500);
+    } catch (e) {
+      log(`  ! ${url}: ${e.message}`);
+      skipped++;
+    }
+  }
+
+  log(`  hyogo: inserted=${inserted} updated=${updated} skipped=${skipped}`);
+  return { inserted, updated, skipped };
 }
