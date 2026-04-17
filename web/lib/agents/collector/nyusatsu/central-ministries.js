@@ -2,10 +2,11 @@
  * Collector: nyusatsu.central-ministries
  * 中央省庁 6省庁（農水省・経産省・総務省・厚労省・国交省・環境省）の入札公告
  *
- * 既存 lib/nyusatsu-fetcher.js 委譲。
- * 次フェーズで省庁ごとに分離する予定（Collectorは1責務が原則のため）。
+ * 新パイプライン経由:
+ *   collectCentralMinistriesRaw (fetch+parse) → processCentralMinistries (format+DB)
  */
-import { fetchAndUpsertNyusatsu } from "@/lib/nyusatsu-fetcher";
+import { collectCentralMinistriesRaw } from "@/lib/nyusatsu-fetcher";
+import { processCentralMinistries } from "@/lib/agents/pipeline/nyusatsu";
 
 /** @type {import("../../types.js").Collector} */
 const collector = {
@@ -15,18 +16,19 @@ const collector = {
   async collect({ dryRun = false, logger = console.log } = {}) {
     const start = Date.now();
     try {
-      const r = await fetchAndUpsertNyusatsu({ dryRun, logger });
+      const collected = await collectCentralMinistriesRaw({ logger });
+      const stats = processCentralMinistries(collected.perSource, { dryRun, logger });
       return {
         id: "nyusatsu.central-ministries",
         domain: "nyusatsu",
         sourceLabel: "中央省庁（農水・経産・総務・厚労・国交・環境）",
         status: "ok",
-        fetched: r.allRows?.length ?? r.totalFetched ?? 0,
-        inserted: r.inserted || 0,
-        updated: r.updated || 0,
-        skipped: r.skipped || 0,
+        fetched: collected.totalFetched,
+        inserted: stats.inserted,
+        updated: stats.updated,
+        skipped: stats.skipped,
         elapsedMs: Date.now() - start,
-        extra: { perSource: r.perSource },
+        extra: { perSource: stats.perSource },
       };
     } catch (e) {
       return {

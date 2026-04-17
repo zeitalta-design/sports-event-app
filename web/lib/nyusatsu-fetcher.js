@@ -5,132 +5,69 @@
  *   - maff:  農林水産省 入札公告・補助事業公募一覧
  *   - meti:  経済産業省 公募・入札情報
  *   - soumu: 総務省 入札・公募情報
- *   - mhlw:  厚生労働省 調達情報（拡充）
- *   - mlit:  国土交通省 調達情報（拡充）
+ *   - mhlw:  厚生労働省 調達情報
+ *   - mlit:  国土交通省 調達情報
+ *   - env:   環境省 調達情報
  *
- * 旧 scripts/ingest-nyusatsu.mjs の Python 依存を除去し、Node.js 単独で動作。
+ * 【Phase 1 Step 2.5 以降】
+ * このモジュールは「取得 + パースのみ」に特化（DB 書込みは pipeline の責務）。
+ * 旧 fetchAndUpsertNyusatsu は削除。呼び出し側は
+ *   collectCentralMinistriesRaw → processCentralMinistries（lib/agents/pipeline/nyusatsu.js）
+ * の2段階で使う。
  */
-import { getDb } from "@/lib/db";
 import * as XLSX from "xlsx";
 
 const UA = "Mozilla/5.0 (compatible; RiskMonitor/1.0)";
 const FETCH_TIMEOUT_MS = 20000;
 
-export async function fetchAndUpsertNyusatsu({ dryRun = false, logger = console.log } = {}) {
-  const start = Date.now();
-  const log = (msg) => logger(`[nyusatsu-fetcher] ${msg}`);
-  const db = getDb();
+/** 6省庁の scrape 関数を束ねる定義（pipeline からも参照可能） */
+export const CENTRAL_MINISTRY_SOURCES = [
+  { name: "maff",  label: "農林水産省",   scrape: () => scrapeMaff() },
+  { name: "meti",  label: "経済産業省",   scrape: () => scrapeMeti() },
+  { name: "soumu", label: "総務省",       scrape: () => scrapeSoumu() },
+  { name: "mhlw",  label: "厚生労働省",   scrape: () => scrapeMhlw() },
+  { name: "mlit",  label: "国土交通省",   scrape: () => scrapeMlit() },
+  { name: "env",   label: "環境省",       scrape: () => scrapeEnv() },
+];
 
-  const upsertStmt = db.prepare(`
-    INSERT INTO nyusatsu_items
-      (slug, title, category, issuer_name, target_area, deadline, budget_amount,
-       bidding_method, summary, status, is_published, created_at, updated_at,
-       qualification, announcement_url, contact_info, delivery_location,
-       has_attachment, announcement_date, contract_period)
-    VALUES
-      (@slug, @title, @category, @issuer_name, @target_area, @deadline, @budget_amount,
-       @bidding_method, @summary, @status, 1, datetime('now'), datetime('now'),
-       @qualification, @announcement_url, @contact_info, @delivery_location,
-       @has_attachment, @announcement_date, @contract_period)
-    ON CONFLICT(slug) DO UPDATE SET
-      title             = excluded.title,
-      deadline          = excluded.deadline,
-      status            = excluded.status,
-      announcement_url  = excluded.announcement_url,
-      announcement_date = excluded.announcement_date,
-      updated_at        = datetime('now')
-  `);
-
-  const sources = [
-    { name: "maff",  fn: scrapeMaff,  label: "農林水産省" },
-    { name: "meti",  fn: scrapeMeti,  label: "経済産業省" },
-    { name: "soumu", fn: scrapeSoumu, label: "総務省" },
-    { name: "mhlw",  fn: scrapeMhlw,  label: "厚生労働省" },
-    { name: "mlit",  fn: scrapeMlit,  label: "国土交通省" },
-    { name: "env",   fn: scrapeEnv,   label: "環境省" },
-  ];
-
-  let allRows = [];
+/**
+ * 6省庁すべてから生レコードを取得（DB 書込みなし）。
+ *
+ * @param {Object}   [opts]
+ * @param {function} [opts.logger]
+ * @returns {Promise<{
+ *   perSource: Array<{ name: string, label: string, items: Array, error?: string }>,
+ *   totalFetched: number
+ * }>}
+ */
+export async function collectCentralMinistriesRaw({ logger = console.log } = {}) {
+  const log = (msg) => logger(`[nyusatsu-collect] ${msg}`);
   const perSource = [];
+  let totalFetched = 0;
 
-  for (const src of sources) {
+  for (const src of CENTRAL_MINISTRY_SOURCES) {
     try {
-      const items = await src.fn();
+      const rows = await src.scrape();
+      // ソース名・発注者名を各 row に付与（formatter がこれを利用する）
+      const items = rows.map((r) => ({ ...r, source: src.name, issuer: src.label }));
       log(`${src.name}: ${items.length}件取得`);
-      perSource.push({ name: src.name, label: src.label, fetched: items.length });
-      allRows.push(...items.map((r) => ({ ...r, source: src.name, issuer: src.label })));
+      perSource.push({ name: src.name, label: src.label, items });
+      totalFetched += items.length;
     } catch (e) {
       log(`${src.name} failed: ${e.message}`);
-      perSource.push({ name: src.name, label: src.label, error: e.message, fetched: 0 });
+      perSource.push({ name: src.name, label: src.label, items: [], error: e.message });
     }
   }
 
-  log(`合計 ${allRows.length} 件取得`);
-
-  const now = new Date().toISOString().slice(0, 10);
-  let inserted = 0, updated = 0, skipped = 0;
-
-  for (const row of allRows) {
-    if (!row.title || row.title.length < 5) { skipped++; continue; }
-    const announceDate = parseJaDate(row.announce_date);
-    const deadline = parseJaDate(row.deadline);
-    const status = deadline && deadline < now ? "closed" : "open";
-    const slug = toSlug(row.source, row.title);
-
-    const item = {
-      slug,
-      title: row.title.slice(0, 200),
-      category: inferCategory(row.title),
-      issuer_name: row.issuer || row.source,
-      target_area: "全国",
-      deadline: deadline || null,
-      budget_amount: null,
-      bidding_method: "proposal",
-      summary: null,
-      status,
-      qualification: null,
-      announcement_url: row.detail_url || "",
-      contact_info: null,
-      delivery_location: null,
-      has_attachment: row.detail_url ? 1 : 0,
-      announcement_date: announceDate || null,
-      contract_period: null,
-    };
-
-    if (dryRun) { inserted++; continue; }
-    try {
-      const before = db.prepare("SELECT id FROM nyusatsu_items WHERE slug = ?").get(slug);
-      upsertStmt.run(item);
-      before ? updated++ : inserted++;
-    } catch {
-      skipped++;
-    }
-  }
-
-  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-  log(`Done: inserted=${inserted} updated=${updated} skipped=${skipped} (${elapsed}s)`);
-
-  if (!dryRun) {
-    try {
-      db.prepare(`
-        INSERT INTO sync_runs (domain_id, run_type, run_status, fetched_count, created_count, updated_count, started_at, finished_at)
-        VALUES ('nyusatsu', 'scheduled', 'completed', ?, ?, ?, datetime('now'), datetime('now'))
-      `).run(allRows.length, inserted, updated);
-    } catch {
-      /* ignore */
-    }
-  }
-
-  return {
-    ok: true,
-    perSource,
-    totalFetched: allRows.length,
-    inserted,
-    updated,
-    skipped,
-    elapsed,
-  };
+  log(`合計 ${totalFetched} 件取得`);
+  return { perSource, totalFetched };
 }
+
+// ─── 下位ヘルパー（pipeline から参照） ─────────────────────
+export { toSlug, parseJaDate, inferCategory };
+
+// （旧 fetchAndUpsertNyusatsu は削除。pipeline からは
+//  collectCentralMinistriesRaw + processCentralMinistries を使う）
 
 // ─── スクレイパー ────────────────────────────
 

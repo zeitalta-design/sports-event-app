@@ -40,18 +40,23 @@ if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
 console.log(`[fetch-nyusatsu] Start: dryRun=${dryRun}`);
 const start = Date.now();
 
-const { fetchAndUpsertNyusatsu } = await import("../lib/nyusatsu-fetcher.js");
-const result = await fetchAndUpsertNyusatsu({ dryRun });
+// 新パイプライン: collect (fetch+parse) → process (format+DB)
+const { collectCentralMinistriesRaw } = await import("../lib/nyusatsu-fetcher.js");
+const { processCentralMinistries } = await import("../lib/agents/pipeline/nyusatsu.js");
+
+const collected = await collectCentralMinistriesRaw();
+const stats = processCentralMinistries(collected.perSource, { dryRun });
 
 const elapsed = ((Date.now() - start) / 1000).toFixed(1);
 console.log("\n========================================");
 console.log(`[fetch-nyusatsu] Done (${elapsed}s)`);
-console.log(`  totalFetched: ${result.totalFetched}`);
-console.log(`  inserted:     ${result.inserted}`);
-console.log(`  updated:      ${result.updated}`);
-console.log(`  skipped:      ${result.skipped}`);
+console.log(`  totalFetched: ${collected.totalFetched}`);
+console.log(`  formatted:    ${stats.formatted}`);
+console.log(`  inserted:     ${stats.inserted}`);
+console.log(`  updated:      ${stats.updated}`);
+console.log(`  skipped:      ${stats.skipped}`);
 console.log("\n--- ソース別 ---");
-for (const s of result.perSource) {
+for (const s of stats.perSource) {
   if (s.error) {
     console.log(`  ! ${s.name} (${s.label}): ${s.error}`);
   } else {
@@ -66,17 +71,18 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     "",
     "| 項目 | 値 |",
     "|------|----|",
-    `| 取得件数 | ${result.totalFetched} |`,
-    `| 新規追加 | ${result.inserted} |`,
-    `| 更新 | ${result.updated} |`,
-    `| スキップ | ${result.skipped} |`,
+    `| 取得件数 | ${collected.totalFetched} |`,
+    `| 整形 | ${stats.formatted} |`,
+    `| 新規追加 | ${stats.inserted} |`,
+    `| 更新 | ${stats.updated} |`,
+    `| スキップ | ${stats.skipped} |`,
     `| 所要時間 | ${elapsed}s |`,
     "",
     "### ソース別",
     "",
     "| ソース | 省庁 | 件数 | エラー |",
     "|--------|------|------|--------|",
-    ...result.perSource.map((s) =>
+    ...stats.perSource.map((s) =>
       `| ${s.name} | ${s.label} | ${s.fetched || 0} | ${s.error || "-"} |`
     ),
   ];
@@ -84,5 +90,5 @@ if (process.env.GITHUB_STEP_SUMMARY) {
 }
 
 // 全ソース失敗時のみfailure
-const allFailed = result.perSource.every((s) => s.error || s.fetched === 0);
+const allFailed = stats.perSource.every((s) => s.error || s.fetched === 0);
 process.exit(allFailed ? 1 : 0);

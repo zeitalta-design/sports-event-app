@@ -13,8 +13,10 @@
 import { getDb } from "@/lib/db";
 import { upsertNyusatsuResult } from "@/lib/repositories/nyusatsu";
 import { METHOD_LABELS, guessCategoryFromTitle } from "@/lib/nyusatsu-result-fetcher";
+import { toSlug, inferCategory } from "@/lib/nyusatsu-fetcher";
 import kkjFormat from "@/lib/agents/formatter/nyusatsu/kkj";
 import ppFormat from "@/lib/agents/formatter/nyusatsu/p-portal-results";
+import cmFormat from "@/lib/agents/formatter/nyusatsu/central-ministries";
 
 /**
  * KKJ 生レコード配列を受け取り、format → DB upsert までを実行。
@@ -228,6 +230,129 @@ export function processPPortalResults(rawRecords, { sourceUrl = "", dryRun = fal
 
   log(`done formatted=${formatted} inserted=${inserted} updated=${updated} skipped=${skipped}`);
   return { formatted, inserted, updated, skipped };
+}
+
+// ─── 中央省庁 6省庁 pipeline ─────────────────────
+
+/**
+ * 中央省庁 6省庁の生レコード群を受け取り、
+ * format → nyusatsu_items upsert までを実行。
+ *
+ * @param {Array<{name: string, label: string, items: Array, error?: string}>} perSource
+ *                                    collectCentralMinistriesRaw の perSource 配列
+ * @param {Object} [opts]
+ * @param {boolean}[opts.dryRun]
+ * @param {Function}[opts.logger]
+ * @returns {{ formatted: number, inserted: number, updated: number, skipped: number,
+ *             perSource: Array<{name: string, label: string, fetched: number, error?: string}> }}
+ */
+export function processCentralMinistries(perSource, { dryRun = false, logger = console.log } = {}) {
+  if (!Array.isArray(perSource)) {
+    throw new TypeError("processCentralMinistries: perSource must be an array");
+  }
+  const log = (msg) => logger(`[pipeline.nyusatsu.central-ministries] ${msg}`);
+  const db = getDb();
+
+  const selectBySlug = db.prepare("SELECT id FROM nyusatsu_items WHERE slug = ?");
+  const insertStmt = db.prepare(`
+    INSERT INTO nyusatsu_items
+      (slug, title, category, issuer_name, target_area, deadline, budget_amount,
+       bidding_method, summary, status, is_published, created_at, updated_at,
+       qualification, announcement_url, contact_info, delivery_location,
+       has_attachment, announcement_date, contract_period)
+    VALUES
+      (@slug, @title, @category, @issuer_name, @target_area, @deadline, @budget_amount,
+       @bidding_method, @summary, @status, 1, datetime('now'), datetime('now'),
+       @qualification, @announcement_url, @contact_info, @delivery_location,
+       @has_attachment, @announcement_date, @contract_period)
+  `);
+  const updateStmt = db.prepare(`
+    UPDATE nyusatsu_items SET
+      title = @title, category = @category, issuer_name = @issuer_name,
+      target_area = @target_area, deadline = @deadline,
+      bidding_method = @bidding_method, summary = @summary, status = @status,
+      announcement_url = @announcement_url, announcement_date = @announcement_date,
+      updated_at = datetime('now')
+    WHERE slug = @slug
+  `);
+
+  const today = new Date().toISOString().slice(0, 10);
+  let formatted = 0, inserted = 0, updated = 0, skipped = 0;
+  const perSourceStats = [];
+  let totalRaw = 0;
+
+  for (const src of perSource) {
+    const items = Array.isArray(src.items) ? src.items : [];
+    totalRaw += items.length;
+    if (src.error) {
+      perSourceStats.push({ name: src.name, label: src.label, fetched: 0, error: src.error });
+      continue;
+    }
+    perSourceStats.push({ name: src.name, label: src.label, fetched: items.length });
+
+    for (const raw of items) {
+      if (!raw || !raw.title || String(raw.title).length < 5) { skipped++; continue; }
+
+      let unified;
+      try {
+        unified = cmFormat(raw);
+        formatted++;
+      } catch (e) {
+        log(`format error (${src.name}): ${e.message}`);
+        skipped++; continue;
+      }
+
+      const row = unifiedCentralMinistriesToItemRow(unified, today);
+      if (dryRun) { inserted++; continue; }
+
+      try {
+        const existing = selectBySlug.get(row.slug);
+        if (existing) { updateStmt.run(row); updated++; }
+        else          { insertStmt.run(row); inserted++; }
+      } catch (e) {
+        log(`db error for ${row.slug}: ${e.message}`);
+        skipped++;
+      }
+    }
+  }
+
+  if (!dryRun) {
+    try {
+      db.prepare(`
+        INSERT INTO sync_runs (domain_id, run_type, run_status, fetched_count, created_count, updated_count, started_at, finished_at)
+        VALUES ('nyusatsu', 'scheduled', 'completed', ?, ?, ?, datetime('now'), datetime('now'))
+      `).run(totalRaw, inserted, updated);
+    } catch { /* sync_runs 無い環境では無視 */ }
+  }
+
+  log(`done formatted=${formatted} inserted=${inserted} updated=${updated} skipped=${skipped}`);
+  return { formatted, inserted, updated, skipped, perSource: perSourceStats };
+}
+
+function unifiedCentralMinistriesToItemRow(unified, today) {
+  const raw = unified.raw || {};
+  const deadline = unified.deadline;
+  const status = deadline && deadline < today ? "closed" : "open";
+
+  return {
+    slug: toSlug(raw.source || "nyusatsu", unified.title || ""),
+    title: (unified.title || "").slice(0, 200),
+    category: inferCategory(unified.title || ""),
+    issuer_name: unified.organization,
+    target_area: "全国",
+    deadline: deadline || null,
+    budget_amount: null,
+    bidding_method: "proposal",
+    summary: null,
+    status,
+    qualification: null,
+    announcement_url: unified.detail_url || "",
+    contact_info: null,
+    delivery_location: null,
+    has_attachment: unified.detail_url ? 1 : 0,
+    announcement_date: unified.published_at || null,
+    contract_period: null,
+  };
 }
 
 function unifiedPPortalToResultRow(unified, sourceUrl) {
