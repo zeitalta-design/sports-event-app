@@ -2,12 +2,11 @@
  * Collector: nyusatsu.p-portal-results
  * 調達ポータル（旧GEPS）落札実績オープンデータ
  *
- * こちらは入札「落札結果」を扱う。公告側（nyusatsu_items）ではなく
- * nyusatsu_results テーブルへの upsert。
- *
- * 既存 lib/nyusatsu-result-fetcher.js 委譲。
+ * 新パイプライン経由:
+ *   collectPPortalRaw (fetch+parse) → processPPortalResults (format+DB)
  */
-import { fetchPPortalResults } from "@/lib/nyusatsu-result-fetcher";
+import { collectPPortalRaw } from "@/lib/nyusatsu-result-fetcher";
+import { processPPortalResults } from "@/lib/agents/pipeline/nyusatsu";
 
 /** @type {import("../../types.js").Collector} */
 const collector = {
@@ -17,18 +16,23 @@ const collector = {
   async collect({ dryRun = false, logger = console.log, mode = "diff", date, year } = {}) {
     const start = Date.now();
     try {
-      const r = await fetchPPortalResults({ mode, date, year, dryRun, logger });
+      const collected = await collectPPortalRaw({ mode, date, year, logger });
+      const stats = processPPortalResults(collected.rawRecords, {
+        sourceUrl: collected.url,
+        dryRun,
+        logger,
+      });
       return {
         id: "nyusatsu.p-portal-results",
         domain: "nyusatsu",
         sourceLabel: "調達ポータル 落札実績（オープンデータ）",
         status: "ok",
-        fetched: r.totalRows || 0,
-        inserted: r.inserted || 0,
-        updated: r.updated || 0,
-        skipped: r.skipped || 0,
+        fetched: collected.rawRecords.length,
+        inserted: stats.inserted,
+        updated: stats.updated,
+        skipped: stats.skipped,
         elapsedMs: Date.now() - start,
-        extra: { filename: r.filename },
+        extra: { filename: collected.filename },
       };
     } catch (e) {
       return {

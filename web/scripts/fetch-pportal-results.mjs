@@ -44,24 +44,32 @@ if (!useLocal && (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOK
 
 register("./_alias-loader.mjs", pathToFileURL(import.meta.filename).href);
 
-const { fetchPPortalResults } = await import("../lib/nyusatsu-result-fetcher.js");
+// 新パイプライン経由: collect (fetch+parse) → process (format+upsert)
+const { collectPPortalRaw } = await import("../lib/nyusatsu-result-fetcher.js");
+const { processPPortalResults } = await import("../lib/agents/pipeline/nyusatsu.js");
 
 console.log(`[fetch-pportal] Start: mode=${modeArg} dryRun=${dryRun}`);
+const t0 = Date.now();
 
-const result = await fetchPPortalResults({
+const collected = await collectPPortalRaw({
   mode: modeArg,
   date: dateArg || undefined,
   year: yearArg ? parseInt(yearArg) : undefined,
+});
+const stats = processPPortalResults(collected.rawRecords, {
+  sourceUrl: collected.url,
   dryRun,
 });
+const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
 
 console.log("\n========================================");
-console.log(`[fetch-pportal] Done (${result.elapsed}s)`);
-console.log(`  file:     ${result.filename}`);
-console.log(`  total:    ${result.totalRows}`);
-console.log(`  inserted: ${result.inserted}`);
-console.log(`  updated:  ${result.updated}`);
-console.log(`  skipped:  ${result.skipped}`);
+console.log(`[fetch-pportal] Done (${elapsed}s)`);
+console.log(`  file:      ${collected.filename}`);
+console.log(`  total:     ${collected.rawRecords.length}`);
+console.log(`  formatted: ${stats.formatted}`);
+console.log(`  inserted:  ${stats.inserted}`);
+console.log(`  updated:   ${stats.updated}`);
+console.log(`  skipped:   ${stats.skipped}`);
 console.log("========================================");
 
 if (process.env.GITHUB_STEP_SUMMARY) {
@@ -70,12 +78,13 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     "",
     "| 項目 | 値 |",
     "|------|----|",
-    `| ファイル | ${result.filename} |`,
-    `| 総行数 | ${result.totalRows} |`,
-    `| 新規追加 | ${result.inserted} |`,
-    `| 更新 | ${result.updated} |`,
-    `| スキップ | ${result.skipped} |`,
-    `| 所要時間 | ${result.elapsed}s |`,
+    `| ファイル | ${collected.filename} |`,
+    `| 総行数 | ${collected.rawRecords.length} |`,
+    `| 整形 | ${stats.formatted} |`,
+    `| 新規追加 | ${stats.inserted} |`,
+    `| 更新 | ${stats.updated} |`,
+    `| スキップ | ${stats.skipped} |`,
+    `| 所要時間 | ${elapsed}s |`,
   ];
   fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
 }

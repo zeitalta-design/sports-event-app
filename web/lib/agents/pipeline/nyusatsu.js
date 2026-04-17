@@ -11,7 +11,10 @@
  *     内部完結しているため、切り出しにリファクタが必要）
  */
 import { getDb } from "@/lib/db";
+import { upsertNyusatsuResult } from "@/lib/repositories/nyusatsu";
+import { METHOD_LABELS, guessCategoryFromTitle } from "@/lib/nyusatsu-result-fetcher";
 import kkjFormat from "@/lib/agents/formatter/nyusatsu/kkj";
+import ppFormat from "@/lib/agents/formatter/nyusatsu/p-portal-results";
 
 /**
  * KKJ 生レコード配列を受け取り、format → DB upsert までを実行。
@@ -164,4 +167,90 @@ function hashFallback(s) {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
   return Math.abs(h).toString(36);
+}
+
+// ─── 調達ポータル 落札結果 pipeline ─────────────────────
+
+/**
+ * 調達ポータル CSV の生レコード配列を受け取り、
+ * format → nyusatsu_results upsert までを実行。
+ *
+ * @param {Array}   rawRecords   parseCsv が返す生レコード配列
+ * @param {Object} [opts]
+ * @param {string} [opts.sourceUrl]  取得元の URL（source_url に保存）
+ * @param {boolean}[opts.dryRun]
+ * @param {Function}[opts.logger]
+ * @returns {{ formatted: number, inserted: number, updated: number, skipped: number }}
+ */
+export function processPPortalResults(rawRecords, { sourceUrl = "", dryRun = false, logger = console.log } = {}) {
+  if (!Array.isArray(rawRecords)) {
+    throw new TypeError("processPPortalResults: rawRecords must be an array");
+  }
+  const log = (msg) => logger(`[pipeline.nyusatsu.p-portal-results] ${msg}`);
+  const db = getDb();
+
+  let formatted = 0, inserted = 0, updated = 0, skipped = 0;
+
+  for (const raw of rawRecords) {
+    if (!raw || !raw.title || String(raw.title).length < 3) { skipped++; continue; }
+
+    let unified;
+    try {
+      unified = ppFormat(raw);
+      formatted++;
+    } catch (e) {
+      log(`format error: ${e.message}`);
+      skipped++; continue;
+    }
+
+    const row = unifiedPPortalToResultRow(unified, sourceUrl);
+    if (dryRun) { inserted++; continue; }
+
+    try {
+      const r = upsertNyusatsuResult(row);
+      r.action === "insert" ? inserted++ : updated++;
+    } catch (err) {
+      if (!String(err.message).includes("UNIQUE")) {
+        log(`  ! ${raw.title.slice(0, 40)}: ${err.message}`);
+      }
+      skipped++;
+    }
+  }
+
+  if (!dryRun) {
+    try {
+      db.prepare(`
+        INSERT INTO sync_runs (domain_id, run_type, run_status, fetched_count, created_count, updated_count, started_at, finished_at)
+        VALUES ('nyusatsu_results', 'scheduled', 'completed', ?, ?, ?, datetime('now'), datetime('now'))
+      `).run(rawRecords.length, inserted, updated);
+    } catch { /* sync_runs が無い環境では無視 */ }
+  }
+
+  log(`done formatted=${formatted} inserted=${inserted} updated=${updated} skipped=${skipped}`);
+  return { formatted, inserted, updated, skipped };
+}
+
+function unifiedPPortalToResultRow(unified, sourceUrl) {
+  const raw = unified.raw || {};
+  return {
+    slug: `pportal-${raw.procurementId}`,
+    nyusatsu_item_id: null,
+    title: unified.title,
+    issuer_name: unified.organization, // issuerCode のまま。Resolver でコード→名称化予定
+    winner_name: raw.winnerName || null,
+    winner_corporate_number: raw.corporateNumber || null,
+    award_amount: raw.awardAmount ?? null,
+    award_date: unified.published_at, // = awardDate
+    num_bidders: null,
+    award_rate: null,
+    budget_amount: null,
+    category: guessCategoryFromTitle(unified.title),
+    target_area: null,
+    bidding_method: METHOD_LABELS[raw.methodCode] || raw.methodCode || null,
+    result_url: unified.detail_url,
+    source_name: "調達ポータル（落札実績オープンデータ）",
+    source_url: sourceUrl || unified.detail_url,
+    summary: null,
+    is_published: 1,
+  };
 }

@@ -3,8 +3,11 @@
  *
  * https://www.p-portal.go.jp/pps-web-biz/UAB02/OAB0201
  *
- * 旧 GEPS が統合された調達ポータルから、落札結果 CSV を取得し
- * nyusatsu_results テーブルに upsert する。
+ * 【Phase 1 Step 2.5 以降】
+ * このモジュールは「取得 + パースのみ」に特化する（DB 書込みは pipeline の責務）。
+ * 旧 fetchPPortalResults は削除。呼び出し側は
+ *   collectPPortalRaw → processPPortalResults（lib/agents/pipeline/nyusatsu.js）
+ * の2段階で使う。
  *
  * CSV は UTF-8 BOM 付き、ヘッダーなし、8列:
  *   0: 調達案件番号
@@ -19,14 +22,8 @@
  * データ種別:
  *   - 全件 (年度別): successful_bid_record_info_all_{YYYY}.zip
  *   - 日次差分: successful_bid_record_info_diff_{YYYYMMDD}.zip
- *
- * 使い方:
- *   日次 cron → diff ファイル取得 → 差分 upsert
- *   初回 or 補完 → all ファイル取得 → 全件 upsert
  */
 
-import { getDb } from "@/lib/db";
-import { upsertNyusatsuResult } from "@/lib/repositories/nyusatsu";
 import { execSync } from "child_process";
 import { mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync } from "fs";
 import { tmpdir } from "os";
@@ -48,25 +45,26 @@ const METHOD_LABELS = {
   W1: "その他",
 };
 
+/** 調達方式コード → 日本語ラベル（pipeline から参照） */
+export { METHOD_LABELS };
+
 /**
- * 調達ポータルから落札結果を取得して DB に upsert する
+ * 調達ポータルから落札結果 CSV を取得し、生レコード配列を返す（DB 書込みなし）。
  *
  * @param {object} opts
- * @param {"diff"|"all"} [opts.mode="diff"] diff=日次差分 / all=全件（年度指定）
- * @param {string} [opts.date] diff モード: YYYYMMDD（省略時は昨日）
- * @param {number} [opts.year] all モード: 西暦年（省略時は今年度）
- * @param {boolean} [opts.dryRun=false]
+ * @param {"diff"|"all"} [opts.mode="diff"]
+ * @param {string}  [opts.date]  diff モード: YYYYMMDD（省略時は昨日）
+ * @param {number}  [opts.year]  all モード: 西暦年（省略時は今年）
  * @param {function} [opts.logger]
+ * @returns {Promise<{ filename: string, url: string, rawRecords: Array }>}
  */
-export async function fetchPPortalResults({
+export async function collectPPortalRaw({
   mode = "diff",
   date,
   year,
-  dryRun = false,
   logger = console.log,
 } = {}) {
-  const start = Date.now();
-  const log = (msg) => logger(`[pportal-fetcher] ${msg}`);
+  const log = (msg) => logger(`[pportal-collect] ${msg}`);
 
   // ファイル名決定
   let filename;
@@ -85,7 +83,6 @@ export async function fetchPPortalResults({
   log(`${mode === "all" ? "全件" : "日次差分"}: ${filename}`);
   log(`📍 ${url}`);
 
-  // ダウンロード
   const res = await fetch(url, {
     headers: { "User-Agent": UA },
     signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -94,69 +91,13 @@ export async function fetchPPortalResults({
   const buf = Buffer.from(await res.arrayBuffer());
   log(`  ダウンロード完了: ${(buf.length / 1024).toFixed(1)}KB`);
 
-  // ZIP 解凍（xlsx ライブラリの cfb/zip 機能を利用）
   const csvText = extractCsvFromZip(buf);
   if (!csvText) throw new Error("ZIP 内に CSV が見つかりません");
 
-  // CSV パース
-  const rows = parseCsv(csvText);
-  log(`  パース完了: ${rows.length}件`);
+  const rawRecords = parseCsv(csvText);
+  log(`  パース完了: ${rawRecords.length}件`);
 
-  // DB upsert
-  const db = getDb();
-  let inserted = 0, updated = 0, skipped = 0;
-
-  for (const row of rows) {
-    if (!row.title || row.title.length < 3) { skipped++; continue; }
-
-    const slug = `pportal-${row.procurementId}`;
-    const result = {
-      slug,
-      nyusatsu_item_id: null, // 公告との紐付けは後続処理
-      title: row.title,
-      issuer_name: row.issuerCode, // TODO: コード→名称変換
-      winner_name: row.winnerName,
-      winner_corporate_number: row.corporateNumber || null,
-      award_amount: row.awardAmount,
-      award_date: row.awardDate,
-      num_bidders: null, // CSV には含まれない
-      award_rate: null,  // 予定価格が不明のため計算不可
-      budget_amount: null,
-      category: guessCategoryFromTitle(row.title),
-      target_area: null,
-      bidding_method: METHOD_LABELS[row.methodCode] || row.methodCode,
-      result_url: `https://www.p-portal.go.jp/pps-web-biz/UAA01/OAA0101`,
-      source_name: "調達ポータル（落札実績オープンデータ）",
-      source_url: url,
-      summary: null,
-      is_published: 1,
-    };
-
-    if (dryRun) { inserted++; continue; }
-    try {
-      const r = upsertNyusatsuResult(result);
-      r.action === "insert" ? inserted++ : updated++;
-    } catch (err) {
-      if (!err.message.includes("UNIQUE")) {
-        log(`  ! ${row.title.slice(0, 40)}: ${err.message}`);
-      }
-      skipped++;
-    }
-  }
-
-  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-  log(`Done: inserted=${inserted} updated=${updated} skipped=${skipped} (${elapsed}s)`);
-
-  if (!dryRun) {
-    try {
-      db.prepare(`
-        INSERT INTO sync_runs (domain_id, run_type, run_status, fetched_count, created_count, updated_count, started_at, finished_at)
-        VALUES ('nyusatsu_results', 'scheduled', 'completed', ?, ?, ?, datetime('now'), datetime('now'))
-      `).run(rows.length, inserted, updated);
-    } catch { /* ignore */ }
-  }
-
-  return { ok: true, filename, totalRows: rows.length, inserted, updated, skipped, elapsed };
+  return { filename, url, rawRecords };
 }
 
 // ─── ZIP → CSV 抽出 ─────────────────────
@@ -188,7 +129,7 @@ function extractCsvFromZip(zipBuffer) {
 
 // ─── CSV パース ─────────────────────
 
-function parseCsv(text) {
+export function parseCsv(text) {
   const lines = text.split("\n").filter((l) => l.trim());
   const results = [];
 
@@ -230,7 +171,7 @@ function parseCsv(text) {
 
 // ─── カテゴリ推定 ─────────────────────
 
-function guessCategoryFromTitle(title) {
+export function guessCategoryFromTitle(title) {
   const t = String(title);
   if (/工事|建設|土木|橋梁|道路|トンネル|舗装/.test(t)) return "construction";
   if (/業務委託|コンサル|調査|設計|測量|計画/.test(t)) return "consulting";
