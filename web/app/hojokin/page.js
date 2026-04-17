@@ -1,18 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useMemo } from "react";
 import CategoryPageHeader from "@/components/CategoryPageHeader";
 import DomainCompareBar from "@/components/core/DomainCompareBar";
-import DomainCompareButton from "@/components/core/DomainCompareButton";
-import DomainFavoriteButton from "@/components/core/DomainFavoriteButton";
+import DomainResultCard from "@/components/core/DomainResultCard";
 import StatsDashboard from "@/components/StatsDashboard";
 import SearchForm from "@/components/search/SearchForm";
 import ActiveFilterChips from "@/components/search/ActiveFilterChips";
 import Pagination from "@/components/search/Pagination";
 import "@/lib/domains";
 import { getDomain } from "@/lib/core/domain-registry";
+import { useDomainSearchPage } from "@/lib/core/useDomainSearchPage";
 import {
   hojokinConfig,
   getCategoryLabel,
@@ -25,6 +23,19 @@ import {
 
 const hojokinDomain = getDomain("hojokin");
 const PAGE_SIZE = 20;
+
+const FILTER_KEYS = [
+  "keyword",
+  "category",
+  "target_type",
+  "status",
+  "provider",
+  "year",
+  "deadline_from",
+  "deadline_to",
+  "amount_min",
+  "amount_max",
+];
 
 const INITIAL_FILTERS = {
   keyword: "",
@@ -41,146 +52,44 @@ const INITIAL_FILTERS = {
   page: 1,
 };
 
-function HojokinCard({ item }) {
+function HojokinBadges({ item }) {
   return (
-    <div className="card p-4 hover:shadow-md transition-shadow flex gap-4">
-      <Link href={`/hojokin/${item.slug}`} className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-2xl shrink-0">
-        {getCategoryIcon(item.category)}
-      </Link>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <Link href={`/hojokin/${item.slug}`} className="block min-w-0">
-            <h3 className="text-sm font-bold text-gray-900 truncate hover:text-blue-600">{item.title}</h3>
-          </Link>
-          <div className="flex items-center gap-1 shrink-0">
-            {hojokinDomain && <DomainFavoriteButton itemId={item.id} domain={hojokinDomain} />}
-            <DomainCompareButton domainId="hojokin" itemId={item.id} variant="compact" />
-          </div>
-        </div>
-        <p className="text-xs text-gray-500 mt-0.5">{item.provider_name}</p>
-        <p className="text-xs text-gray-600 mt-1 line-clamp-2">{item.summary}</p>
-        <div className="flex items-center gap-2 mt-2 flex-wrap">
-          <span className="badge badge-blue">{getCategoryLabel(item.category)}</span>
-          <span className={`badge ${getStatusColor(item.status)}`}>{getStatusLabel(item.status)}</span>
-          <span className="text-xs text-gray-600">上限 {formatAmount(item.max_amount)}</span>
-          <span className="text-xs text-gray-500">締切: {formatDeadline(item.deadline)}</span>
-        </div>
-      </div>
+    <div className="flex items-center gap-2 mt-2 flex-wrap">
+      <span className="badge badge-blue">{getCategoryLabel(item.category)}</span>
+      <span className={`badge ${getStatusColor(item.status)}`}>{getStatusLabel(item.status)}</span>
+      <span className="text-xs text-gray-600">上限 {formatAmount(item.max_amount)}</span>
+      <span className="text-xs text-gray-500">締切: {formatDeadline(item.deadline)}</span>
     </div>
   );
 }
 
 export default function HojokinListPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const [items, setItems] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const [filters, setFilters] = useState({
-    keyword: searchParams.get("keyword") || "",
-    category: searchParams.get("category") || "",
-    target_type: searchParams.get("target_type") || "",
-    status: searchParams.get("status") || "",
-    provider: searchParams.get("provider") || "",
-    year: searchParams.get("year") || "",
-    deadline_from: searchParams.get("deadline_from") || "",
-    deadline_to: searchParams.get("deadline_to") || "",
-    amount_min: searchParams.get("amount_min") || "",
-    amount_max: searchParams.get("amount_max") || "",
-    sort: searchParams.get("sort") || "deadline",
-    page: Math.max(1, parseInt(searchParams.get("page") || "1", 10)),
+  const {
+    items,
+    total,
+    totalPages,
+    stats,
+    loading,
+    filters,
+    formInput,
+    hasFilters,
+    startItem,
+    endItem,
+    handleSearch,
+    handleReset,
+    goToPage,
+    onChipRemove,
+    onStatsToggle,
+    onSortChange,
+    onFormFieldChange,
+  } = useDomainSearchPage({
+    basePath: "/hojokin",
+    listApiPath: "/api/hojokin",
+    statsApiPath: "/api/hojokin/stats",
+    filterKeys: FILTER_KEYS,
+    initialFilters: INITIAL_FILTERS,
+    pageSize: PAGE_SIZE,
   });
-
-  const [formInput, setFormInput] = useState(filters);
-
-  const syncUrl = useCallback((f) => {
-    const params = new URLSearchParams();
-    if (f.keyword) params.set("keyword", f.keyword);
-    if (f.category) params.set("category", f.category);
-    if (f.target_type) params.set("target_type", f.target_type);
-    if (f.status) params.set("status", f.status);
-    if (f.provider) params.set("provider", f.provider);
-    if (f.year) params.set("year", f.year);
-    if (f.deadline_from) params.set("deadline_from", f.deadline_from);
-    if (f.deadline_to) params.set("deadline_to", f.deadline_to);
-    if (f.amount_min) params.set("amount_min", f.amount_min);
-    if (f.amount_max) params.set("amount_max", f.amount_max);
-    if (f.sort && f.sort !== "deadline") params.set("sort", f.sort);
-    if (f.page > 1) params.set("page", String(f.page));
-    const qs = params.toString();
-    router.replace(`/hojokin${qs ? `?${qs}` : ""}`, { scroll: false });
-  }, [router]);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const listParams = new URLSearchParams();
-      const statsParams = new URLSearchParams();
-      const setBoth = (k, v) => { if (v) { listParams.set(k, v); statsParams.set(k, v); } };
-      setBoth("keyword", filters.keyword);
-      setBoth("category", filters.category);
-      setBoth("target_type", filters.target_type);
-      setBoth("status", filters.status);
-      setBoth("provider", filters.provider);
-      setBoth("year", filters.year);
-      setBoth("deadline_from", filters.deadline_from);
-      setBoth("deadline_to", filters.deadline_to);
-      setBoth("amount_min", filters.amount_min);
-      setBoth("amount_max", filters.amount_max);
-      listParams.set("sort", filters.sort);
-      listParams.set("page", String(filters.page));
-      listParams.set("pageSize", String(PAGE_SIZE));
-
-      const [listRes, statsRes] = await Promise.all([
-        fetch(`/api/hojokin?${listParams}`),
-        fetch(`/api/hojokin/stats?${statsParams}`),
-      ]);
-      const listData = await listRes.json();
-      const statsData = await statsRes.json();
-
-      setItems(listData.items || []);
-      setTotal(listData.total || 0);
-      setTotalPages(listData.totalPages || 1);
-      setStats(statsData.error ? null : statsData);
-    } catch (err) {
-      console.error("Failed to fetch hojokin:", err);
-      setItems([]);
-      setStats(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
-
-  useEffect(() => {
-    fetchData();
-    syncUrl(filters);
-  }, [fetchData, syncUrl, filters]);
-
-  const goToPage = (p) => {
-    const clamped = Math.max(1, Math.min(p, totalPages));
-    setFilters((prev) => ({ ...prev, page: clamped }));
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const hasFilters = !!(
-    filters.keyword || filters.category || filters.target_type ||
-    filters.status || filters.provider || filters.year ||
-    filters.deadline_from || filters.deadline_to ||
-    filters.amount_min || filters.amount_max
-  );
-
-  const startItem = total === 0 ? 0 : (filters.page - 1) * PAGE_SIZE + 1;
-  const endItem = Math.min(filters.page * PAGE_SIZE, total);
-
-  const handleSearch = () => setFilters({ ...formInput, page: 1 });
-  const handleReset = () => {
-    setFormInput(INITIAL_FILTERS);
-    setFilters(INITIAL_FILTERS);
-  };
 
   const searchFields = useMemo(() => [
     {
@@ -239,16 +148,6 @@ export default function HojokinListPage() {
     { key: "amount_max", label: "上限額(以下)", resolve: (v) => `${parseInt(v, 10).toLocaleString()}円` },
   ], []);
 
-  const onChipRemove = (key, value) => {
-    setFilters((p) => ({ ...p, [key]: value, page: 1 }));
-    setFormInput((p) => ({ ...p, [key]: value }));
-  };
-
-  const onStatsToggle = (key, value) => {
-    setFilters((p) => ({ ...p, [key]: value, page: 1 }));
-    setFormInput((p) => ({ ...p, [key]: value }));
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-4 py-6">
@@ -264,15 +163,12 @@ export default function HojokinListPage() {
         <SearchForm
           fields={searchFields}
           values={formInput}
-          onChange={(name, value) => setFormInput((p) => ({ ...p, [name]: value }))}
+          onChange={onFormFieldChange}
           onSearch={handleSearch}
           onReset={handleReset}
           sortOptions={hojokinConfig.sorts}
           sort={filters.sort}
-          onSortChange={(v) => {
-            setFormInput((p) => ({ ...p, sort: v }));
-            setFilters((p) => ({ ...p, sort: v, page: 1 }));
-          }}
+          onSortChange={onSortChange}
         />
 
         {hasFilters && (
@@ -347,7 +243,16 @@ export default function HojokinListPage() {
         {!loading && items.length > 0 && (
           <div className="space-y-3">
             {items.map((item) => (
-              <HojokinCard key={item.id} item={item} />
+              <DomainResultCard
+                key={item.id}
+                item={item}
+                domainId="hojokin"
+                domain={hojokinDomain}
+                basePath="/hojokin"
+                icon={getCategoryIcon(item.category)}
+                secondaryText={item.provider_name}
+                renderBadges={HojokinBadges}
+              />
             ))}
           </div>
         )}
