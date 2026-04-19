@@ -264,6 +264,7 @@ export default function SanpaiListPage() {
                 icon={getLicenseTypeIcon(item.license_type)}
                 secondaryText={[item.prefecture, item.city].filter(Boolean).join(" ") || "—"}
                 renderBadges={SanpaiBadges}
+                lockSummary
               />
             ))}
           </div>

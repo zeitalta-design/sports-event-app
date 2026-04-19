@@ -5,6 +5,10 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import DomainDetailPage from "@/components/core/DomainDetailPage";
 import DomainFavoriteButton from "@/components/core/DomainFavoriteButton";
+import CrossDomainLinks from "@/components/core/CrossDomainLinks";
+import OrganizationHubLink from "@/components/core/OrganizationHubLink";
+import ProLockedOverlay from "@/components/ProLockedOverlay";
+import { useIsPro } from "@/lib/useIsPro";
 import "@/lib/domains";
 import { getDomain } from "@/lib/core/domain-registry";
 import {
@@ -211,6 +215,7 @@ export default function SanpaiDetailPage() {
   const [item, setItem] = useState(null);
   const [penalties, setPenalties] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { isPro } = useIsPro();
 
   useEffect(() => {
     async function load() {
@@ -271,8 +276,16 @@ export default function SanpaiDetailPage() {
       {/* キー情報バー */}
       <SanpaiInfoBanner item={item} penalties={penalties} />
 
-      {/* リスク概要 */}
-      <RiskSummary item={item} penalties={penalties} />
+      {/* リスク概要 — Phase M-Post: 非 Pro はボカシ */}
+      <ProLockedOverlay
+        isPro={isPro}
+        variant="full"
+        className="mb-6"
+        title="このリスク概要は Pro で閲覧できます"
+        description="詳細な概要や判断材料を確認できます"
+      >
+        <RiskSummary item={item} penalties={penalties} />
+      </ProLockedOverlay>
 
       {/* 処分履歴タイムライン */}
       <PenaltyTimeline penalties={penalties} />
@@ -301,12 +314,35 @@ export default function SanpaiDetailPage() {
         </table>
       </section>
 
-      {/* 備考 */}
+      {/* 他DB情報（cross-domain） */}
+      <CrossDomainLinks
+        lookupKey={item.corporate_number || item.company_name}
+        skipDomain="sanpai"
+      />
+
+      {/* 共通企業詳細（cross-domain hub）への導線 */}
+      <OrganizationHubLink
+        corp={item.corporate_number}
+        name={item.company_name}
+      />
+
+      {/* 備考 — Phase M-Post: 非 Pro は本文をボカシ、見出しだけ見せる */}
       {item.notes && (
-        <section className="card p-6 mb-6">
-          <h2 className="text-sm font-bold text-gray-900 mb-3">備考</h2>
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{item.notes}</p>
-        </section>
+        isPro === true ? (
+          <section className="card p-6 mb-6">
+            <h2 className="text-sm font-bold text-gray-900 mb-3">備考</h2>
+            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{item.notes}</p>
+          </section>
+        ) : (
+          <section className="card p-6 mb-6">
+            <h2 className="text-sm font-bold text-gray-900 mb-3">備考</h2>
+            <ProLockedOverlay isPro={isPro} variant="inline">
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap line-clamp-3">
+                {item.notes}
+              </p>
+            </ProLockedOverlay>
+          </section>
+        )
       )}
 
       {/* 参照リンク */}

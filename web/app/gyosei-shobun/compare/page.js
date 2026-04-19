@@ -6,6 +6,8 @@ import Link from "next/link";
 import { gyoseiShobunConfig } from "@/lib/gyosei-shobun-config";
 import LegalDisclaimer from "@/components/gyosei-shobun/LegalDisclaimer";
 import { calculateRiskScore, RISK_COLORS } from "@/lib/risk-score";
+import { useIsPro } from "@/lib/useIsPro";
+import ProLockedOverlay from "@/components/ProLockedOverlay";
 
 const ACTION_TYPE_COLORS = {
   license_revocation: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", accent: "#DC2626" },
@@ -292,15 +294,19 @@ function CompareContent() {
 
 /** テーブルセルの値表示 */
 function CellValue({ item, field }) {
+  const { isPro } = useIsPro();
   const value = item[field.key];
   if (field.format === "risk") {
     const risk = calculateRiskScore(item);
     const rc = RISK_COLORS[risk.level] || RISK_COLORS.unknown;
+    // Phase M-Post: 非 Pro はスコア数値・ラベルをボカシ表示
     return (
-      <div className="flex items-center gap-2">
-        <span className={`text-lg font-black ${rc.text}`}>{risk.score}</span>
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${rc.badge}`}>{risk.label}</span>
-      </div>
+      <ProLockedOverlay isPro={isPro} variant="inline">
+        <div className="flex items-center gap-2">
+          <span className={`text-lg font-black ${rc.text}`}>{risk.score}</span>
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${rc.badge}`}>{risk.label}</span>
+        </div>
+      </ProLockedOverlay>
     );
   }
 

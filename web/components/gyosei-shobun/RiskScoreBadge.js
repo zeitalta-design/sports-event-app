@@ -1,18 +1,42 @@
+"use client";
+
 /**
- * リスクスコアバッジ
+ * リスクスコアバッジ（Phase M-Post: 非 Pro はボカシ表示）
  *
  * 3つの表示モード:
  *  - full:    円グラフ風 + ラベル + スコア数字（詳細ページ用）
  *  - compact: 小さいバッジ（一覧カード用）
  *  - inline:  テキストのみ（テーブルセル用）
+ *
+ * 非 Pro ユーザーではスコア数値 / ラベル / 詳細をボカシ、
+ * 「スコア存在すること + Pro で閲覧可能」の導線だけ見せる。
+ * isPro 判定は useIsPro フックで auto。強制 override は isPro prop で可能。
  */
 
 import { calculateRiskScore, RISK_COLORS } from "@/lib/risk-score";
+import { useIsPro } from "@/lib/useIsPro";
+import ProLockedOverlay from "@/components/ProLockedOverlay";
 
 /**
- * @param {{ action: Object, mode?: "full" | "compact" | "inline" }} props
+ * @param {{ action: Object, mode?: "full" | "compact" | "inline", isPro?: boolean }} props
  */
-export default function RiskScoreBadge({ action, mode = "compact" }) {
+export default function RiskScoreBadge({ action, mode = "compact", isPro: isProProp }) {
+  const { isPro: isProAuto } = useIsPro();
+  const isPro = typeof isProProp === "boolean" ? isProProp : isProAuto;
+
+  const raw = <RawBadge action={action} mode={mode} />;
+
+  // mode ごとの ProLockedOverlay variant を選ぶ
+  const variant = mode === "full" ? "full" : mode === "inline" ? "inline" : "compact";
+  return (
+    <ProLockedOverlay isPro={isPro} variant={variant}>
+      {raw}
+    </ProLockedOverlay>
+  );
+}
+
+// ─── 素のバッジ（isPro 判定前の children として使う） ──
+function RawBadge({ action, mode }) {
   const { score, level, label } = calculateRiskScore(action);
   const c = RISK_COLORS[level] || RISK_COLORS.unknown;
 

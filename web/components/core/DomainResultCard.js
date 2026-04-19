@@ -19,6 +19,8 @@
 import Link from "next/link";
 import DomainCompareButton from "@/components/core/DomainCompareButton";
 import DomainFavoriteButton from "@/components/core/DomainFavoriteButton";
+import ProLockedOverlay from "@/components/ProLockedOverlay";
+import { useIsPro } from "@/lib/useIsPro";
 
 /**
  * @param {Object} props
@@ -30,6 +32,11 @@ import DomainFavoriteButton from "@/components/core/DomainFavoriteButton";
  * @param {string} [props.secondaryText]      - 2行目（発注機関 / 実施機関）
  * @param {(ctx: {item:any}) => React.ReactNode} [props.renderBadges]
  *   バッジ行の描画。カテゴリ/ステータス/金額/締切など domain 固有要素をここで描く。
+ * @param {string} [props.hrefQuery]
+ *   詳細リンクに追加する query string（? は不要）。Phase J-5: entityId 等の文脈維持用。
+ * @param {boolean} [props.lockSummary]
+ *   Phase M-Post: true のとき、非 Pro ユーザーに対して summary を ProLockedOverlay (inline)
+ *   でボカシ表示する。sanpai 一覧など「概要をリスク要約として見せる」ドメインで使う。
  */
 export default function DomainResultCard({
   item,
@@ -39,8 +46,13 @@ export default function DomainResultCard({
   icon,
   secondaryText,
   renderBadges,
+  hrefQuery,
+  lockSummary = false,
 }) {
-  const href = `${basePath}/${item.slug}`;
+  const { isPro } = useIsPro();
+  const href = hrefQuery
+    ? `${basePath}/${item.slug}?${hrefQuery}`
+    : `${basePath}/${item.slug}`;
   return (
     <div className="card p-4 hover:shadow-md transition-shadow flex gap-4">
       <Link
@@ -65,7 +77,15 @@ export default function DomainResultCard({
           <p className="text-xs text-gray-500 mt-0.5">{secondaryText}</p>
         )}
         {item.summary && (
-          <p className="text-xs text-gray-600 mt-1 line-clamp-2">{item.summary}</p>
+          lockSummary ? (
+            <div className="mt-1">
+              <ProLockedOverlay isPro={isPro} variant="inline">
+                <p className="text-xs text-gray-600 line-clamp-2">{item.summary}</p>
+              </ProLockedOverlay>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-600 mt-1 line-clamp-2">{item.summary}</p>
+          )
         )}
         {renderBadges && renderBadges({ item })}
       </div>
